@@ -9,18 +9,6 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
-### #1 [FEAT] Ship the v2 remote control surface (started 08/11/2026 22:45:00)
-
-- [x] Sweep the read-only command surface on a real player and record the evidence
-- [x] Probe the write commands in the order listed in `docs/feature-research.md`
-- [x] Server: one write endpoint per device with a serialised queue and slider coalescing
-- [x] UI: play/pause, previous, next, stop and seek with optimistic state and reconciliation
-- [x] UI: volume slider bounded by `max_volume`, mute, and a high volume confirmation
-- [x] UI: source switcher built from the input capability endpoints
-- [x] UI: preset grid playing `MCUKeyShortClick:<slot>` with relayed cover art
-- [x] UI: sleep timer and audio output route, both behind an explicit action
-- [x] Document the measured commands, and update the README and the board
-
 ## Backlog
 
 ### #2 [UX] Add the diagnostic assistant with findings and report export (P1)
