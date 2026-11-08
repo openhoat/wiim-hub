@@ -133,9 +133,17 @@ configured private registry.
 
 ## Security
 
-No authentication in v1. Keep the vhost on the LAN or a private mesh, and put an
-authentication proxy in front of it before any public exposure, and before the control version
-introduces write endpoints.
+The hub has no built-in authentication, by design: identity belongs to the ingress. Run it on a
+private network, or behind a forward-auth proxy such as oauth2-proxy or Authelia, and keep
+`/health` reachable without a session if a probe needs it. The control version writes to the
+device, so exposing it without an authentication layer is not supported.
+
+## Roadmap
+
+- [`KANBAN.md`](KANBAN.md): the board, with priorities and the current item.
+- [`docs/feature-research.md`](docs/feature-research.md): what the LinkPlay API exposes, what was
+  measured on a real player, and the behaviour requirements for the control, diagnostic and
+  multiroom versions.
 
 ## License
 
