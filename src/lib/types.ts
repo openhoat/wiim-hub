@@ -12,6 +12,19 @@ export type Preset = { number: number; name: string; artwork: string }
 
 export type OutputOption = { hardware: number; name: string }
 
+export type EqBand = { name: string; value: number }
+
+export type Equalizer = {
+  enabled: boolean
+  name: string
+  source: string
+  bands: EqBand[]
+  presets: string[]
+  roomFit: boolean
+}
+
+export type Quality = { sampleRate: number | null; bitDepth: number | null; bitRate: number | null }
+
 export type DeviceEvent = {
   t: number
   kind: EventKind
@@ -49,6 +62,8 @@ export type Device = {
   outputs: OutputOption[]
   outputHardware: number | null
   presets: Preset[]
+  eq: Equalizer
+  quality: Quality
   updatedAt: number | null
   online: boolean
   lastSeen: number | null

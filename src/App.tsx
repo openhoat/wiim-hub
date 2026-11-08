@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/empty-state'
 import { Header } from '@/components/header'
 import { HubBanner } from '@/components/hub-banner'
 import { NowPlayingCard } from '@/components/now-playing-card'
+import { SoundCard } from '@/components/sound-card'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/toaster'
@@ -124,7 +125,10 @@ const Hub = () => {
             (view === 'user' ? (
               <div className="mx-auto max-w-3xl space-y-4">
                 {devices.map((device) => (
-                  <NowPlayingCard key={device.name + device.ip} device={device} now={now} />
+                  <div key={device.name + device.ip} className="space-y-4">
+                    <NowPlayingCard device={device} now={now} />
+                    <SoundCard device={device} />
+                  </div>
                 ))}
               </div>
             ) : (

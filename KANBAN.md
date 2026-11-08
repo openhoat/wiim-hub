@@ -9,6 +9,29 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
+### #15 [UX] Add the equalizer panel to the sound card (started 2026-11-08)
+
+- [x] Read the per-source curve through `EQGetLV2SourceBandEx` and expose it on every poll
+- [x] Load the 24 factory curves, switch the equalizer on and off, edit one band at a time
+- [x] Keep the gain inside the measured -12..+12 dB range and target the source the device reported
+- [ ] Show room correction as read-only until its write payload is proven on a device
+
+### #16 [UX] Show the stream quality next to the sound controls (started 2026-11-08)
+
+- [x] Display the sample rate, bit depth and bit rate from `getMetaInfo` as one chip
+- [ ] Read `streamServicesCapability` and explain which tier a service can reach on this model
+
+### #17 [UX] Add a device settings sheet with name, LED, buttons and limits (P2)
+
+- [ ] Write the device name, the status LED, the touch buttons, the channel balance, the maximum volume and the fade
+- [ ] Show every field as read from `getStatusEx` and keep one explicit save, never a write on keystroke
+- [ ] Refuse a balance outside the measured -1..+1 range and restore the previous value on failure
+
+### #18 [UX] Play a stream URL from the hub (P2)
+
+- [ ] Send `setPlayerCmd:play:<url>` behind an explicit confirmation naming the address
+- [ ] Accept only http and https, cap the length, and report the device answer verbatim on failure
+
 ## Backlog
 
 ### #2 [UX] Add the diagnostic assistant with findings and report export (P1)
@@ -35,11 +58,6 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 - [ ] Subscribe to the device events on port 49152, renew the subscription, keep polling as a fallback
 - [ ] Detect a stale subscription and fall back within one poll interval
 - [ ] Measure the effect on request count and on UI latency, and record both in the docs
-
-### #6 [UX] Show music quality and the streaming services the model supports (P2)
-
-- [ ] Display sample rate, bit depth and bit rate from `getMetaInfo` as a quality chip
-- [ ] Read `streamServicesCapability` and explain which tier a service can reach on this model
 
 ### #7 [UX] Manage devices from the UI (P2)
 

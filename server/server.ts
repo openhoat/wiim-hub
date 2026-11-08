@@ -60,6 +60,8 @@ const emptyState = (host: string): DeviceState => ({
   outputs: [],
   outputHardware: null,
   presets: [],
+  eq: { enabled: false, name: '', source: '', bands: [], presets: [], roomFit: false },
+  quality: { sampleRate: null, bitDepth: null, bitRate: null },
   updatedAt: null,
   online: false,
   lastSeen: null,

@@ -18,6 +18,29 @@ export type Action =
   | { action: 'preset'; slot: number }
   | { action: 'sleep'; seconds: number }
   | { action: 'output'; hardware: number }
+  | { action: 'eq'; enabled: boolean }
+  | { action: 'eqPreset'; name: string }
+  | { action: 'eqBand'; band: string; value: number }
+
+// The ten bands of the graphic equalizer, in the order the device reports
+// them. Only these names are writable: the payload is a name the firmware
+// matches against its own curve.
+export const eqBandNames = [
+  'band31hz',
+  'band63hz',
+  'band125hz',
+  'band250hz',
+  'band500hz',
+  'band1khz',
+  'band2khz',
+  'band4khz',
+  'band8khz',
+  'band16khz',
+] as const
+
+// Measured on the Pro: a band accepts -12..+12 dB. Outside that the firmware
+// answers Failed or clamps, so the hub refuses rather than guessing.
+const eqGainLimit = 12
 
 const fixed = {
   play: 'setPlayerCmd:resume',
@@ -79,6 +102,24 @@ export const parseAction = (body: unknown): Parsed => {
     if (hardware === null || hardware < 1 || hardware > 99) return { error: 'invalid output mode' }
     return { action: { action: 'output', hardware } }
   }
+  if (name === 'eq') {
+    if (typeof body.enabled !== 'boolean') return { error: 'invalid eq flag' }
+    return { action: { action: 'eq', enabled: body.enabled } }
+  }
+  if (name === 'eqPreset') {
+    if (typeof body.name !== 'string' || body.name === '' || body.name.length > 40) {
+      return { error: 'invalid eq preset' }
+    }
+    return { action: { action: 'eqPreset', name: body.name } }
+  }
+  if (name === 'eqBand') {
+    if (typeof body.band !== 'string' || !eqBandNames.includes(body.band as (typeof eqBandNames)[number])) {
+      return { error: 'invalid eq band' }
+    }
+    if (typeof body.value !== 'number' || !Number.isFinite(body.value)) return { error: 'invalid eq gain' }
+    if (Math.abs(body.value) > eqGainLimit) return { error: `eq gain outside -${eqGainLimit}..${eqGainLimit} dB` }
+    return { action: { action: 'eqBand', band: body.band, value: body.value } }
+  }
   return { error: `unknown action ${name}` }
 }
 
@@ -117,6 +158,25 @@ export const commandFor = (action: Action, device: DeviceState): Command | { err
         return { error: `output not available: ${action.hardware}` }
       }
       return { command: `setAudioOutputHardwareMode:${action.hardware}`, family: null }
+    case 'eq':
+      return { command: action.enabled ? 'EQOn' : 'EQOff', family: null }
+    case 'eqPreset':
+      // The list comes from the device itself, so a name outside it either
+      // does not exist on this firmware or was not meant as a preset.
+      if (!device.eq.presets.includes(action.name)) return { error: `unknown eq preset: ${action.name}` }
+      return { command: `EQLoad:${action.name}`, family: null }
+    case 'eqBand': {
+      // The curve is stored per source: writing without the source the device
+      // reported would edit another room's curve.
+      if (device.eq.source === '') return { error: 'eq source unknown' }
+      const payload = {
+        source_name: device.eq.source,
+        pluginURI: 'http://moddevices.com/plugins/caps/Eq10HP',
+        channelMode: 'Stereo',
+        EQBand: [{ param_name: action.band, value: Math.round(action.value * 10) / 10 }],
+      }
+      return { command: `EQSetLV2SourceBand:${JSON.stringify(payload)}`, family: 'eq-band' }
+    }
     default:
       return { error: 'unsupported action' }
   }

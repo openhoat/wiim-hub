@@ -11,7 +11,7 @@ type Override = Partial<
     Device,
     'volume' | 'mute' | 'status' | 'curposMs' | 'totalMs' | 'input' | 'sleepSeconds' | 'outputHardware'
   >
->
+> & { eq?: Partial<Device['eq']> }
 
 const lifetimeMs = 6000
 
@@ -43,6 +43,20 @@ const optimisticFor = (device: Device, action: Action): Override => {
       return { sleepSeconds: action.seconds }
     case 'output':
       return { outputHardware: action.hardware }
+    case 'eq':
+      return { eq: { enabled: action.enabled } }
+    case 'eqPreset':
+      // The curve of the named preset is not known to the browser: the next
+      // poll brings it, and the name is enough to confirm the click landed.
+      return { eq: { name: action.name } }
+    case 'eqBand': {
+      // A hand-moved band drops the factory name on the device: paint that too,
+      // so the curve stops claiming to be `Rock` the instant it stops being it.
+      const bands = device.eq.bands.map((band) =>
+        band.name === action.band ? { ...band, value: action.value } : band,
+      )
+      return { eq: { bands, name: '' } }
+    }
     default:
       return {}
   }
@@ -119,8 +133,16 @@ export const useControls = (device: Device): Controls => {
   const clearError = useCallback(() => setError(null), [])
 
   const fresh = override !== null && Date.now() - override.at < lifetimeMs
+  const painted = override !== null && fresh ? override.value : null
+  let shown = device
+  if (painted !== null) {
+    // `eq` is an object of its own: merging it like a scalar field would drop
+    // the curve as soon as a single flag was painted.
+    const { eq: eqPatch, ...rest } = painted
+    shown = { ...device, ...rest, eq: eqPatch === undefined ? device.eq : { ...device.eq, ...eqPatch } }
+  }
   return {
-    device: fresh ? { ...device, ...override.value } : device,
+    device: shown,
     pending: pending > 0,
     error,
     clearError,

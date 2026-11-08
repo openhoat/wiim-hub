@@ -31,6 +31,28 @@ export type Preset = { number: number; name: string; artwork: string }
 // value, so an unknown mode name stays unselectable instead of being guessed.
 export type OutputOption = { hardware: number; name: string }
 
+// One band of the graphic equalizer, as the device spells it (`band31hz`). The
+// curve is per source on the device, so `Equalizer.source` names the one the
+// bands belong to: a write must target that source, never a hardcoded one.
+export type EqBand = { name: string; value: number }
+
+export type Equalizer = {
+  enabled: boolean
+  // Empty once a band was moved by hand: the device drops the factory name and
+  // the curve becomes custom.
+  name: string
+  source: string
+  bands: EqBand[]
+  presets: string[]
+  // RoomFit (room correction) is reported as a capability: read-only here, the
+  // write payload was never measured on a device.
+  roomFit: boolean
+}
+
+// What `getMetaInfo` says about the stream itself: the numbers behind "is this
+// really lossless".
+export type Quality = { sampleRate: number | null; bitDepth: number | null; bitRate: number | null }
+
 export type DeviceState = {
   ip: string
   name: string
@@ -61,6 +83,8 @@ export type DeviceState = {
   outputs: OutputOption[]
   outputHardware: number | null
   presets: Preset[]
+  eq: Equalizer
+  quality: Quality
   updatedAt: number | null
   online: boolean
   lastSeen: number | null
@@ -100,6 +124,8 @@ export type DevicePatch = {
   outputs: OutputOption[]
   outputHardware: number | null
   presets: Preset[]
+  eq: Equalizer
+  quality: Quality
 }
 
 export const MAX_SAMPLES = 400
@@ -223,7 +249,10 @@ const getOnce = (ip: string, command: string, scheme: Scheme): Promise<string | 
     const options = {
       host: ip,
       port: scheme === 'https' ? 443 : 80,
-      path: `/httpapi.asp?command=${command}`,
+      // The equalizer commands carry a JSON argument (quotes, braces, spaces):
+      // the device decodes the query string, and an unencoded path with those
+      // characters is rejected by the HTTP client before it leaves the hub.
+      path: `/httpapi.asp?command=${encodeURIComponent(command)}`,
       method: 'GET',
       timeout: timeoutMs,
       headers: { accept: 'application/json, text/plain, */*' },
@@ -444,7 +473,6 @@ const capabilityFor = async (ip: string): Promise<Capability> => {
 
 const presetTtlMs = 60_000
 const presetCache = new Map<string, { at: number; value: Preset[] }>()
-
 const presetsFor = async (ip: string): Promise<Preset[]> => {
   const cached = presetCache.get(ip)
   if (cached !== undefined && Date.now() - cached.at < presetTtlMs) return cached.value
@@ -463,16 +491,81 @@ const presetsFor = async (ip: string): Promise<Preset[]> => {
   return value
 }
 
+// The graphic EQ plugin the firmware exposes. Reading a curve takes this URI
+// plus a source name; an empty source means "the one playing", and the answer
+// names it, which is what a later band write must target.
+export const eqPluginUri = 'http://moddevices.com/plugins/caps/Eq10HP'
+
+export const eqQuery = `EQGetLV2SourceBandEx:${JSON.stringify({ EQLevel: 1, source_name: '', pluginURI: eqPluginUri })}`
+
+type Acoustic = { at: number; presets: string[]; roomFit: boolean }
+const acousticCache = new Map<string, Acoustic>()
+
+// The factory curve names and the room-correction capability are static for a
+// firmware: neither changes while a player is streaming, so both ride the same
+// five minute cache as the input and output lists.
+const acousticFor = async (ip: string): Promise<Acoustic> => {
+  const cached = acousticCache.get(ip)
+  if (cached !== undefined && Date.now() - cached.at < capabilityTtlMs) return cached
+  const [listRaw, capabilityRaw] = await Promise.all([
+    fetchCommand(ip, 'EQGetList'),
+    fetchCommand(ip, 'GetAcousticCapability'),
+  ])
+  const list = parseArray(listRaw)
+  const capability = parseJson(capabilityRaw)
+  // A player without EQ answers `unknown command`: keep what was known rather
+  // than turning the panel off on one bad request.
+  const presets =
+    list === null ? (cached?.presets ?? []) : list.filter((name): name is string => typeof name === 'string' && name !== '')
+  const roomFit = isRecord(capability?.RC) ? true : (cached?.roomFit ?? false)
+  const value: Acoustic = { at: Date.now(), presets, roomFit }
+  acousticCache.set(ip, value)
+  return value
+}
+
+const readEq = (raw: string | null, acoustic: Acoustic): Equalizer => {
+  const parsed = parseJson(raw)
+  const bands: EqBand[] = []
+  if (Array.isArray(parsed?.EQBand)) {
+    const entries = parsed.EQBand.filter(isRecord)
+    entries.sort((left, right) => (num(left.index) ?? 0) - (num(right.index) ?? 0))
+    for (const entry of entries) {
+      const name = text(entry.param_name)
+      if (name === '') continue
+      const value = typeof entry.value === 'number' ? entry.value : Number.parseFloat(text(entry.value))
+      if (!Number.isFinite(value)) continue
+      bands.push({ name, value })
+    }
+  }
+  return {
+    enabled: text(parsed?.EQStat).toLowerCase() === 'on',
+    name: text(parsed?.Name),
+    source: text(parsed?.source_name),
+    bands,
+    presets: acoustic.presets,
+    roomFit: acoustic.roomFit,
+  }
+}
+
+// `getMetaInfo` reports the stream numbers as strings; they describe the codec
+// in flight, not the device, so they reset to nothing when playback stops.
+const readQuality = (metaData: Record<string, unknown>): Quality => ({
+  sampleRate: num(metaData.sampleRate),
+  bitDepth: num(metaData.bitDepth),
+  bitRate: num(metaData.bitRate),
+})
+
 // `host` is either an address or a resolvable name (`salon.local`), so the
 // caller never has to care which one the configuration carries.
 export const pollDevice = async (host: string): Promise<DevicePatch> => {
   const ip = resolveTarget(host)
-  const [statusRaw, playerRaw, metaRaw, outputRaw, sleepRaw] = await Promise.all([
+  const [statusRaw, playerRaw, metaRaw, outputRaw, sleepRaw, eqRaw] = await Promise.all([
     fetchCommand(ip, 'getStatusEx'),
     fetchCommand(ip, 'getPlayerStatusEx'),
     fetchCommand(ip, 'getMetaInfo'),
     fetchCommand(ip, 'getNewAudioOutputHardwareMode'),
     fetchCommand(ip, 'getShutdown'),
+    fetchCommand(ip, eqQuery),
   ])
   const status = parseJson(statusRaw)
   const player = parseJson(playerRaw)
@@ -488,6 +581,7 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
   const slavesRaw = grouped ? parseJson(await fetchCommand(ip, 'multiroom:getSlaveList')) : null
   const capability = online ? await capabilityFor(ip) : (capabilityCache.get(ip) ?? emptyCapability())
   const presets = online ? await presetsFor(ip) : (presetCache.get(ip)?.value ?? [])
+  const acoustic = online ? await acousticFor(ip) : (acousticCache.get(ip) ?? { at: 0, presets: [], roomFit: false })
   return {
     ip,
     online,
@@ -519,5 +613,7 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
     outputs: capability.outputs,
     outputHardware: num(output?.hardware),
     presets,
+    eq: readEq(eqRaw, acoustic),
+    quality: readQuality(metaData),
   }
 }

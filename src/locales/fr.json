@@ -112,5 +112,18 @@
     "confirmVolume": "Régler le volume à {n} ?",
     "apply": "Appliquer",
     "cancel": "Annuler"
+  },
+  "sound": {
+    "title": "Son",
+    "equalizer": "Égaliseur",
+    "on": "Activé",
+    "off": "Désactivé",
+    "presets": "Courbes",
+    "custom": "Personnalisée",
+    "gain": "gain",
+    "offHint": "La courbe reste enregistrée, mais n'est pas appliquée tant que l'égaliseur est désactivé.",
+    "roomFit": "Cet appareil annonce une correction acoustique. Le hub ne la modifie pas tant que le réglage n'est pas vérifié.",
+    "unavailable": "Cet appareil ne remonte pas d'égaliseur.",
+    "quality": "Qualité du flux telle que l'appareil l'annonce"
   }
 }

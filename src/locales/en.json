@@ -112,5 +112,18 @@
     "confirmVolume": "Set the volume to {n}?",
     "apply": "Apply",
     "cancel": "Cancel"
+  },
+  "sound": {
+    "title": "Sound",
+    "equalizer": "Equalizer",
+    "on": "On",
+    "off": "Off",
+    "presets": "Curves",
+    "custom": "Custom",
+    "gain": "gain",
+    "offHint": "The curve is stored but not applied while the equalizer is off.",
+    "roomFit": "This player reports room correction. Adjusting it stays out of the hub until the setting is proven.",
+    "unavailable": "This player does not report an equalizer.",
+    "quality": "Stream quality as reported by the player"
   }
 }

@@ -41,6 +41,9 @@ export type Action =
   | { action: 'preset'; slot: number }
   | { action: 'sleep'; seconds: number }
   | { action: 'output'; hardware: number }
+  | { action: 'eq'; enabled: boolean }
+  | { action: 'eqPreset'; name: string }
+  | { action: 'eqBand'; band: string; value: number }
 
 export type CommandResult = { ok: boolean; unsupported: boolean; command: string; body: string }
 
