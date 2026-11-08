@@ -1,0 +1,16 @@
+{
+  "description": "Self-hosted read-only hub for LinkPlay-based WiiM devices on the local network",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "keywords": ["diagnostic", "httpapi", "linkplay", "self-hosted", "wiim"],
+  "license": "MIT",
+  "name": "wiim-hub",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.ts",
+    "start:dev": "node --watch src/server.ts"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}

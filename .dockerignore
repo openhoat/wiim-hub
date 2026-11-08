@@ -1,0 +1,11 @@
+.git
+.github
+.gitignore
+.dockerignore
+.env
+.env.example
+examples
+scripts
+node_modules
+*.md
+LICENSE

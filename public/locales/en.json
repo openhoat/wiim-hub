@@ -1,0 +1,73 @@
+{
+  "title": "WiiM Web",
+  "subtitle": "Read-only view of the WiiM devices on your network.",
+  "views": {
+    "user": "Now playing",
+    "diagnostic": "Diagnostic"
+  },
+  "statuses": {
+    "play": "playing",
+    "pause": "paused",
+    "stop": "stopped",
+    "none": "idle",
+    "idle": "idle",
+    "loading": "loading"
+  },
+  "discover": "Discover",
+  "searching": "Searching...",
+  "added": "+{count} device(s)",
+  "noNewDevice": "No new device",
+  "discoveryFailed": "Failed",
+  "empty": "No device known. Set DEVICE_HOSTS or run discovery.",
+  "noPlayback": "nothing playing",
+  "unknown": "unknown",
+  "none": "none",
+  "never": "never",
+  "offline": "offline",
+  "secondsAgo": "{n} s ago",
+  "minutesAgo": "{n} min ago",
+  "rssiUnknown": "RSSI unknown",
+  "rssi": "RSSI {value} dBm",
+  "rssiChart": "RSSI over the last 20 minutes",
+  "sample": "sample {time}",
+  "hubDown": "hub unreachable",
+  "weakSignal": "weak signal",
+  "language": "Language",
+  "theme": "Theme",
+  "auto": "auto",
+  "dark": "dark",
+  "light": "light",
+  "details": "Details",
+  "hideDetails": "Hide details",
+  "export": "Export CSV",
+  "up": "up",
+  "down": "down",
+  "chipVolume": "Volume {value}",
+  "groupMembers": "{n} grouped",
+  "offlineCount": "{n} offline",
+  "labels": {
+    "address": "Address",
+    "firmware": "Firmware",
+    "network": "Network",
+    "bssid": "BSSID",
+    "group": "Group",
+    "volume": "Volume",
+    "state": "State",
+    "source": "Source",
+    "lastSeen": "Last seen",
+    "failures": "Failures"
+  },
+  "table": {
+    "time": "Time",
+    "rssi": "RSSI",
+    "volume": "Volume",
+    "state": "State",
+    "online": "Reachable"
+  },
+  "events": {
+    "online": "device reachable",
+    "offline": "device unreachable",
+    "status": "state",
+    "track": "track"
+  }
+}

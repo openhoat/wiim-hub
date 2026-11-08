@@ -1,0 +1,13 @@
+services:
+
+  wiim-hub:
+    build: ..
+    container_name: wiim-hub
+    ports:
+      - "8090:8090"
+    environment:
+      - PORT=8090
+      - POLL_MS=3000
+      - DEVICE_HOSTS=192.168.1.10
+      - DISCOVERY=1
+    restart: unless-stopped
