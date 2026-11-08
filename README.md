@@ -36,9 +36,9 @@ views diverge, and the device side is the one the official app consumes.
   speaker fetches itself. Every control paints the expected value immediately and lets the next
   poll confirm or revert it, and the hub serialises one write per device so a slider drag cannot
   race itself.
-- **Sound card**: the graphic equalizer read per source and edited one band at a time, the 24
-  factory curves, the stream quality the player reports (sample rate, bit depth, bit rate), and
-  room correction as a capability, read-only until its write payload is proven.
+- **Sound card**, folded until opened: the quality chip stays in the header, the graphic equalizer
+  is read per source and edited one band at a time, with the 24 factory curves and room correction
+  as a capability, read-only until its write payload is proven.
 - **Device settings sheet**: name, status LED, touch controls, balance, maximum volume and fade,
   read when the sheet opens and written on an explicit gesture. The hub keeps no copy.
 - **One writer per device**: volume and seek writes are coalesced to their last value, everything

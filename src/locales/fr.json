@@ -125,6 +125,8 @@
     "roomFit": "Cet appareil annonce une correction acoustique. Le hub ne la modifie pas tant que le réglage n'est pas vérifié.",
     "unavailable": "Cet appareil ne remonte pas d'égaliseur.",
     "offline": "Appareil injoignable, son égaliseur ne peut pas être lu.",
+    "show": "Afficher l'égaliseur",
+    "hide": "Masquer l'égaliseur",
     "quality": "Qualité du flux telle que l'appareil l'annonce"
   },
   "device": {

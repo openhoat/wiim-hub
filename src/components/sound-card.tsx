@@ -1,4 +1,4 @@
-import { AudioLines, SlidersHorizontal } from 'lucide-react'
+import { AudioLines, ChevronRight, SlidersHorizontal } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -209,28 +209,46 @@ const QualityChip = ({ device }: Readonly<{ device: Device }>) => {
 
 export const SoundCard = ({ device }: Readonly<{ device: Device }>) => {
   const { t } = useSettings()
+  // The curve is a wall of ten bars nobody reads at a glance: the card opens on
+  // a gesture, and the poll keeps the data fresh so the gesture costs no wait.
+  const [open, setOpen] = useState(false)
   const controls = useControls(device)
   const eq = controls.device.eq
   const available = eq.bands.length > 0
+  const panelId = `sound-panel-${device.ip}`
 
   return (
     <Card className={cn('p-5 sm:p-6', !device.online && 'opacity-80')}>
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-medium">{t('sound.title')}</h2>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={panelId}
+        aria-label={`${t('sound.title')}, ${open ? t('sound.hide') : t('sound.show')}`}
+        onClick={() => setOpen((value) => !value)}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <span className="flex min-w-0 items-center gap-2">
+          <ChevronRight
+            className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')}
+          />
+          <h2 className="text-sm font-medium">{t('sound.title')}</h2>
+        </span>
         <QualityChip device={controls.device} />
-      </div>
+      </button>
 
-      <div className="mt-4">
-        {available ? (
-          <EqualizerPanel controls={controls} />
-        ) : (
-          // A silent speaker and a speaker without an equalizer look the same
-          // on the wire; the card must not blame the model for a network miss.
-          <p className="text-[11px] text-muted-foreground">
-            {t(device.online ? 'sound.unavailable' : 'sound.offline')}
-          </p>
-        )}
-      </div>
+      {open && (
+        <div id={panelId} className="mt-4">
+          {available ? (
+            <EqualizerPanel controls={controls} />
+          ) : (
+            // A silent speaker and a speaker without an equalizer look the same
+            // on the wire; the card must not blame the model for a network miss.
+            <p className="text-[11px] text-muted-foreground">
+              {t(device.online ? 'sound.unavailable' : 'sound.offline')}
+            </p>
+          )}
+        </div>
+      )}
 
       <p
         role="status"
