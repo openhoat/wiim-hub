@@ -1,16 +1,42 @@
 {
-  "description": "Self-hosted read-only hub for LinkPlay-based WiiM devices on the local network",
+  "name": "wiim-hub",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted hub for LinkPlay-based WiiM devices on the local network",
   "engines": {
     "node": ">=22.18"
   },
-  "keywords": ["diagnostic", "httpapi", "linkplay", "self-hosted", "wiim"],
+  "keywords": ["linkplay", "self-hosted", "wiim"],
   "license": "MIT",
-  "name": "wiim-hub",
-  "private": true,
   "scripts": {
-    "start": "node src/server.ts",
-    "start:dev": "node --watch src/server.ts"
+    "build": "vite build",
+    "start": "node server/server.ts",
+    "start:dev": "vite",
+    "start:server": "node --watch server/server.ts",
+    "typecheck": "tsc --noEmit",
+    "validate": "npm run typecheck && npm run build"
   },
-  "type": "module",
-  "version": "0.1.0"
+  "dependencies": {
+    "@fontsource-variable/inter": "^5.3.0",
+    "@radix-ui/react-dropdown-menu": "^2.2.1",
+    "@radix-ui/react-slot": "^1.5.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.70.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.7.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.2.1",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^5.9.3",
+    "vite": "^8.3.6"
+  }
 }

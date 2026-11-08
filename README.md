@@ -26,12 +26,12 @@ views diverge, and the device side is the one the official app consumes.
   playback state, volume, group size, offline badge) and a *diagnostic* view for support (raw
   fields, RSSI sparkline, event log, sample table, CSV export). The selected view is remembered
   per browser.
-- Now playing: track, artist, album, album art, playback progress extrapolated between polls,
-  playback source badge.
+- Now playing: track, artist, album, album art (relayed by the hub, see below), playback progress
+  extrapolated between polls, playback source badge, playback state, volume.
 - RSSI history (400 samples, about 20 minutes at 3 s) with a sparkline, an event log (reachability,
   playback state, track changes), a weak-signal and offline indicator, and a count badge in the
   tab title.
-- Per-device details: sample table and CSV export.
+- Per-device details: sample table, JSON export and CSV export, copy of the device address.
 - Minimal i18n: English and French labels, picked from the browser, English fallback. Language and
   theme choices are remembered in `localStorage`.
 
@@ -45,6 +45,8 @@ Measured on a WiiM Pro, firmware `Linkplay.4.8.833748`, release `20261027`:
 - `getStatusEx`, `getPlayerStatusEx` and `getMetaInfo` answer; `getVolume`, `getEQ` and `getInfo`
   do not on that firmware, so missing keys are tolerated rather than treated as errors.
 - No CORS header: a browser cannot call the device directly, hence this hub.
+- Album art arrives as an absolute URL (sometimes an external streaming host): the hub fetches it,
+  the browser never talks to the speaker or to the streaming CDN.
 
 The endpoints live under `/httpapi.asp?command=<name>`; the family is documented by the
 community, not by the vendor, so the client is defensive by design.
@@ -67,13 +69,19 @@ bridge, set `DEVICE_HOSTS` explicitly; use `network_mode: host` if you want disc
 
 ## Run from sources
 
-Node 22.18+ runs the TypeScript sources directly, no build step and no dependency.
+The UI is a React application built by Vite; the server is plain TypeScript. Node 22.18+ runs the
+server sources directly (type stripping), so only the UI needs a build.
 
 ```sh
-PORT=8090 DEVICE_HOSTS=192.168.1.10 node src/server.ts
+npm ci
+npm run build                                  # writes dist/
+PORT=8090 DEVICE_HOSTS=192.168.1.10 npm start   # server + built UI on :8090
 ```
 
-Then open <http://localhost:8090>.
+For UI work, run the two processes side by side: `npm run start:server` (API on :8090, restarts on
+change) and `npm run start:dev` (Vite on :5173, proxies `/api` and `/health` to the API).
+
+Then open <http://localhost:8090>, or <http://localhost:5173> in development.
 
 ## Configuration
 
@@ -89,17 +97,27 @@ Then open <http://localhost:8090>.
 - `GET /health`: liveness, for container healthchecks
 - `GET /api/state`: devices, samples and events
 - `POST /api/discover`: one SSDP pass, then an immediate poll
+- `GET /api/art?host=<address>&uri=<cover>`: album art relay
+
+The art relay exists because an https hub page cannot load a cover served by the speaker over plain
+http, and a streaming service sometimes hands out a cover URL that only resolves locally. It only
+accepts the cover URI the device itself reported on its last poll, so it is not an open proxy.
 
 ## Layout
 
 ```text
-src/device.ts     device client: transport fallback, mDNS name resolution, parsing, hex decoding
-src/discovery.ts  SSDP discovery, filtered on WiiM and LinkPlay descriptions
-src/mdns.ts       dependency-free mDNS A record resolver
-src/server.ts     polling loop, ring buffers, HTTP routes, static files
-public/           web UI and locale files
-scripts/build.sh  image build and push
+server/device.ts     device client: transport fallback, mDNS name resolution, parsing, art relay
+server/discovery.ts  SSDP discovery, filtered on WiiM and LinkPlay descriptions
+server/mdns.ts       dependency-free mDNS A record resolver
+server/server.ts     polling loop, ring buffers, HTTP routes, static bundle, SPA fallback
+src/                 React UI: components, settings and i18n provider, formatting helpers
+src/locales/         en and fr dictionaries
+scripts/build.sh     image build and push
 ```
+
+The UI is React 19 + Vite + Tailwind CSS + shadcn/ui primitives (Radix), with lucide icons and a
+self-hosted Inter variable font: one accent colour, a warm dark theme by default, a now-playing
+view built around the album art, and a diagnostic view built around the numbers.
 
 ## Image publication
 

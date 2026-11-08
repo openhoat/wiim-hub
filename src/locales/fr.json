@@ -1,0 +1,93 @@
+{
+  "title": "WiiM Hub",
+  "subtitle": "Une vue calme de ce que font vos enceintes.",
+  "views": {
+    "user": "En lecture",
+    "diagnostic": "Diagnostic"
+  },
+  "settings": "Réglages",
+  "language": "Langue",
+  "theme": "Thème",
+  "auto": "Auto",
+  "langName": {
+    "en": "English",
+    "fr": "Français"
+  },
+  "dark": "Sombre",
+  "light": "Clair",
+  "discover": "Découvrir",
+  "discovering": "Recherche...",
+  "added": "{count} appareil(s) trouvé(s)",
+  "noNewDevice": "Aucun nouvel appareil",
+  "discoveryFailed": "Découverte impossible",
+  "empty": "Aucun appareil",
+  "emptyHint": "Renseigner DEVICE_HOSTS, ou lancer un scan du réseau.",
+  "deviceSummary": "{online} sur {total} en ligne",
+  "polled": "sondage toutes les {seconds} s",
+  "noPlayback": "Aucune lecture",
+  "unknown": "inconnu",
+  "none": "aucun",
+  "never": "jamais",
+  "offline": "hors ligne",
+  "online": "joignable",
+  "sample": "relevé {time}",
+  "secondsAgo": "il y a {n} s",
+  "minutesAgo": "il y a {n} min",
+  "hubDown": "Hôte injoignable",
+  "hubDownHint": "La page réessaie d'elle-même.",
+  "retry": "Réessayer",
+  "noEvents": "Aucun changement.",
+  "noSamples": "Aucun relevé.",
+  "weakSignal": "signal faible",
+  "rssiUnknown": "signal inconnu",
+  "rssi": "{value} dBm",
+  "rssiChart": "Signal sur les 20 dernières minutes",
+  "chipVolume": "Volume {value}",
+  "groupMembers": "{n} groupé(s)",
+  "offlineCount": "{n} hors ligne",
+  "details": "Échantillons",
+  "hideDetails": "Masquer les échantillons",
+  "export": "Exporter",
+  "exportCsv": "En CSV",
+  "exportJson": "En JSON",
+  "copy": "Copier l'adresse",
+  "copied": "Copié",
+  "sections": {
+    "fields": "Champs",
+    "signal": "Signal",
+    "timeline": "Chronologie"
+  },
+  "statuses": {
+    "play": "en lecture",
+    "pause": "en pause",
+    "stop": "arrêté",
+    "none": "au repos",
+    "idle": "au repos",
+    "loading": "chargement"
+  },
+  "labels": {
+    "address": "Adresse",
+    "firmware": "Micrologiciel",
+    "network": "Réseau",
+    "bssid": "BSSID",
+    "group": "Groupe",
+    "volume": "Volume",
+    "state": "État",
+    "source": "Source",
+    "lastSeen": "Dernière vue",
+    "failures": "Échecs"
+  },
+  "table": {
+    "time": "Heure",
+    "rssi": "Signal",
+    "volume": "Volume",
+    "state": "État",
+    "online": "Joignable"
+  },
+  "events": {
+    "online": "appareil joignable",
+    "offline": "appareil injoignable",
+    "status": "état",
+    "track": "piste"
+  }
+}

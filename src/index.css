@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/* The dark theme is a class on <html>, set by the settings provider, so the
+   switch never waits for a system media query round trip. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Warm neutrals, one green accent. The palette is deliberately quiet: the
+   album art is the only saturated surface on the page. */
+:root {
+  --background: oklch(0.973 0.006 85);
+  --foreground: oklch(0.25 0.012 60);
+  --card: oklch(0.998 0.002 85);
+  --card-foreground: var(--foreground);
+  --muted: oklch(0.944 0.008 85);
+  --muted-foreground: oklch(0.52 0.012 60);
+  --border: oklch(0.892 0.008 80);
+  --accent: oklch(0.56 0.13 152);
+  --accent-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.62 0.14 55);
+  --danger: oklch(0.58 0.18 22);
+}
+
+.dark {
+  --background: oklch(0.165 0.01 60);
+  --foreground: oklch(0.95 0.008 85);
+  --card: oklch(0.205 0.011 60);
+  --card-foreground: var(--foreground);
+  --muted: oklch(0.26 0.012 60);
+  --muted-foreground: oklch(0.68 0.012 70);
+  --border: oklch(0.31 0.012 60);
+  --accent: oklch(0.8 0.16 152);
+  --accent-foreground: oklch(0.2 0.04 152);
+  --warning: oklch(0.78 0.13 65);
+  --danger: oklch(0.7 0.17 22);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  /* A single warm halo at the top of the page: it keeps a dark screen from
+     reading as a flat black rectangle without tinting the cards. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: 22rem;
+    pointer-events: none;
+    z-index: -1;
+    background: radial-gradient(60% 100% at 50% 0%, color-mix(in oklch, var(--accent) 9%, transparent), transparent 70%);
+  }
+
+  :focus-visible {
+    outline: none;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--accent) 25%, transparent);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+}
+
+/* The three bars of the playing indicator. Short enough to feel alive, calm
+   enough to sit beside a title without pulling the eye. */
+@keyframes bar-dance {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+.eq-bar {
+  transform-origin: bottom;
+  animation: bar-dance 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .eq-bar {
+    animation: none;
+    transform: scaleY(0.7);
+  }
+}

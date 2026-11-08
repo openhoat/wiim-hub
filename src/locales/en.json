@@ -1,0 +1,93 @@
+{
+  "title": "WiiM Hub",
+  "subtitle": "A calm view of what your speakers are doing.",
+  "views": {
+    "user": "Now playing",
+    "diagnostic": "Diagnostic"
+  },
+  "settings": "Settings",
+  "language": "Language",
+  "theme": "Theme",
+  "auto": "Auto",
+  "langName": {
+    "en": "English",
+    "fr": "Français"
+  },
+  "dark": "Dark",
+  "light": "Light",
+  "discover": "Discover",
+  "discovering": "Scanning...",
+  "added": "{count} device(s) found",
+  "noNewDevice": "No new device",
+  "discoveryFailed": "Discovery failed",
+  "empty": "No device yet",
+  "emptyHint": "List devices in DEVICE_HOSTS, or scan the network.",
+  "deviceSummary": "{online} of {total} online",
+  "polled": "polled every {seconds} s",
+  "noPlayback": "Nothing playing",
+  "unknown": "unknown",
+  "none": "none",
+  "never": "never",
+  "offline": "offline",
+  "online": "reachable",
+  "sample": "updated {time}",
+  "secondsAgo": "{n} s ago",
+  "minutesAgo": "{n} min ago",
+  "hubDown": "Hub unreachable",
+  "hubDownHint": "It keeps retrying on its own.",
+  "retry": "Retry now",
+  "noEvents": "No change yet.",
+  "noSamples": "No sample yet.",
+  "weakSignal": "weak signal",
+  "rssiUnknown": "signal unknown",
+  "rssi": "{value} dBm",
+  "rssiChart": "Signal over the last 20 minutes",
+  "chipVolume": "Volume {value}",
+  "groupMembers": "{n} grouped",
+  "offlineCount": "{n} offline",
+  "details": "Samples",
+  "hideDetails": "Hide samples",
+  "export": "Export",
+  "exportCsv": "As CSV",
+  "exportJson": "As JSON",
+  "copy": "Copy the address",
+  "copied": "Copied",
+  "sections": {
+    "fields": "Fields",
+    "signal": "Signal",
+    "timeline": "Timeline"
+  },
+  "statuses": {
+    "play": "playing",
+    "pause": "paused",
+    "stop": "stopped",
+    "none": "idle",
+    "idle": "idle",
+    "loading": "loading"
+  },
+  "labels": {
+    "address": "Address",
+    "firmware": "Firmware",
+    "network": "Network",
+    "bssid": "BSSID",
+    "group": "Group",
+    "volume": "Volume",
+    "state": "State",
+    "source": "Source",
+    "lastSeen": "Last seen",
+    "failures": "Failures"
+  },
+  "table": {
+    "time": "Time",
+    "rssi": "Signal",
+    "volume": "Volume",
+    "state": "State",
+    "online": "Reachable"
+  },
+  "events": {
+    "online": "device reachable",
+    "offline": "device unreachable",
+    "status": "state",
+    "track": "track"
+  }
+}
