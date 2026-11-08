@@ -215,6 +215,7 @@ const artFor = async (url: URL, res: ServerResponse): Promise<void> => {
   const known =
     device !== undefined && (device.albumArt === uri || device.presets.some((preset) => preset.artwork === uri))
   if (host === '' || uri === '' || device === undefined || !known) {
+    console.warn(`wiim-hub: art refused, uri not reported by ${host === '' ? 'any host' : host}`)
     sendJson(res, 400, { error: 'unknown artwork' })
     return
   }

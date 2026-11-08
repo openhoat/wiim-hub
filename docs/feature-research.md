@@ -285,7 +285,9 @@ the feature. Rules marked **must** are correctness rules, not polish.
 - Empty list is the common case on a fresh device (`preset_num: 0` here): show an affordance
   that explains presets are created in the WiiM app, not a broken grid.
 - Preset art must be relayed like track art (the device URLs are HTTP, the hub is HTTPS, mixed
-  content otherwise).
+  content otherwise). The relay accepts only a URI the device reported, follows no redirect,
+  resolves the name once and connects to the checked address, refuses private targets other than
+  the speaker itself, sniffs the image type from the bytes, and stops at 6 MiB / 5 s.
 
 ### 5.5 EQ and acoustic
 

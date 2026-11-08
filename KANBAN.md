@@ -9,8 +9,8 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
-Nothing in progress: 0.4.0 shipped the equalizer, the stream quality, the device settings and the
-stream URL (#15, #17, #18 closed; see git history).
+Nothing in progress: 0.4.x shipped the equalizer, the stream quality, the device settings, the
+stream URL and the art relay constraints (#15, #17, #18, #3 closed; see git history).
 
 ## Backlog
 
@@ -20,11 +20,6 @@ stream URL (#15, #17, #18 closed; see git history).
 - [ ] Add the deterministic guided flows: no sound, drops, wrong output, cannot join a group
 - [ ] Export one JSON report plus a Markdown summary, and copy it from the UI
 - [ ] Say "no anomaly detected" when nothing is wrong, with the values that support it
-
-### #3 [SECURITY] Constrain the cover art relay to URLs the device reported (P1)
-
-- [ ] Reject any `uri` that was not seen in a device payload, and cap size, type and timeouts
-- [ ] Block private ranges other than the configured device hosts, and log refusals
 
 ### #4 [UX] Add a multiroom group view with per member control (P2)
 

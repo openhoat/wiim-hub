@@ -143,7 +143,16 @@ closed to anything the page did not anticipate.
 The art relay exists because an https hub page cannot load a cover served by the speaker over plain
 http, and a streaming service sometimes hands out a cover URL that only resolves locally. It only
 accepts a cover URI the device itself reported on its last poll, track or preset, so it is not an
-open proxy.
+open proxy. Beyond that check:
+
+- the target name is resolved once, and the connection goes to the address that was checked, so a
+  name cannot answer a public address during the check and a private one at connect time;
+- a private, loopback, link-local, carrier NAT or multicast address is refused, with one exception:
+  the speaker's own address, which is the one device the hub already polls. A cover hosted by
+  another machine on the local network is refused rather than fetched;
+- the body decides the type: JPEG, PNG, GIF and WebP are recognised from their first bytes, and a
+  text or HTML answer is refused even when the response claims to be an image;
+- the transfer stops at 6 MiB and 5 s, and every refusal is logged with its reason.
 
 ## Layout
 
