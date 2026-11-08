@@ -109,7 +109,10 @@ Fields worth knowing inside `getStatusEx`, all measured: `DeviceName`, `GroupNam
 `audio_channel_config`, `app_timezone_id`, `power_mode`, `privacy_mode`, `temp_uuid`,
 `update_check_count`, `streams` (bitmask of supported services), `plm_support`.
 
-## 4. Write surface (documented, to be probed in v2)
+## 4. Write surface (measured on the reference player)
+
+Every command below was sent to the reference player one at a time, and the state it is supposed
+to change was read back afterwards. The raw answers are in the appendix; the conclusions are here.
 
 Playback and volume:
 
@@ -155,6 +158,43 @@ Bluetooth (only meaningful with the right hardware):
 
 - `getBluetoothHistory`, `scanbta2dpsynk`, `connectbta2dpsynk:<mac>`, disconnect and pair status
   commands. Out of scope until a device reports a Bluetooth output.
+
+### 4.1 Measured behaviour
+
+One write at a time, re-read after each; `curpos`/`totlen` are milliseconds here.
+
+| Write | Answer | Re-read | Conclusion |
+| --- | --- | --- | --- |
+| `setPlayerCmd:pause` | `OK` | `status=pause` | accepted, state follows |
+| `setPlayerCmd:resume` | `OK` | `status=play` | resumes a paused stream |
+| `setPlayerCmd:onepause` twice | `OK` | `pause` then `play` | real toggle, usable as one button |
+| `setPlayerCmd:next` | `OK` | `status=load`, `totlen=0` | a transition reads as unknown duration, not as live |
+| `setPlayerCmd:prev` | `OK` | new track, `status=play` | the previous track restarts |
+| `setPlayerCmd:seek:60` | `OK` | `curpos=60000` | **seconds** in, milliseconds out |
+| `setPlayerCmd:vol:30` | `OK` | `vol=30` | absolute level, within `max_volume` |
+| `setPlayerCmd:mute:1` then `:0` | `OK` | `mute=1` then `0` | boolean flag |
+| `setPlayerCmd:loopmode:4` then `:0` | `OK` | `loop=4` then `0` | accepted; the mode family is not documented per value |
+| `MCUKeyShortClick:1` | `OK` | nothing changed | answered `OK` with **no preset configured**: the answer does not prove the slot exists |
+| `setShutdown:60` then `:0` | `OK` | `getShutdown=60` then `0` | sleep timer, cancellable |
+| `EQLoad:Rock` | full JSON with `EQStat=On`, `Name=Rock`, 10 bands | curve readable by source | `EQLoad` answers with the state, not `OK` |
+| `EQOff` | `{"status":"OK"}` | `EQStat=Off`, `Name=Rock` kept | off is a switch, not a reset |
+| `setAudioOutputHardwareMode:1` | `OK` | `hardware=1` (Optical) | the mode-name table holds for the routes tested |
+| `setAudioOutputHardwareMode:2` | `OK` | `hardware=2` (Line) | restoring the previous route works |
+| `setPlayerCmd:switchmode:optical` | `OK` | `mode=43`, still playing, `vendor` empty | input switch keeps the transport running |
+| `setPlayerCmd:switchmode:wifi` | `OK` | `mode=10`, `status=stop` | switching back does **not** resume the stream |
+
+Consequences for the hub:
+
+- A write answers `OK`, a JSON body, `Failed` or `unknown command`. Anything that is not one of
+  the two failure tokens is an acceptance; the body must still be shown when it is not `OK`.
+- `seek` takes seconds while `curpos` is in milliseconds: the client divides, the device does not
+  convert.
+- An input switch can leave the device stopped: after `switchmode` the UI must re-read, never
+  assume playback continued.
+- `MCUKeyShortClick` is accepted for an empty slot: presets are read from `getPresetInfo`, never
+  inferred from the write answer.
+- `EQLoad` returns the full curve: the hub can confirm the preset from the write answer itself.
+
 
 ## 5. Requirements by area
 
@@ -417,10 +457,11 @@ that makes a bug report actionable without asking the user to run curl.
 | Multiroom | v3 | group card, per member volume, join/leave |
 | UPnP events | performance | replace polling, fallback kept |
 
-## Appendix: v2 write probe list
+## Appendix: v2 write probe, executed
 
-Run in this order, one at a time, on a player that is allowed to make noise. Record the raw body
-and re-read the state after each write.
+Run in this order, one at a time, on a player allowed to make noise. Record the raw body and
+re-read the state after each write. Executed on the reference player on 08/11/2026; the log is
+kept outside the repository (`/tmp/opencode/wiim-write-probe.log`), the conclusions are in 4.1.
 
 1. `setPlayerCmd:pause` then `setPlayerCmd:resume`, confirm with `getPlayerStatus.status`.
 2. `setPlayerCmd:onepause` twice, confirm the toggle semantics.
@@ -436,3 +477,8 @@ and re-read the state after each write.
 10. `setShutdown:60` then `setShutdown:0`, confirm with `getShutdown`.
 11. `EQLoad:<preset>` then `EQOff`, confirm with `EQGetLV2SourceBandEx`.
 12. `setPlayerCmd:switchmode:optical` and back to `wifi`, confirm `mode` and `status`.
+
+Steps 1 to 12 all ran; step 8 could not confirm a stream change because the reference player has
+no preset configured (`preset_num: 0`), so the acceptance of `MCUKeyShortClick` on an empty slot is
+the only observable there.
+

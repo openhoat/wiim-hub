@@ -1,11 +1,12 @@
 # WiiM Hub
 
-Read-only hub for WiiM devices (and other LinkPlay-based players) on a local network: what each
-device is playing, and what it reports about itself, polled every few seconds and served as a
-small web page.
+Hub for WiiM devices (and other LinkPlay-based players) on a local network: what each device is
+playing, what it reports about itself, and, from 0.3.0, the controls you need when the vendor app
+is not at hand. Devices are polled every few seconds and served as a small web page.
 
-A local, self-hosted complement to the vendor app. v1 **observes only**: it never writes to a
-device. Remote control and multiroom are roadmap items, not promises.
+A local, self-hosted complement to the vendor app: the same device data, on a screen you already
+have open, with an interface that fits a browser and a phone. Multiroom is a roadmap item, not a
+promise.
 
 ## Why a second view
 
@@ -28,6 +29,12 @@ views diverge, and the device side is the one the official app consumes.
   per browser.
 - Now playing: track, artist, album, album art (relayed by the hub, see below), playback progress
   extrapolated between polls, playback source badge, playback state, volume.
+- **Controls** on the now playing card: play and pause, previous, next, stop, seek, volume and
+  mute, source switching, saved presets, sleep timer, audio output route. Every control paints
+  the expected value immediately and lets the next poll confirm or revert it, and the hub
+  serialises one write per device so a slider drag cannot race itself.
+- **One writer per device**: volume and seek writes are coalesced to their last value, everything
+  else is queued in order. The device is a small embedded server, not a database.
 - RSSI history (400 samples, about 20 minutes at 3 s) with a sparkline, an event log (reachability,
   playback state, track changes), a weak-signal and offline indicator, and a count badge in the
   tab title.
@@ -44,6 +51,14 @@ Measured on a WiiM Pro, firmware `Linkplay.4.8.833748`, release `20261027`:
 - Some fields are hex-encoded (`essid`, `Title`): decoded when the bytes read as text.
 - `getStatusEx`, `getPlayerStatusEx` and `getMetaInfo` answer; `getVolume`, `getEQ` and `getInfo`
   do not on that firmware, so missing keys are tolerated rather than treated as errors.
+- Writes are `GET` requests too, and answer `OK`, a JSON body, `Failed` or `unknown command`. The
+  last one is a capability answer, not a transient failure: the control is then shown as
+  unsupported instead of retried.
+- `setPlayerCmd:seek:<n>` takes **seconds** while `curpos` comes back in milliseconds.
+  `MCUKeyShortClick` answers `OK` even for an empty preset slot, so presets are read from
+  `getPresetInfo`, never inferred from the write.
+- Switching input with `setPlayerCmd:switchmode` can leave the device stopped: after a source
+  change the hub re-reads instead of assuming playback continued.
 - No CORS header: a browser cannot call the device directly, hence this hub.
 - Album art arrives as an absolute URL (sometimes an external streaming host): the hub fetches it,
   the browser never talks to the speaker or to the streaming CDN.
@@ -96,20 +111,29 @@ Then open <http://localhost:8090>, or <http://localhost:5173> in development.
 
 - `GET /health`: liveness, for container healthchecks
 - `GET /api/state`: devices, samples and events
+- `POST /api/command?host=<address>`: one intent (`{"action":"volume","level":30}`), validated
+  against the device state and written through the per-device queue
 - `POST /api/discover`: one SSDP pass, then an immediate poll
-- `GET /api/art?host=<address>&uri=<cover>`: album art relay
+- `GET /api/art?host=<address>&uri=<cover>`: album art and preset art relay
+
+The command route accepts an intent, never a raw device command. The server owns the mapping:
+it bounds the volume by the device's `max_volume`, refuses an input or an output the device does
+not report, and answers with the device body so the UI can show it. That keeps the write surface
+closed to anything the page did not anticipate.
 
 The art relay exists because an https hub page cannot load a cover served by the speaker over plain
 http, and a streaming service sometimes hands out a cover URL that only resolves locally. It only
-accepts the cover URI the device itself reported on its last poll, so it is not an open proxy.
+accepts a cover URI the device itself reported on its last poll, track or preset, so it is not an
+open proxy.
 
 ## Layout
 
 ```text
 server/device.ts     device client: transport fallback, mDNS name resolution, parsing, art relay
+server/commands.ts   accepted intents, validation against the device state, command mapping
 server/discovery.ts  SSDP discovery, filtered on WiiM and LinkPlay descriptions
 server/mdns.ts       dependency-free mDNS A record resolver
-server/server.ts     polling loop, ring buffers, HTTP routes, static bundle, SPA fallback
+server/server.ts     polling loop, write queue, ring buffers, HTTP routes, static bundle, SPA fallback
 src/                 React UI: components, settings and i18n provider, formatting helpers
 src/locales/         en and fr dictionaries
 scripts/build.sh     image build and push

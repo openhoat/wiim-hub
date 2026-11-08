@@ -20,6 +20,17 @@ export type DeviceEvent = {
   to: string
 }
 
+// A saved radio preset. The slot number is the identity: the list a device
+// reports is sparse (slots 1 and 6 are a valid answer), so the array index is
+// never a usable key.
+export type Preset = { number: number; name: string; artwork: string }
+
+// An output the hub is able to select. `hardware` is the integer the device
+// expects in `setAudioOutputHardwareMode`, mapped from the mode name: the
+// `index` field of `getSoundCardModeSupportList` is not documented as the same
+// value, so an unknown mode name stays unselectable instead of being guessed.
+export type OutputOption = { hardware: number; name: string }
+
 export type DeviceState = {
   ip: string
   name: string
@@ -40,6 +51,16 @@ export type DeviceState = {
   totalMs: number | null
   source: string
   slaves: number
+  mode: string
+  input: string
+  maxVolume: number | null
+  mute: boolean
+  sleepSeconds: number | null
+  inputs: string[]
+  inputLabels: Record<string, string>
+  outputs: OutputOption[]
+  outputHardware: number | null
+  presets: Preset[]
   updatedAt: number | null
   online: boolean
   lastSeen: number | null
@@ -69,6 +90,16 @@ export type DevicePatch = {
   totalMs: number | null
   source: string
   slaves: number
+  mode: string
+  input: string
+  maxVolume: number | null
+  mute: boolean
+  sleepSeconds: number | null
+  inputs: string[]
+  inputLabels: Record<string, string>
+  outputs: OutputOption[]
+  outputHardware: number | null
+  presets: Preset[]
 }
 
 export const MAX_SAMPLES = 400
@@ -167,7 +198,14 @@ const cleanModel = (value: string): string => value.replace(/_with_.*$/i, '').re
 
 // Idle firmware reports the placeholder "Unknown" as the track title: it is a
 // device artefact, not a track, so it must not reach the card.
-const cleanTitle = (value: string): string => (/^unknown$/i.test(value.trim()) ? '' : value)
+const cleanTitle = (value: string): string => (/^unknow?n?$/i.test(value.trim()) ? '' : value)
+
+// The same firmware answers `un_known` for a cover it does not have: relaying
+// that string produces a broken image on every poll of a stopped player.
+const artUri = (value: string): string => {
+  const uri = value.trim()
+  return /^(un[_-]?known|-)$/i.test(uri) ? '' : uri
+}
 
 // Firmware encodes some strings as hex (essid, Title): decode only when the
 // bytes read as printable text, so numeric values stay untouched.
@@ -291,18 +329,155 @@ export const fetchAlbumArt = async (host: string, uri: string): Promise<Binary |
   return getBinary(target, path, scheme === 'https' ? 'http' : 'https', port, insecure)
 }
 
+const isArray = (value: unknown): value is unknown[] => Array.isArray(value)
+
+const parseArray = (raw: string | null): unknown[] | null => {
+  if (!raw) return null
+  try {
+    const value: unknown = JSON.parse(raw)
+    return isArray(value) ? value : null
+  } catch {
+    return null
+  }
+}
+
+// Playback mode -> input id. Only the codes seen on a real player are mapped
+// (10-19 is the device playlist over the network, then the analogue and
+// digital inputs); anything else stays unknown rather than lighting up the
+// wrong source.
+const inputFromMode = (mode: string): string => {
+  const code = Number.parseInt(mode, 10)
+  if (Number.isFinite(code) && code >= 10 && code <= 19) return 'wifi'
+  if (code === 40) return 'line-in'
+  if (code === 41) return 'bluetooth'
+  if (code === 43) return 'optical'
+  return ''
+}
+
+// The integer `setAudioOutputHardwareMode` expects, by mode name. An output
+// whose name is not in this table stays unselectable on purpose: writing a
+// guessed integer would route the audio somewhere the user did not ask for.
+const hardwareByOutputMode: Record<string, number> = {
+  AUDIO_OUTPUT_SPDIF_MODE: 1,
+  AUDIO_OUTPUT_AUX_MODE: 2,
+  AUDIO_OUTPUT_COAX_MODE: 3,
+  AUDIO_OUTPUT_BT_MODE: 4,
+  AUDIO_OUTPUT_USB_MODE: 8,
+}
+
+type Capability = { at: number; inputs: string[]; inputLabels: Record<string, string>; outputs: OutputOption[] }
+
+const capabilityTtlMs = 300_000
+const capabilityCache = new Map<string, Capability>()
+
+// Inputs come from two places: the physical list the model reports, then the
+// inputs the user left enabled in the vendor app. A disabled input is kept
+// when the device reports it as present, because the hardware did not vanish;
+// only an input the user enabled but the capability list missed is added.
+const readInputs = (capabilityRaw: string | null, enableRaw: string | null): string[] => {
+  const list: string[] = []
+  const capability = parseJson(capabilityRaw)
+  if (Array.isArray(capability?.audioInput)) {
+    for (const entry of capability.audioInput) {
+      if (!isRecord(entry)) continue
+      const mode = text(entry.mode)
+      if (mode !== '' && !list.includes(mode)) list.push(mode)
+    }
+  }
+  const enable = parseJson(enableRaw)
+  if (Array.isArray(enable?.audioInput)) {
+    for (const entry of enable.audioInput) {
+      if (!isRecord(entry)) continue
+      const mode = text(entry.mode)
+      if (mode !== '' && num(entry.enable) === 1 && !list.includes(mode)) list.push(mode)
+    }
+  }
+  return list
+}
+
+const readLabels = (raw: string | null): Record<string, string> => {
+  const parsed = parseJson(raw)
+  if (parsed === null) return {}
+  const labels: Record<string, string> = {}
+  for (const [key, value] of Object.entries(parsed)) {
+    if (typeof value === 'string' && value !== '') labels[key] = value
+  }
+  return labels
+}
+
+const readOutputs = (raw: string | null): OutputOption[] => {
+  const parsed = parseArray(raw)
+  if (parsed === null) return []
+  const outputs: OutputOption[] = []
+  for (const entry of parsed) {
+    if (!isRecord(entry) || !isRecord(entry.soundCard)) continue
+    const hardware = hardwareByOutputMode[text(entry.mode)]
+    const name = text(entry.soundCard.devName)
+    if (hardware === undefined || name === '') continue
+    if (outputs.some((output) => output.hardware === hardware)) continue
+    outputs.push({ hardware, name })
+  }
+  return outputs
+}
+
+const emptyCapability = (): Capability => ({ at: 0, inputs: [], inputLabels: {}, outputs: [] })
+
+// Probing a capability costs four requests and the answer almost never
+// changes: cache it per address, and never let a failed probe erase what was
+// already known.
+const capabilityFor = async (ip: string): Promise<Capability> => {
+  const cached = capabilityCache.get(ip)
+  if (cached !== undefined && Date.now() - cached.at < capabilityTtlMs) return cached
+  const [capabilityRaw, enableRaw, renameRaw, outputRaw] = await Promise.all([
+    fetchCommand(ip, 'getAudioInputCapbility'),
+    fetchCommand(ip, 'getAudioInputEnable'),
+    fetchCommand(ip, 'getModeRename'),
+    fetchCommand(ip, 'getSoundCardModeSupportList'),
+  ])
+  const inputs = readInputs(capabilityRaw, enableRaw)
+  const outputs = readOutputs(outputRaw)
+  if (inputs.length === 0 && outputs.length === 0) return cached ?? emptyCapability()
+  const value: Capability = { at: Date.now(), inputs, inputLabels: readLabels(renameRaw), outputs }
+  capabilityCache.set(ip, value)
+  return value
+}
+
+const presetTtlMs = 60_000
+const presetCache = new Map<string, { at: number; value: Preset[] }>()
+
+const presetsFor = async (ip: string): Promise<Preset[]> => {
+  const cached = presetCache.get(ip)
+  if (cached !== undefined && Date.now() - cached.at < presetTtlMs) return cached.value
+  const info = parseJson(await fetchCommand(ip, 'getPresetInfo'))
+  const entries = Array.isArray(info?.preset_list) ? info.preset_list : null
+  if (entries === null) return cached?.value ?? []
+  const value: Preset[] = []
+  for (const entry of entries) {
+    if (!isRecord(entry)) continue
+    const number = num(entry.number)
+    if (number === null || number <= 0) continue
+    value.push({ number, name: text(entry.name) || String(number), artwork: artUri(text(entry.picurl)) })
+  }
+  value.sort((left, right) => left.number - right.number)
+  presetCache.set(ip, { at: Date.now(), value })
+  return value
+}
+
 // `host` is either an address or a resolvable name (`salon.local`), so the
 // caller never has to care which one the configuration carries.
 export const pollDevice = async (host: string): Promise<DevicePatch> => {
   const ip = resolveTarget(host)
-  const [statusRaw, playerRaw, metaRaw] = await Promise.all([
+  const [statusRaw, playerRaw, metaRaw, outputRaw, sleepRaw] = await Promise.all([
     fetchCommand(ip, 'getStatusEx'),
     fetchCommand(ip, 'getPlayerStatusEx'),
     fetchCommand(ip, 'getMetaInfo'),
+    fetchCommand(ip, 'getNewAudioOutputHardwareMode'),
+    fetchCommand(ip, 'getShutdown'),
   ])
   const status = parseJson(statusRaw)
   const player = parseJson(playerRaw)
   const meta = parseJson(metaRaw)
+  const output = parseJson(outputRaw)
   const metaData = meta && isRecord(meta.metaData) ? meta.metaData : {}
   const online = status !== null
   if (!online) forgetTarget(host)
@@ -311,6 +486,8 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
   // it belongs to a group, instead of on every poll of a standalone speaker.
   const grouped = groupId !== '' && groupId !== '0'
   const slavesRaw = grouped ? parseJson(await fetchCommand(ip, 'multiroom:getSlaveList')) : null
+  const capability = online ? await capabilityFor(ip) : (capabilityCache.get(ip) ?? emptyCapability())
+  const presets = online ? await presetsFor(ip) : (presetCache.get(ip)?.value ?? [])
   return {
     ip,
     online,
@@ -325,12 +502,22 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
     volume: num(player?.vol),
     status: text(player?.status),
     title: cleanTitle(text(metaData.title) || maybeHex(text(player?.Title))),
-    artist: text(metaData.artist),
-    album: text(metaData.album),
-    albumArt: text(metaData.albumArtURI),
+    artist: cleanTitle(text(metaData.artist)),
+    album: cleanTitle(text(metaData.album)),
+    albumArt: artUri(text(metaData.albumArtURI)),
     curposMs: num(player?.curpos),
     totalMs: num(player?.totlen),
     source: text(player?.vendor),
     slaves: num(slavesRaw?.slaves) ?? 0,
+    mode: text(player?.mode),
+    input: inputFromMode(text(player?.mode)),
+    maxVolume: num(status?.max_volume),
+    mute: num(player?.mute) === 1,
+    sleepSeconds: num(sleepRaw),
+    inputs: capability.inputs,
+    inputLabels: capability.inputLabels,
+    outputs: capability.outputs,
+    outputHardware: num(output?.hardware),
+    presets,
   }
 }

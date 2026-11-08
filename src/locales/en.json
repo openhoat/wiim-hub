@@ -89,5 +89,28 @@
     "offline": "device unreachable",
     "status": "state",
     "track": "track"
+  },
+  "controls": {
+    "play": "Play",
+    "pause": "Pause",
+    "stop": "Stop",
+    "previous": "Previous",
+    "next": "Next",
+    "mute": "Mute",
+    "unmute": "Unmute",
+    "volume": "Volume",
+    "seek": "Position",
+    "live": "live",
+    "sources": "Source",
+    "outputs": "Output",
+    "sleep": "Sleep timer",
+    "sleepOff": "Off",
+    "sleepMinutes": "{n} min",
+    "presets": "Presets",
+    "unsupported": "This player does not accept that command.",
+    "failed": "Command failed:",
+    "confirmVolume": "Set the volume to {n}?",
+    "apply": "Apply",
+    "cancel": "Cancel"
   }
 }

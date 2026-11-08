@@ -6,10 +6,12 @@ import {
   type DevicePatch,
   type DeviceState,
   fetchAlbumArt,
+  fetchCommand,
   MAX_EVENTS,
   MAX_SAMPLES,
   pollDevice,
 } from './device.ts'
+import { commandFor, commandOutcome, parseAction } from './commands.ts'
 import { discoverSsdp } from './discovery.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
@@ -48,6 +50,16 @@ const emptyState = (host: string): DeviceState => ({
   totalMs: null,
   source: '',
   slaves: 0,
+  mode: '',
+  input: '',
+  maxVolume: null,
+  mute: false,
+  sleepSeconds: null,
+  inputs: [],
+  inputLabels: {},
+  outputs: [],
+  outputHardware: null,
+  presets: [],
   updatedAt: null,
   online: false,
   lastSeen: null,
@@ -112,6 +124,62 @@ const pollAll = async (): Promise<void> => {
   }
 }
 
+// One writer per device. The device is a small embedded server: two
+// concurrent writes can interleave, and a slider drag would otherwise emit
+// dozens of requests whose answers arrive out of order. Commands are queued in
+// order, except the families marked by `commandFor` (volume, seek) where only
+// the last value matters: a pending one of the same family takes the new value
+// in place, and every caller waiting on it gets the same final answer.
+type Outcome = { ok: boolean; unsupported: boolean; command: string; body: string }
+type Resolve = (outcome: Outcome) => void
+type Job = { command: string; family: string | null; resolvers: Resolve[] }
+
+const queues = new Map<string, Job[]>()
+const draining = new Set<string>()
+
+const drain = async (key: string): Promise<void> => {
+  if (draining.has(key)) return
+  draining.add(key)
+  try {
+    const queue = queues.get(key) ?? []
+    while (queue.length > 0) {
+      const job = queue.shift() as Job
+      const state = states.get(key)
+      const body = await fetchCommand(state?.ip ?? key, job.command)
+      const outcome = { ...commandOutcome(body), command: job.command, body: body ?? '' }
+      for (const resolve of job.resolvers) resolve(outcome)
+    }
+  } finally {
+    draining.delete(key)
+  }
+}
+
+const enqueue = (key: string, command: string, family: string | null): Promise<Outcome> =>
+  new Promise((resolve) => {
+    const queue = queues.get(key) ?? []
+    const pending = family === null ? undefined : queue.find((job) => job.family === family)
+    if (pending !== undefined) {
+      pending.command = command
+      pending.resolvers.push(resolve)
+    } else {
+      queue.push({ command, family, resolvers: [resolve] })
+    }
+    queues.set(key, queue)
+    void drain(key)
+  })
+
+// A write changes the state the hub renders: read it back quickly instead of
+// waiting for the next tick, so the optimistic value is confirmed or dropped
+// within a few hundred milliseconds.
+let followUp: NodeJS.Timeout | null = null
+const pollSoon = (delay: number): void => {
+  if (followUp !== null) clearTimeout(followUp)
+  followUp = setTimeout(() => {
+    followUp = null
+    void pollAll()
+  }, delay)
+}
+
 const refreshHosts = async (): Promise<number> => {
   if (!discoveryEnabled) return 0
   const found = await discoverSsdp()
@@ -137,7 +205,9 @@ const artFor = async (url: URL, res: ServerResponse): Promise<void> => {
   const host = url.searchParams.get('host') ?? ''
   const uri = url.searchParams.get('uri') ?? ''
   const device = states.get(host) ?? [...states.values()].find((state) => state.ip === host)
-  if (host === '' || uri === '' || device === undefined || device.albumArt !== uri) {
+  const known =
+    device !== undefined && (device.albumArt === uri || device.presets.some((preset) => preset.artwork === uri))
+  if (host === '' || uri === '' || device === undefined || !known) {
     sendJson(res, 400, { error: 'unknown artwork' })
     return
   }
@@ -151,6 +221,82 @@ const artFor = async (url: URL, res: ServerResponse): Promise<void> => {
   // browser stops asking on every poll while a track plays.
   res.writeHead(200, { 'content-type': art.type, 'cache-control': 'private, max-age=86400, immutable' })
   res.end(art.body)
+}
+
+const readBody = (req: IncomingMessage, limit = 2048): Promise<string | null> =>
+  new Promise((resolve) => {
+    let size = 0
+    const chunks: Buffer[] = []
+    req.on('data', (chunk: Buffer) => {
+      size += chunk.length
+      if (size > limit) {
+        req.destroy()
+        resolve(null)
+        return
+      }
+      chunks.push(chunk)
+    })
+    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+    req.on('error', () => resolve(null))
+  })
+
+// The browser knows a device by the address it last saw, which may be the
+// configured name, the resolved address, or both: accept either and write
+// through the same queue key so two spellings cannot run two writers.
+const findEntry = (host: string): { key: string; state: DeviceState } | null => {
+  const direct = states.get(host)
+  if (direct !== undefined) return { key: host, state: direct }
+  for (const [key, state] of states) {
+    if (state.ip === host) return { key, state }
+  }
+  return null
+}
+
+const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  // A JSON content type cannot be produced by an HTML form, so a cross-site
+  // form post cannot reach a device even when the ingress cookie is loose.
+  const type = req.headers['content-type'] ?? ''
+  if (!type.toLowerCase().includes('application/json')) {
+    sendJson(res, 415, { error: 'content-type must be application/json' })
+    return
+  }
+  const host = url.searchParams.get('host') ?? ''
+  const entry = host === '' ? null : findEntry(host)
+  if (entry === null) {
+    sendJson(res, 404, { error: 'unknown device' })
+    return
+  }
+  // Writing to a device that just stopped answering would queue a command for
+  // a machine nobody can reach: refuse, and let the user retry when it is back.
+  if (!entry.state.online) {
+    sendJson(res, 409, { error: 'device offline' })
+    return
+  }
+  const raw = await readBody(req)
+  if (raw === null) {
+    sendJson(res, 413, { error: 'body too large' })
+    return
+  }
+  let body: unknown
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    sendJson(res, 400, { error: 'invalid json' })
+    return
+  }
+  const parsed = parseAction(body)
+  if ('error' in parsed) {
+    sendJson(res, 400, parsed)
+    return
+  }
+  const command = commandFor(parsed.action, entry.state)
+  if ('error' in command) {
+    sendJson(res, 422, command)
+    return
+  }
+  const outcome = await enqueue(entry.key, command.command, command.family)
+  pollSoon(400)
+  sendJson(res, 200, outcome)
 }
 
 const contentTypes: Record<string, string> = {
@@ -199,6 +345,10 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
   if (url.pathname === '/api/art') {
     await artFor(url, res)
+    return
+  }
+  if (url.pathname === '/api/command' && req.method === 'POST') {
+    await commandRoute(url, req, res)
     return
   }
   if (url.pathname === '/api/discover' && req.method === 'POST') {

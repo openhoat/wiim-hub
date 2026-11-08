@@ -89,5 +89,28 @@
     "offline": "appareil injoignable",
     "status": "état",
     "track": "piste"
+  },
+  "controls": {
+    "play": "Lire",
+    "pause": "Pause",
+    "stop": "Arrêter",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "mute": "Couper le son",
+    "unmute": "Rétablir le son",
+    "volume": "Volume",
+    "seek": "Position",
+    "live": "direct",
+    "sources": "Source",
+    "outputs": "Sortie",
+    "sleep": "Minuteur",
+    "sleepOff": "Désactivé",
+    "sleepMinutes": "{n} min",
+    "presets": "Préréglages",
+    "unsupported": "Cet appareil ne prend pas en charge cette commande.",
+    "failed": "Échec de la commande :",
+    "confirmVolume": "Régler le volume à {n} ?",
+    "apply": "Appliquer",
+    "cancel": "Annuler"
   }
 }

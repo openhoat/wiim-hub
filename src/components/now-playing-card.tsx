@@ -1,10 +1,11 @@
-import { Disc3, Radio, Users, Volume2 } from 'lucide-react'
+import { Disc3, Radio, Users } from 'lucide-react'
+import { PlayerControls } from '@/components/player-controls'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { artUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
-import { formatDuration, positionOf } from '@/lib/format'
 import { agoLabel, statusLabel } from '@/lib/labels'
+import { useControls } from '@/lib/use-controls'
 import { useSettings } from '@/lib/settings'
 import type { Device } from '@/lib/types'
 
@@ -22,14 +23,10 @@ const Equalizer = () => (
 
 export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: number }>) => {
   const { t } = useSettings()
-  const art = artUrl(device)
-  const playing = device.online && device.status === 'play'
-  const position = positionOf(device, now)
-  const ratio =
-    position !== null && device.totalMs !== null && device.totalMs > 0
-      ? Math.min(1, position / device.totalMs)
-      : null
-  const quiet = !device.online || position === null
+  const controls = useControls(device)
+  const live = controls.device
+  const art = artUrl(live)
+  const playing = live.online && live.status === 'play'
 
   return (
     <Card className={cn('p-5 sm:p-6', !device.online && 'opacity-80')}>
@@ -47,7 +44,7 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
           ) : (
             <span className={cn('size-1.5 rounded-full', device.online ? 'bg-muted-foreground' : 'bg-warning')} />
           )}
-          {device.online ? statusLabel(t, device.status) : t('offline')}
+          {device.online ? statusLabel(t, live.status) : t('offline')}
         </Badge>
       </div>
 
@@ -92,26 +89,11 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
         </div>
       </div>
 
-      <div className="mt-5">
-        <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-          <div
-            className={cn('h-full rounded-full bg-accent', playing && 'transition-[width] duration-1000 ease-linear')}
-            style={{ width: `${Math.round((ratio ?? 0) * 100)}%` }}
-          />
-        </div>
-        <div className="mt-1.5 flex items-center justify-between text-[11px] tabular-nums text-muted-foreground">
-          <span>{position !== null ? formatDuration(position) : '—'}</span>
-          <span className="flex items-center gap-2">
-            {device.volume !== null && (
-              <span className="inline-flex items-center gap-1">
-                <Volume2 className="size-3" />
-                {device.volume}
-              </span>
-            )}
-            <span>{quiet ? agoLabel(t, device.lastSeen, now) : formatDuration(device.totalMs ?? 0)}</span>
-          </span>
-        </div>
-      </div>
+      <PlayerControls controls={controls} now={now} />
+
+      {!device.online && (
+        <p className="mt-2 text-[11px] text-muted-foreground">{agoLabel(t, device.lastSeen, now)}</p>
+      )}
     </Card>
   )
 }

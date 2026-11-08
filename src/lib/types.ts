@@ -8,6 +8,10 @@ export type Sample = {
 
 export type EventKind = 'online' | 'offline' | 'status' | 'track'
 
+export type Preset = { number: number; name: string; artwork: string }
+
+export type OutputOption = { hardware: number; name: string }
+
 export type DeviceEvent = {
   t: number
   kind: EventKind
@@ -35,6 +39,16 @@ export type Device = {
   totalMs: number | null
   source: string
   slaves: number
+  mode: string
+  input: string
+  maxVolume: number | null
+  mute: boolean
+  sleepSeconds: number | null
+  inputs: string[]
+  inputLabels: Record<string, string>
+  outputs: OutputOption[]
+  outputHardware: number | null
+  presets: Preset[]
   updatedAt: number | null
   online: boolean
   lastSeen: number | null
