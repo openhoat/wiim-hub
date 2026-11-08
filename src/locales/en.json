@@ -149,5 +149,13 @@
     "writeFailed": "the device refused the change",
     "failed": "Change failed:",
     "close": "Close"
+  },
+  "stream": {
+    "open": "Stream URL",
+    "title": "Play a stream",
+    "hint": "The speaker fetches the address itself. http or https only.",
+    "address": "Stream address",
+    "play": "Play",
+    "close": "Close"
   }
 }

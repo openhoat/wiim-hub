@@ -50,6 +50,7 @@ export type Action =
   | { action: 'balance'; value: number }
   | { action: 'maxVolume'; level: number }
   | { action: 'fade'; on: boolean }
+  | { action: 'url'; url: string }
 
 export type CommandResult = { ok: boolean; unsupported: boolean; command: string; body: string }
 

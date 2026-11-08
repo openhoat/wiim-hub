@@ -149,5 +149,13 @@
     "writeFailed": "l'appareil a refusé le changement",
     "failed": "Échec du changement :",
     "close": "Fermer"
+  },
+  "stream": {
+    "open": "URL de flux",
+    "title": "Lire un flux",
+    "hint": "L'enceinte va chercher l'adresse elle-même. http ou https uniquement.",
+    "address": "Adresse du flux",
+    "play": "Lire",
+    "close": "Fermer"
   }
 }

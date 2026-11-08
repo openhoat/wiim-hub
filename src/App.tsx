@@ -9,6 +9,7 @@ import { SoundCard } from '@/components/sound-card'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/toaster'
+import { cn } from '@/lib/cn'
 import { SettingsProvider, useSettings } from '@/lib/settings'
 import { useHub } from '@/lib/use-hub'
 import type { View } from '@/lib/types'
@@ -123,7 +124,11 @@ const Hub = () => {
 
           {devices.length > 0 &&
             (view === 'user' ? (
-              <div className="mx-auto max-w-3xl space-y-4">
+              <div
+                className={cn(
+                  devices.length > 1 ? 'grid items-start gap-4 xl:grid-cols-2' : 'mx-auto max-w-3xl space-y-4',
+                )}
+              >
                 {devices.map((device) => (
                   <div key={device.name + device.ip} className="space-y-4">
                     <NowPlayingCard device={device} now={now} />

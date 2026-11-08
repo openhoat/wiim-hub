@@ -21,6 +21,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { presetArtUrl } from '@/lib/api'
+import { PlayUrlDialog } from '@/components/play-url-dialog'
 import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
 import { useSettings } from '@/lib/settings'
@@ -292,6 +293,8 @@ export const PlayerControls = ({ controls, now }: Readonly<{ controls: Controls;
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+
+        <PlayUrlDialog controls={controls} />
       </div>
 
       {device.presets.length > 0 && (

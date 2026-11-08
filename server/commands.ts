@@ -27,6 +27,7 @@ export type Action =
   | { action: 'balance'; value: number }
   | { action: 'maxVolume'; level: number }
   | { action: 'fade'; on: boolean }
+  | { action: 'url'; url: string }
 
 // The ten bands of the graphic equalizer, in the order the device reports
 // them. Only these names are writable: the payload is a name the firmware
@@ -150,6 +151,23 @@ export const parseAction = (body: unknown): Parsed => {
     if (level === null || level < 1 || level > 100) return { error: 'invalid maximum volume' }
     return { action: { action: 'maxVolume', level } }
   }
+  if (name === 'url') {
+    if (typeof body.url !== 'string') return { error: 'invalid stream url' }
+    const value = body.url.trim()
+    if (value === '' || value.length > 2048) return { error: 'invalid stream url' }
+    let parsed: URL
+    try {
+      parsed = new URL(value)
+    } catch {
+      return { error: 'invalid stream url' }
+    }
+    // The speaker fetches the address itself: a local file path or a javascript
+    // scheme is not a stream, and anything else is not worth guessing.
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      return { error: 'stream url must be http or https' }
+    }
+    return { action: { action: 'url', url: parsed.toString() } }
+  }
   return { error: `unknown action ${name}` }
 }
 
@@ -221,6 +239,10 @@ export const commandFor = (action: Action, device: DeviceState): Command | { err
       return { command: `setMaxVolume:${action.level}`, family: null }
     case 'fade':
       return { command: `SetFadeFeature:${action.on ? 1 : 0}`, family: null }
+    case 'url':
+      // Measured on the Pro: the player switches to its own push mode, reports
+      // the address as the title and plays it, without any account.
+      return { command: `setPlayerCmd:play:${action.url}`, family: null }
     default:
       return { error: 'unsupported action' }
   }

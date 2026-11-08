@@ -457,12 +457,17 @@ const emptyCapability = (): Capability => ({ at: 0, inputs: [], inputLabels: {},
 const capabilityFor = async (ip: string): Promise<Capability> => {
   const cached = capabilityCache.get(ip)
   if (cached !== undefined && Date.now() - cached.at < capabilityTtlMs) return cached
-  const [capabilityRaw, enableRaw, renameRaw, outputRaw] = await Promise.all([
+  const [primaryRaw, enableRaw, renameRaw, outputRaw] = await Promise.all([
     fetchCommand(ip, 'getAudioInputCapbility'),
     fetchCommand(ip, 'getAudioInputEnable'),
     fetchCommand(ip, 'getModeRename'),
     fetchCommand(ip, 'getSoundCardModeSupportList'),
   ])
+  // `getAudioInputCapbility` is the vendor's own spelling, typo included. A
+  // model that only answers the corrected name would otherwise lose its whole
+  // input list, so the miss costs one retry once per cache window.
+  const capabilityRaw =
+    parseJson(primaryRaw) === null ? await fetchCommand(ip, 'getAudioInputCapability') : primaryRaw
   const inputs = readInputs(capabilityRaw, enableRaw)
   const outputs = readOutputs(outputRaw)
   if (inputs.length === 0 && outputs.length === 0) return cached ?? emptyCapability()

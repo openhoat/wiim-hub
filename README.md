@@ -1,12 +1,13 @@
 # WiiM Hub
 
 Hub for WiiM devices (and other LinkPlay-based players) on a local network: what each device is
-playing, what it reports about itself, and, from 0.3.0, the controls you need when the vendor app
-is not at hand. Devices are polled every few seconds and served as a small web page.
+playing, what it reports about itself, and the controls you need when the vendor app is not at
+hand. Devices are polled every few seconds and served as a small web page.
 
 A local, self-hosted complement to the vendor app: the same device data, on a screen you already
-have open, with an interface that fits a browser and a phone. Multiroom is a roadmap item, not a
-promise.
+have open, with an interface that fits a browser and a phone. Every device gets its own card,
+state and write queue, so a mixed fleet (Pro, Mini, Amp, Ultra, and OEM LinkPlay players) is the
+normal case, not a special one. Multiroom is a roadmap item, not a promise.
 
 ## Why a second view
 
@@ -16,7 +17,8 @@ views diverge, and the device side is the one the official app consumes.
 
 ## Features
 
-- Several devices side by side, polled in parallel.
+- Several devices side by side, polled in parallel, in the order of their names. A device seen
+  twice (configured as `salon.local`, discovered as `192.168.1.150`) is kept once.
 - Per-device transport: https/443 first, http/80 fallback remembered, so a mixed firmware fleet
   costs at most one extra request per device.
 - Devices configured by address or by name (`salon.local`): the built-in mDNS resolver (system
@@ -30,9 +32,15 @@ views diverge, and the device side is the one the official app consumes.
 - Now playing: track, artist, album, album art (relayed by the hub, see below), playback progress
   extrapolated between polls, playback source badge, playback state, volume.
 - **Controls** on the now playing card: play and pause, previous, next, stop, seek, volume and
-  mute, source switching, saved presets, sleep timer, audio output route. Every control paints
-  the expected value immediately and lets the next poll confirm or revert it, and the hub
-  serialises one write per device so a slider drag cannot race itself.
+  mute, source switching, saved presets, sleep timer, audio output route, and a stream URL the
+  speaker fetches itself. Every control paints the expected value immediately and lets the next
+  poll confirm or revert it, and the hub serialises one write per device so a slider drag cannot
+  race itself.
+- **Sound card**: the graphic equalizer read per source and edited one band at a time, the 24
+  factory curves, the stream quality the player reports (sample rate, bit depth, bit rate), and
+  room correction as a capability, read-only until its write payload is proven.
+- **Device settings sheet**: name, status LED, touch controls, balance, maximum volume and fade,
+  read when the sheet opens and written on an explicit gesture. The hub keeps no copy.
 - **One writer per device**: volume and seek writes are coalesced to their last value, everything
   else is queued in order. The device is a small embedded server, not a database.
 - RSSI history (400 samples, about 20 minutes at 3 s) with a sparkline, an event log (reachability,
@@ -57,6 +65,15 @@ Measured on a WiiM Pro, firmware `Linkplay.4.8.833748`, release `20261027`:
 - `setPlayerCmd:seek:<n>` takes **seconds** while `curpos` comes back in milliseconds.
   `MCUKeyShortClick` answers `OK` even for an empty preset slot, so presets are read from
   `getPresetInfo`, never inferred from the write.
+- The graphic equalizer is stored **per source**. `EQGetLV2SourceBandEx` with an empty
+  `source_name` answers the curve of the source playing and names it; `EQSetLV2SourceBand` targets
+  that source, keeps the other bands, and **drops the factory name** as soon as one band moves.
+  `EQLoad:<name>` answers the whole new curve. Measured gain range: -12..+12 dB.
+- `setPlayerCmd:play:<url>` switches the player to its own push mode (`CustomPushUrl`): the
+  address becomes the title, and the stream numbers come from the stream itself.
+- Device settings are one command each: `setDeviceName:<name>` (a space survives the query
+  encoding), `LED_SWITCH_SET`, `Button_Enable_SET`, `SetFadeFeature`, `setMaxVolume`, and
+  `setChannelBalance`, which accepts -1..1 and answers `Failed` beyond.
 - Switching input with `setPlayerCmd:switchmode` can leave the device stopped: after a source
   change the hub re-reads instead of assuming playback continued.
 - No CORS header: a browser cannot call the device directly, hence this hub.
@@ -70,7 +87,7 @@ community, not by the vendor, so the client is defensive by design.
 
 ```sh
 docker build -t wiim-hub .
-docker run --rm -p 8090:8090 -e DEVICE_HOSTS=192.168.1.10 wiim-hub
+docker run --rm -p 8090:8090 -e DEVICE_HOSTS=192.168.1.10,salon.local,kitchen wiim-hub
 ```
 
 Or use [`examples/compose.yml`](examples/compose.yml):
@@ -104,13 +121,15 @@ Then open <http://localhost:8090>, or <http://localhost:5173> in development.
 | -------------- | ------- | -------------------------------------------------------- |
 | `PORT`         | `8090`  | HTTP port of the hub                                     |
 | `POLL_MS`      | `3000`  | Polling period, floor 1000 ms                            |
-| `DEVICE_HOSTS` | empty   | Comma separated device addresses or names, authoritative list |
+| `DEVICE_HOSTS` | empty   | Comma separated device addresses or names, authoritative list; one entry per speaker |
 | `DISCOVERY`    | `1`     | SSDP discovery, best effort, set `0` to disable          |
 
 ## Endpoints
 
 - `GET /health`: liveness, for container healthchecks
 - `GET /api/state`: devices, samples and events
+- `GET /api/settings?host=<address>`: name, LED, touch controls, balance, maximum volume and fade,
+  read live when the settings sheet opens
 - `POST /api/command?host=<address>`: one intent (`{"action":"volume","level":30}`), validated
   against the device state and written through the per-device queue
 - `POST /api/discover`: one SSDP pass, then an immediate poll

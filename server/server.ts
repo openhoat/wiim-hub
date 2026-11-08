@@ -11,6 +11,7 @@ import {
   MAX_SAMPLES,
   pollDevice,
   readSettings,
+  resolveTarget,
 } from './device.ts'
 import { commandFor, commandOutcome, parseAction } from './commands.ts'
 import { discoverSsdp } from './discovery.ts'
@@ -188,10 +189,13 @@ const refreshHosts = async (): Promise<number> => {
   const found = await discoverSsdp()
   let added = 0
   for (const ip of found) {
-    if (!hosts.has(ip)) {
-      hosts.add(ip)
-      added += 1
-    }
+    // One speaker can be configured under its mDNS name and answered by SSDP
+    // under its address: the same machine must not get two cards, and the two
+    // spellings must not run two writers against it.
+    const known = [...hosts].some((host) => host === ip || resolveTarget(host) === ip)
+    if (known) continue
+    hosts.add(ip)
+    added += 1
   }
   return added
 }
@@ -343,7 +347,12 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
     return
   }
   if (url.pathname === '/api/state') {
-    sendJson(res, 200, { ts: Date.now(), pollMs, devices: [...states.values()] })
+    // A stable order across polls and machines: a card must not jump when a
+    // second speaker answers or renames itself.
+    const devices = [...states.values()].sort(
+      (left, right) => left.name.localeCompare(right.name) || left.ip.localeCompare(right.ip),
+    )
+    sendJson(res, 200, { ts: Date.now(), pollMs, devices })
     return
   }
   if (url.pathname === '/api/art') {
