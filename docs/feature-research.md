@@ -182,6 +182,16 @@ One write at a time, re-read after each; `curpos`/`totlen` are milliseconds here
 | `setAudioOutputHardwareMode:2` | `OK` | `hardware=2` (Line) | restoring the previous route works |
 | `setPlayerCmd:switchmode:optical` | `OK` | `mode=43`, still playing, `vendor` empty | input switch keeps the transport running |
 | `setPlayerCmd:switchmode:wifi` | `OK` | `mode=10`, `status=stop` | switching back does **not** resume the stream |
+| `EQSetLV2SourceBand` one band | `OK` | that band changed, the others kept, `Name` **emptied** | a hand-moved band turns the curve into a custom one |
+| `EQSetBand:{"EQBand":[{"index":0,…}]}` | `OK` | band 0 read `-10.56` for a requested `6.0` | the v1 payload is not interpreted as a gain: never use it |
+| `setPlayerCmd:play:<url>` | `OK` | `mode=10`, `vendor=CustomPushUrl`, title = the address, stream numbers from the stream | the player fetches the address itself, no account |
+| `setDeviceName:Salon Hub` | `OK` | `DeviceName=Salon Hub` | a space survives the query encoding |
+| `LED_SWITCH_SET:0` then `:1` | `OK` | `LED_SWITCH_GET` follows | plain flag |
+| `Button_Enable_SET:0` then `:1` | `OK` | `Button_Enable_GET` follows | plain flag |
+| `setChannelBalance:1`, `:0.5` | `OK` | read back | accepted range -1..1, decimal steps |
+| `setChannelBalance:2`, `:5`, `:10` | `Failed` | unchanged | out of range is refused, not clamped |
+| `setMaxVolume:80` then `:100` | `OK` | `max_volume` follows | the ceiling is a device setting |
+| `SetFadeFeature:0` then `:1` | `OK` | `{"FadeFeature":0}` then `1` | JSON answer, not a bare token |
 
 Consequences for the hub:
 
@@ -194,6 +204,14 @@ Consequences for the hub:
 - `MCUKeyShortClick` is accepted for an empty slot: presets are read from `getPresetInfo`, never
   inferred from the write answer.
 - `EQLoad` returns the full curve: the hub can confirm the preset from the write answer itself.
+- The equalizer curve belongs to a **source**: read it with an empty `source_name`, then write
+  against the source the answer names. Writing a band clears the factory name.
+- `EQSetBand` (the v1 payload with an `index`) is accepted but does not apply the value asked:
+  `EQSetLV2SourceBand` with `param_name` is the only measured band write.
+- A device setting that is out of range answers `Failed` and keeps the previous value: the hub
+  bounds the value itself and re-reads after every write.
+- `setPlayerCmd:play:<url>` is the only way to start playback without an account; a stream URL is
+  accepted only over http or https.
 
 
 ## 5. Requirements by area

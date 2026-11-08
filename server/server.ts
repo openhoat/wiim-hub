@@ -348,9 +348,13 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
   if (url.pathname === '/api/state') {
     // A stable order across polls and machines: a card must not jump when a
-    // second speaker answers or renames itself.
+    // second speaker answers or renames itself, and a reachable speaker comes
+    // before a silent one.
     const devices = [...states.values()].sort(
-      (left, right) => left.name.localeCompare(right.name) || left.ip.localeCompare(right.ip),
+      (left, right) =>
+        Number(right.online) - Number(left.online) ||
+        left.name.localeCompare(right.name) ||
+        left.ip.localeCompare(right.ip),
     )
     sendJson(res, 200, { ts: Date.now(), pollMs, devices })
     return

@@ -224,7 +224,11 @@ export const SoundCard = ({ device }: Readonly<{ device: Device }>) => {
         {available ? (
           <EqualizerPanel controls={controls} />
         ) : (
-          <p className="text-[11px] text-muted-foreground">{t('sound.unavailable')}</p>
+          // A silent speaker and a speaker without an equalizer look the same
+          // on the wire; the card must not blame the model for a network miss.
+          <p className="text-[11px] text-muted-foreground">
+            {t(device.online ? 'sound.unavailable' : 'sound.offline')}
+          </p>
         )}
       </div>
 

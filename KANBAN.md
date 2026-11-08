@@ -9,28 +9,8 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
-### #15 [UX] Add the equalizer panel to the sound card (started 2026-11-08)
-
-- [x] Read the per-source curve through `EQGetLV2SourceBandEx` and expose it on every poll
-- [x] Load the 24 factory curves, switch the equalizer on and off, edit one band at a time
-- [x] Keep the gain inside the measured -12..+12 dB range and target the source the device reported
-- [ ] Show room correction as read-only until its write payload is proven on a device
-
-### #16 [UX] Show the stream quality next to the sound controls (started 2026-11-08)
-
-- [x] Display the sample rate, bit depth and bit rate from `getMetaInfo` as one chip
-- [ ] Read `streamServicesCapability` and explain which tier a service can reach on this model
-
-### #17 [UX] Add a device settings sheet with name, LED, buttons and limits (P2)
-
-- [ ] Write the device name, the status LED, the touch buttons, the channel balance, the maximum volume and the fade
-- [ ] Show every field as read from `getStatusEx` and keep one explicit save, never a write on keystroke
-- [ ] Refuse a balance outside the measured -1..+1 range and restore the previous value on failure
-
-### #18 [UX] Play a stream URL from the hub (P2)
-
-- [ ] Send `setPlayerCmd:play:<url>` behind an explicit confirmation naming the address
-- [ ] Accept only http and https, cap the length, and report the device answer verbatim on failure
+Nothing in progress: 0.4.0 shipped the equalizer, the stream quality, the device settings and the
+stream URL (#15, #17, #18 closed; see git history).
 
 ## Backlog
 
@@ -47,6 +27,8 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 - [ ] Block private ranges other than the configured device hosts, and log refusals
 
 ### #4 [UX] Add a multiroom group view with per member control (P2)
+
+[//]: # Blocked: the member payload of `multiroom:getSlaveList` and the join/leave/kick semantics cannot be measured while only one speaker is reachable (the Mini is in RMA). Reads can ship first; the writes wait for a second unit.
 
 - [ ] Read the role from `multiroom:getSlaveList` and render master, members and orphans
 - [ ] Per member volume and mute with coalescing, plus one synchronised volume control
@@ -74,6 +56,11 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 - [ ] Run the type check and the build on push, and publish the image on tags
 - [ ] Keep the compose example and the README instructions in sync with the published image
+
+### #16 [UX] Explain which tier each streaming service can reach (P3)
+
+- [x] Display the sample rate, bit depth and bit rate from `getMetaInfo` as one chip (0.4.0)
+- [ ] Read `streamServicesCapability` and explain which tier a service can reach on this model
 
 ### #10 [UX] Add a PWA shell with install and offline support (P3)
 
