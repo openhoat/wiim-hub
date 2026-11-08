@@ -125,5 +125,29 @@
     "roomFit": "This player reports room correction. Adjusting it stays out of the hub until the setting is proven.",
     "unavailable": "This player does not report an equalizer.",
     "quality": "Stream quality as reported by the player"
+  },
+  "device": {
+    "title": "Device settings",
+    "subtitle": "Written to the speaker itself. The hub stores nothing.",
+    "name": "Name",
+    "save": "Rename",
+    "led": "Status LED",
+    "ledHint": "The small light under the speaker.",
+    "buttons": "Touch controls",
+    "buttonsHint": "Play, volume and preset buttons on the device.",
+    "fade": "Fade in and out",
+    "fadeHint": "Smooth the start and the end of a track.",
+    "balance": "Balance",
+    "balanceHint": "Left and right level.",
+    "maxVolume": "Maximum volume",
+    "maxVolumeHint": "The ceiling of the volume slider.",
+    "on": "On",
+    "off": "Off",
+    "loading": "Reading the device...",
+    "loadFailed": "Could not read the settings.",
+    "retry": "Retry",
+    "writeFailed": "the device refused the change",
+    "failed": "Change failed:",
+    "close": "Close"
   }
 }

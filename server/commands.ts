@@ -21,6 +21,12 @@ export type Action =
   | { action: 'eq'; enabled: boolean }
   | { action: 'eqPreset'; name: string }
   | { action: 'eqBand'; band: string; value: number }
+  | { action: 'rename'; name: string }
+  | { action: 'led'; on: boolean }
+  | { action: 'buttons'; on: boolean }
+  | { action: 'balance'; value: number }
+  | { action: 'maxVolume'; level: number }
+  | { action: 'fade'; on: boolean }
 
 // The ten bands of the graphic equalizer, in the order the device reports
 // them. Only these names are writable: the payload is a name the firmware
@@ -120,6 +126,30 @@ export const parseAction = (body: unknown): Parsed => {
     if (Math.abs(body.value) > eqGainLimit) return { error: `eq gain outside -${eqGainLimit}..${eqGainLimit} dB` }
     return { action: { action: 'eqBand', band: body.band, value: body.value } }
   }
+  if (name === 'rename') {
+    if (typeof body.name !== 'string') return { error: 'invalid device name' }
+    // The name travels in a command line the device parses: keep it to printable
+    // characters and a length the firmware accepts.
+    const deviceName = body.name.trim()
+    if (deviceName.length === 0 || deviceName.length > 32) return { error: 'invalid device name' }
+    if (/[^\p{L}\p{N}\p{P}\p{Zs}]/u.test(deviceName)) return { error: 'invalid device name' }
+    return { action: { action: 'rename', name: deviceName } }
+  }
+  if (name === 'led' || name === 'buttons' || name === 'fade') {
+    if (typeof body.on !== 'boolean') return { error: `invalid ${name} flag` }
+    return { action: { action: name, on: body.on } }
+  }
+  if (name === 'balance') {
+    if (typeof body.value !== 'number' || !Number.isFinite(body.value)) return { error: 'invalid balance' }
+    // Measured: +/-1 is accepted, +/-2 is Failed. Clamp is a refusal, not a fix.
+    if (Math.abs(body.value) > 1) return { error: 'balance outside -1..1' }
+    return { action: { action: 'balance', value: body.value } }
+  }
+  if (name === 'maxVolume') {
+    const level = integer(body.level)
+    if (level === null || level < 1 || level > 100) return { error: 'invalid maximum volume' }
+    return { action: { action: 'maxVolume', level } }
+  }
   return { error: `unknown action ${name}` }
 }
 
@@ -177,6 +207,20 @@ export const commandFor = (action: Action, device: DeviceState): Command | { err
       }
       return { command: `EQSetLV2SourceBand:${JSON.stringify(payload)}`, family: 'eq-band' }
     }
+    case 'rename':
+      return { command: `setDeviceName:${action.name}`, family: null }
+    case 'led':
+      return { command: `LED_SWITCH_SET:${action.on ? 1 : 0}`, family: null }
+    case 'buttons':
+      return { command: `Button_Enable_SET:${action.on ? 1 : 0}`, family: null }
+    case 'balance':
+      // The device takes a decimal: round to the tenth, which is finer than the
+      // half step the UI offers and still inside the measured range.
+      return { command: `setChannelBalance:${Math.round(action.value * 10) / 10}`, family: 'balance' }
+    case 'maxVolume':
+      return { command: `setMaxVolume:${action.level}`, family: null }
+    case 'fade':
+      return { command: `SetFadeFeature:${action.on ? 1 : 0}`, family: null }
     default:
       return { error: 'unsupported action' }
   }

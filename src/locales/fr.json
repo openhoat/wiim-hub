@@ -125,5 +125,29 @@
     "roomFit": "Cet appareil annonce une correction acoustique. Le hub ne la modifie pas tant que le réglage n'est pas vérifié.",
     "unavailable": "Cet appareil ne remonte pas d'égaliseur.",
     "quality": "Qualité du flux telle que l'appareil l'annonce"
+  },
+  "device": {
+    "title": "Réglages de l'appareil",
+    "subtitle": "Écrits dans l'enceinte elle-même. Le hub ne conserve rien.",
+    "name": "Nom",
+    "save": "Renommer",
+    "led": "Voyant d'état",
+    "ledHint": "La petite lumière sous l'enceinte.",
+    "buttons": "Commandes tactiles",
+    "buttonsHint": "Boutons lecture, volume et préréglages de l'appareil.",
+    "fade": "Fondu entrant et sortant",
+    "fadeHint": "Adoucit le début et la fin d'un morceau.",
+    "balance": "Balance",
+    "balanceHint": "Niveau à gauche et à droite.",
+    "maxVolume": "Volume maximum",
+    "maxVolumeHint": "Le plafond du curseur de volume.",
+    "on": "Activé",
+    "off": "Désactivé",
+    "loading": "Lecture de l'appareil...",
+    "loadFailed": "Impossible de lire les réglages.",
+    "retry": "Réessayer",
+    "writeFailed": "l'appareil a refusé le changement",
+    "failed": "Échec du changement :",
+    "close": "Fermer"
   }
 }

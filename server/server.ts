@@ -10,6 +10,7 @@ import {
   MAX_EVENTS,
   MAX_SAMPLES,
   pollDevice,
+  readSettings,
 } from './device.ts'
 import { commandFor, commandOutcome, parseAction } from './commands.ts'
 import { discoverSsdp } from './discovery.ts'
@@ -347,6 +348,27 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
   if (url.pathname === '/api/art') {
     await artFor(url, res)
+    return
+  }
+  // Settings are read when the sheet opens, not on every poll: the answer is a
+  // set of four writes nobody watches between visits.
+  if (url.pathname === '/api/settings') {
+    const host = url.searchParams.get('host') ?? ''
+    const entry = host === '' ? null : findEntry(host)
+    if (entry === null) {
+      sendJson(res, 404, { error: 'unknown device' })
+      return
+    }
+    if (!entry.state.online) {
+      sendJson(res, 409, { error: 'device offline' })
+      return
+    }
+    const settings = await readSettings(entry.state.ip)
+    if (settings === null) {
+      sendJson(res, 502, { error: 'device did not answer' })
+      return
+    }
+    sendJson(res, 200, settings)
     return
   }
   if (url.pathname === '/api/command' && req.method === 'POST') {

@@ -1,4 +1,5 @@
 import { Disc3, Radio, Users } from 'lucide-react'
+import { DeviceSettingsDialog } from '@/components/device-settings'
 import { PlayerControls } from '@/components/player-controls'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -38,14 +39,17 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
             {device.group !== '' && device.slaves === 0 && <span className="text-muted-foreground/70"> · {device.group}</span>}
           </p>
         </div>
-        <Badge variant={device.online ? (playing ? 'accent' : 'default') : 'warning'}>
-          {playing ? (
-            <Equalizer />
-          ) : (
-            <span className={cn('size-1.5 rounded-full', device.online ? 'bg-muted-foreground' : 'bg-warning')} />
-          )}
-          {device.online ? statusLabel(t, live.status) : t('offline')}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <DeviceSettingsDialog controls={controls} />
+          <Badge variant={device.online ? (playing ? 'accent' : 'default') : 'warning'}>
+            {playing ? (
+              <Equalizer />
+            ) : (
+              <span className={cn('size-1.5 rounded-full', device.online ? 'bg-muted-foreground' : 'bg-warning')} />
+            )}
+            {device.online ? statusLabel(t, live.status) : t('offline')}
+          </Badge>
+        </div>
       </div>
 
       <div className="mt-5 flex gap-5">

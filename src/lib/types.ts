@@ -25,6 +25,16 @@ export type Equalizer = {
 
 export type Quality = { sampleRate: number | null; bitDepth: number | null; bitRate: number | null }
 
+// Read on demand when the settings sheet opens, not on every poll.
+export type DeviceSettings = {
+  name: string
+  ledOn: boolean | null
+  buttonsOn: boolean | null
+  balance: number | null
+  maxVolume: number | null
+  fade: boolean | null
+}
+
 export type DeviceEvent = {
   t: number
   kind: EventKind

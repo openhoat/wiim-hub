@@ -1,4 +1,4 @@
-import type { Device, HubState } from './types'
+import type { Device, DeviceSettings, HubState } from './types'
 
 const readJson = async <T,>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(path, { cache: 'no-store', ...init })
@@ -44,6 +44,12 @@ export type Action =
   | { action: 'eq'; enabled: boolean }
   | { action: 'eqPreset'; name: string }
   | { action: 'eqBand'; band: string; value: number }
+  | { action: 'rename'; name: string }
+  | { action: 'led'; on: boolean }
+  | { action: 'buttons'; on: boolean }
+  | { action: 'balance'; value: number }
+  | { action: 'maxVolume'; level: number }
+  | { action: 'fade'; on: boolean }
 
 export type CommandResult = { ok: boolean; unsupported: boolean; command: string; body: string }
 
@@ -56,8 +62,12 @@ export const sendCommand = (device: Device, action: Action): Promise<CommandResu
     body: JSON.stringify(action),
   })
 
-// Cover art travels through the hub: the page is served over https while the
-// speaker only answers plain http, and a browser drops that mixed content. The
+// Settings are read live when the sheet opens: the device answers four extra
+// requests, which the poll does not pay every three seconds.
+export const fetchSettings = (device: Device): Promise<DeviceSettings> =>
+  readJson<DeviceSettings>(`/api/settings?host=${encodeURIComponent(device.ip)}`)
+
+// Cover art travels through the hub: the page is served over https while the// speaker only answers plain http, and a browser drops that mixed content. The
 // device address and the track URI form the cache key, so a cover is fetched
 // once per track rather than once per poll.
 export const artUrl = (device: Device): string | null => {
