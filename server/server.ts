@@ -503,8 +503,18 @@ const scheduleNextPoll = (): void => {
 }
 
 const main = async (): Promise<void> => {
-  if (eventsEnabled) await hub.start().catch(() => undefined)
-  else console.log('wiim-hub: UPnP events off (UPNP_CALLBACK is empty)')
+  if (eventsEnabled) {
+    // A port already taken is the most likely failure here, and it must be said:
+    // the hub keeps working on the fast poll, but nothing would explain why the
+    // subscriptions never appear.
+    await hub.start().catch(error => {
+      console.error(
+        `wiim-hub: UPnP callback could not listen on ${upnpPort}, polling only (${String(error)})`
+      )
+    })
+  } else {
+    console.log('wiim-hub: UPnP events off (UPNP_CALLBACK is empty)')
+  }
   await pollAll()
   scheduleNextPoll()
   void refreshHosts().then(() => pollAll())

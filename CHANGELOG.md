@@ -10,6 +10,11 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- A callback port already in use is reported instead of leaving the hub silently on the fast poll
+  with no explanation of why the subscriptions never appear.
+
 ## [0.6.0] - 2026-11-09
 
 ### Added
