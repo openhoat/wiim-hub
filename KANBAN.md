@@ -7,22 +7,6 @@ record). An item moved to In Progress keeps its number and gains a start timesta
 Detailed requirements live in `docs/feature-research.md`; cards stay coarse and point there.
 Fine grained work in progress goes to the gitignored `.scratch/<slug>/` directory, never here.
 
-## In Progress
-
-### #8 [TEST] Cover the device client and the write queue (P2) — started 2026-11-09 14:55
-
-- [x] Test the write queue and its coalescing by family (`server/queue.test.ts`, quality pass)
-- [x] Unit test the parsing of the awkward payload shapes the device client reads, including
-      `unknown command`, empty bodies, numeric counters and hex titles
-- [x] Test the optimistic reconciliation (`src/lib/optimistic.ts`: what a click paints, the six
-      second window, the nested equalizer merge), pulled out of the hook so it runs without a
-      browser
-- [ ] Test the position unit heuristic (milliseconds locally, microseconds on the streaming
-      services): the rule is documented in `docs/feature-research.md` §5.10 but not implemented, so
-      it waits for a measured streaming session rather than for a test
-- [x] Add a recorded fixture per endpoint for those tests (`server/fixtures/wiim-pro.ts`): the
-      interface side already runs without a player (`npm run demo`), the device client now does too
-
 ## Backlog
 
 ### #4 [UX] Add a multiroom group view with per member control (P2)
@@ -46,7 +30,8 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ### #10 [UX] Add a PWA shell with install and offline support (P3)
 
-- [ ] Add a manifest, icons and a service worker caching the shell only, never the API
+- [x] Add a manifest, icons and a standalone display, so the page installs as an app (0.9.0)
+- [ ] Add a service worker caching the shell only, never the API
 - [ ] Show the last known state with its age when the hub is unreachable
 
 ### #11 [UX] Add notifications and webhooks for the alerts (P3)
