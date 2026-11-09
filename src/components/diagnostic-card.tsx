@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { EventTimeline } from '@/components/event-timeline'
 import { FindingsPanel } from '@/components/findings-panel'
+import { GuidesPanel } from '@/components/guides-panel'
 import { SampleTable } from '@/components/sample-table'
 import { Sparkline } from '@/components/sparkline'
 import { Badge } from '@/components/ui/badge'
@@ -62,7 +63,7 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
   }
 
   return (
-    <Card className="p-4 sm:p-5">
+    <Card className="p-4 sm:p-5" data-testid={`device-${device.ip}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -166,6 +167,10 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
 
       <section className="mt-5">
         <FindingsPanel device={device} now={now} />
+      </section>
+
+      <section className="mt-5">
+        <GuidesPanel device={device} />
       </section>
 
       <section className="mt-5">

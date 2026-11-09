@@ -13,6 +13,7 @@ const device = (overrides: Partial<DeviceState> = {}): DeviceState => ({
   release: '20261027',
   ssid: 'lab',
   bssid: 'aa:bb:cc:dd:ee:ff',
+  wmrmVersion: '4.3',
   group: { role: 'none', name: '', members: [], saved: false },
   rssi: -53,
   volume: 30,

@@ -33,6 +33,7 @@ import {
   slaveList,
   statusEx,
 } from './fixtures/wiim-pro.ts'
+import { guidesFor } from './guides.ts'
 import { buildInventory, type Inventory, type Resolution } from './inventory.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
@@ -90,6 +91,7 @@ const emptyState = (ip: string): DeviceState => ({
   release: '',
   ssid: '',
   bssid: '',
+  wmrmVersion: '',
   group: { role: 'none', name: '', members: [], saved: false },
   rssi: null,
   volume: null,
@@ -248,6 +250,7 @@ const livingRoom = (): DeviceState => {
     release: '20261027',
     ssid: 'Demo Wi-Fi',
     bssid: '02:00:00:00:00:21',
+    wmrmVersion: '4.3',
     group: {
       role: 'master',
       name: 'Apartment',
@@ -348,6 +351,7 @@ const bedroom = (): DeviceState => {
     release: '20261027',
     ssid: 'Demo Wi-Fi',
     bssid: '02:00:00:00:00:22',
+    wmrmVersion: '4.3',
     group: { role: 'none', name: 'Apartment', members: [], saved: true },
     rssi: -68,
     volume: 30,
@@ -724,6 +728,7 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       .map(state => ({
         ...state,
         findings: findingsFor({ state, diagnostics: state.diagnostics }),
+        guides: guidesFor({ state, diagnostics: state.diagnostics }),
       }))
     sendJson(res, 200, { ts: Date.now(), pollMs: tickMs, devices })
     return
@@ -737,6 +742,7 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     const findings = findingsFor({ state, diagnostics: state.diagnostics })
+    const guides = guidesFor({ state, diagnostics: state.diagnostics })
     const inventory = state.online ? demoInventory() : null
     const report = buildReport({
       state,
@@ -745,11 +751,13 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       hub: { version: 'demo', pollMs: tickMs, slowPollMs: tickMs, eventsEnabled: false },
       inventory,
       resolution: demoResolution(state),
+      guides,
     })
     sendJson(res, 200, {
       ts: report.generatedAt,
       host: state.ip,
       findings,
+      guides,
       inventory,
       markdown: report.markdown,
     })

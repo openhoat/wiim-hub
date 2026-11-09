@@ -130,6 +130,18 @@ test('states the findings, and says explicitly when there is nothing to report',
   expect(inventory.markdown).toContain('| `getInfo` | legacy | unsupported | `unknown command` |')
   expect(inventory.markdown).toContain('| `getAllRoutines` | routines | empty | `empty body` |')
 
+  // The guided checks come before the inventory: the answer to the user first,
+  // the raw capability table after it.
+  expect(inventory.markdown).toContain('## Guided checks')
+  expect(inventory.markdown).toContain('- **No sound**: all 6 check(s) passed.')
+  expect(inventory.markdown).toContain('- **Cannot join a group**: all 4 check(s) passed.')
+  expect(inventory.markdown.indexOf('## Guided checks')).toBeLessThan(
+    inventory.markdown.indexOf('## Capability inventory')
+  )
+  // An offline speaker stops every flow at the same first check.
+  expect(report.markdown).toContain('- **No sound**: fail at `offline`')
+  expect(report.markdown).toContain('The player does not answer: 3 consecutive poll failure(s).')
+
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download the report' }).first().click()
   const file = await download
@@ -168,6 +180,48 @@ test('shows an external input as a source instead of an empty player', async ({ 
   await expect(page.getByText('Nothing playing')).toHaveCount(0)
   // No media means no position: the residue must not become a seek bar.
   await expect(page.getByRole('slider', { name: 'Position' })).toHaveCount(0)
+})
+
+test('walks the four guided flows, cheapest question first', async ({ page }) => {
+  await openHub(page)
+  await page.getByRole('button', { name: 'Diagnostic' }).click()
+
+  // One diagnostic card per speaker: scope to the reachable one.
+  const card = page.getByTestId('device-192.0.2.21')
+  await expect(card.getByText('Guided checks')).toBeVisible()
+
+  // Four flows as tabs, the ones with something to say marked, and the first
+  // flow selected by default.
+  await expect(card.getByRole('tab')).toHaveCount(4)
+  await expect(card.getByRole('tab', { name: 'No sound' })).toHaveAttribute('aria-selected', 'true')
+
+  // A clean flow reads as positive facts, not as anomalies reworded: the mute
+  // and volume rows describe the healthy state.
+  await expect(card.getByText('The player is not muted.')).toBeVisible()
+  await expect(card.getByText('The volume is 44.')).toBeVisible()
+  await expect(card.getByText('No anomaly on this flow')).toBeVisible()
+
+  // Another flow is a different reading: the link, then the counters.
+  await card.getByRole('tab', { name: 'It drops' }).click()
+  await expect(card.getByText('The radio link reads -52 dBm, 35 dB SNR.')).toBeVisible()
+  await expect(card.getByText('The Wi-Fi link is stable.')).toBeVisible()
+})
+
+test('stops a guided flow at its first anomaly on an offline speaker', async ({ page }) => {
+  await openHub(page)
+  await page.getByRole('button', { name: 'Diagnostic' }).click()
+
+  // The offline speaker answers nothing: every flow stops on the same first
+  // check, and the panel says the reading stopped instead of "all clear".
+  const guides = page.getByTestId('device-192.0.2.22').getByTestId('guides-panel')
+  await expect(guides.getByRole('tab')).toHaveCount(4)
+  await expect(
+    guides.getByText('The player does not answer: 3 consecutive poll failure(s).')
+  ).toBeVisible()
+  await expect(
+    guides.getByText('The flow stops at the first anomaly: that row is the last one.')
+  ).toBeVisible()
+  await expect(guides.getByText('No anomaly on this flow')).toHaveCount(0)
 })
 
 test('keeps a volume written from the page across a poll', async ({ page }) => {

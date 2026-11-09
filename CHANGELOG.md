@@ -29,6 +29,16 @@ Releases are cut from `package.json`: the version in that file names the section
   answered) rides the same section, and `/api/report` returns `inventory` and `resolution` next to
   the Markdown. An offline player is not probed: eighteen timeouts would say nothing the offline
   finding does not already say, so the section states that the probe was skipped.
+- The four guided checks answer the questions a user arrives with ("no sound", "it drops", "wrong
+  output", "cannot join a group"). `server/guides.ts` reads the device in a fixed order and stops at
+  the first check that is not a pass, so the last row is the first anomaly: mute, volume, sleep
+  timer, source, transport, output for "no sound"; link then network and crash counters for "it
+  drops"; the active route for "wrong output"; the group protocol version, role and link for
+  "cannot join a group". The source is read before the transport so an external input with no signal
+  is named instead of reading as "the transport is stopped". A check the device could not answer
+  stops the flow without counting as a pass (`settled: false`), and every row names the field it read.
+  `guides` rides `/api/state`, the page shows the flows as tabs under the findings, and the report
+  gains a `## Guided checks` section between the findings and the capability inventory.
 
 ### Fixed
 

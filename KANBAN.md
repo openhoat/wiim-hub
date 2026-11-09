@@ -9,19 +9,6 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
-### #2 [UX] Add the diagnostic assistant with findings and report export (P1) — started 2026-11-09
-
-Findings and the report shipped (`server/findings.ts`, `GET /api/report`); the guided flows below
-are what remains on the card.
-
-- [x] Derive findings from the link, health, hardware and playback signals, each with its evidence
-- [x] Export one JSON report plus a Markdown summary, and copy it from the UI (the report is served
-      by `/api/report` and carries the raw answers, the capability inventory and the probe path)
-- [x] Say "no anomaly detected" when nothing is wrong, with the values that support it
-- [ ] Add the deterministic guided flows: no sound, drops, wrong output, cannot join a group
-
-Card #4 keeps its write half blocked on a second reachable unit.
-
 ### #8 [TEST] Cover the device client and the write queue (P2) — started 2026-11-09 14:55
 
 - [x] Test the write queue and its coalescing by family (`server/queue.test.ts`, quality pass)

@@ -511,8 +511,8 @@ Interpretation rules still open (they need the transport or the group view, not 
 1. **Reboot loop**: `power_ticks` lower than the previous reading, not only a non-zero crash
    counter.
 2. **Silent device**: transport says `play` but the source is a digital input with no signal
-   (`status` idle, `mode` optical/line-in), or the volume is 0, or muted. The sleep timer half of
-   this rule ships; the mute and volume cases do not.
+   (`status` idle, `mode` optical/line-in), or the volume is 0, or muted. The sleep timer half
+   ships as a finding; mute and volume ship as checks in the guided flow below.
 3. **Group mismatch**: this device reports `group: 0` while a master lists it, or the reverse.
    Explain that the state is eventually consistent and show both sides.
 4. **Firmware**: an update is available (`VersionUpdate` non zero) or an update is in progress.
@@ -521,20 +521,38 @@ Interpretation rules still open (they need the transport or the group view, not 
 SNR, drop count, crash count, UPnP losses, flash blocks), so a clean answer shows its basis
 instead of looking like an empty section.
 
-Guided flows (deterministic, no LLM needed):
+### Guided checks (shipped)
 
-- "No sound": check mute, volume, sleep timer, source, transport, output route, in that order,
-  and stop at the first failing check.
-- "It drops": pull `getNetworkHealth` before and after a 60 s window, show the delta.
-- "Wrong output": show the active route and the available routes side by side.
-- "Cannot join group": show both devices' `wmrm_version`, group state and RSSI (a slave on 2.4
-  GHz far from the master is a classic cause).
+`server/guides.ts` answers the four questions in a fixed order and stops at the first check that is
+not a pass, so the last row a reader sees is the first anomaly. The same rules feed the page (in its
+language) and the report (in English); the checks are pure and tested without a speaker. `unknown` (a
+field the device did not report) stops the flow like an anomaly but is not one: `settled` carries the
+difference, so "no anomaly" and "could not tell" never look the same.
 
-Report export: `GET /api/report?host=` answers `{ts, host, findings, inventory, resolution,
-markdown}` and the page offers both copy and download. The Markdown carries the identity,
-firmware, link metrics, network name, playback, group, the findings with their evidence lines, the
-capability inventory, then the raw answers (`diagnostics`, `link`, the last samples) in a JSON
-block. It is the artefact a user pastes into a support thread, and it is English by design: one
+| Flow                | Checks, in order                                                                                       |
+| ------------------- | ------------------------------------------------------------------------------------------------------ |
+| No sound            | offline, mute, volume, sleep timer, source (external inputs only), transport, output, group membership |
+| It drops            | offline, link, network counters (Wi-Fi, ping, wired, reboots), crash counters                          |
+| Wrong output        | offline, active route against the routes the player reports                                            |
+| Cannot join a group | offline, group protocol version (`wmrm_version`), role or saved-only group, link                       |
+
+Two orderings carry the diagnosis: the source is read before the transport, so an optical or line
+input with no signal is named as such instead of reading as the generic "transport stopped"; and the
+link is read before the network counters, because the link rides the poll while the counters need the
+slow probes. A pass row states a healthy fact ("The player is not muted.", "The Wi-Fi link is
+stable."); a verdict row names the field it read (`getPlayerStatusEx.vol 0`), so a reader can check the
+claim instead of trusting it.
+
+The page shows the flows as tabs under the findings, a dot on a tab that has something to say, and
+either the "No anomaly on this flow" badge or the stop note. The report adds a `## Guided checks`
+section between the findings and the capability inventory: one line per flow, "all N check(s)
+passed", or the verdict with its sentence and evidence.
+
+Report export: `GET /api/report?host=` answers `{ts, host, findings, guides, inventory, resolution,
+markdown}` and the page offers both copy and download. The Markdown carries the identity, firmware,
+link metrics, network name, playback, group, the findings with their evidence lines, the guided
+checks, the capability inventory, then the raw answers (`diagnostics`, `link`, the last samples) in a
+JSON block. It is the artefact a user pastes into a support thread, and it is English by design: one
 artefact, not one per language.
 
 ### Capability inventory (shipped with the report)

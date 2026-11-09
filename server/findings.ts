@@ -7,6 +7,7 @@
 // The module is pure on purpose: the thresholds and the wording can be tested
 // without a speaker, and the same findings feed the page and the support report.
 import type { DeviceState, Diagnostics } from './device.ts'
+import { type Guide, guideSection } from './guides.ts'
 import { type Inventory, inventorySection, type Resolution } from './inventory.ts'
 
 // Measured on the reference player (09/11/2026): a healthy link reads -53 dBm,
@@ -273,6 +274,9 @@ export const buildReport = (input: {
   // about the findings do not have to fabricate an inventory.
   inventory?: Inventory | null
   resolution?: Resolution | null
+  // The guided checks are derived from the same state, so a caller that built
+  // the findings can always supply them; omitting them drops the section.
+  guides?: Guide[] | null
   now?: number
 }): { generatedAt: number; markdown: string } => {
   const { state, diagnostics, findings, hub } = input
@@ -319,6 +323,7 @@ export const buildReport = (input: {
     }
     lines.push('')
   }
+  lines.push(...(input.guides ? guideSection(input.guides) : []))
   lines.push(...inventorySection(input.inventory ?? null, input.resolution ?? null, generatedAt))
   lines.push('## Raw answers', '', '```json')
   lines.push(

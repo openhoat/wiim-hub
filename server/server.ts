@@ -19,6 +19,7 @@ import {
 } from './device.ts'
 import { discoverSsdp } from './discovery.ts'
 import { buildReport, findingsFor } from './findings.ts'
+import { guidesFor } from './guides.ts'
 import { readInventory, resolutionFor } from './inventory.ts'
 import { createWriteQueue } from './queue.ts'
 import { createEventHub, type EventPatch } from './upnp.ts'
@@ -63,6 +64,7 @@ const emptyState = (host: string): DeviceState => ({
   release: '',
   ssid: '',
   bssid: '',
+  wmrmVersion: '',
   group: { role: 'none', name: '', members: [], saved: false },
   rssi: null,
   volume: null,
@@ -456,6 +458,7 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       .map(state => ({
         ...state,
         findings: findingsFor({ state, diagnostics: state.diagnostics }),
+        guides: guidesFor({ state, diagnostics: state.diagnostics }),
       }))
     sendJson(res, 200, { ts: Date.now(), pollMs, devices })
     return
@@ -469,6 +472,7 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     const findings = findingsFor({ state: entry.state, diagnostics: entry.state.diagnostics })
+    const guides = guidesFor({ state: entry.state, diagnostics: entry.state.diagnostics })
     // Probing eighteen commands costs about five seconds on a dead device and
     // says nothing useful there: an offline player is already the first finding.
     const inventory = entry.state.online ? await readInventory(entry.key) : null
@@ -480,11 +484,13 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       hub: { version: hubVersion, pollMs, slowPollMs, eventsEnabled },
       inventory,
       resolution,
+      guides,
     })
     sendJson(res, 200, {
       ts: report.generatedAt,
       host: entry.key,
       findings,
+      guides,
       inventory,
       resolution,
       markdown: report.markdown,

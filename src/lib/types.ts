@@ -95,6 +95,27 @@ export type FindingId =
   | 'eventingDegraded'
   | 'sleepTimer'
 
+// The four guided checks, same split as the findings: the server decides and
+// names the field it read, the page translates. `unknown` means the check could
+// not be read, which is not a pass.
+export type CheckStatus = 'pass' | 'warn' | 'fail' | 'unknown'
+
+export type GuideCheck = {
+  id: string
+  status: CheckStatus
+  values: Record<string, string | number>
+  evidence: string
+}
+
+export type GuideId = 'no-sound' | 'drops' | 'wrong-output' | 'cannot-join-group'
+
+export type Guide = {
+  id: GuideId
+  checks: GuideCheck[]
+  verdict: GuideCheck | null
+  settled: boolean
+}
+
 // Read on demand when the settings sheet opens, not on every poll.
 export type DeviceSettings = {
   name: string
@@ -132,6 +153,7 @@ export type Device = {
   release: string
   ssid: string
   bssid: string
+  wmrmVersion: string
   group: GroupState
   rssi: number | null
   volume: number | null
@@ -167,6 +189,7 @@ export type Device = {
   diagnostics: Diagnostics | null
   // Recomputed on every `/api/state`: a counter that recovered stops showing.
   findings: Finding[]
+  guides: Guide[]
   samples: Sample[]
   events: DeviceEvent[]
 }

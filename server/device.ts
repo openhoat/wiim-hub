@@ -127,6 +127,10 @@ export type DeviceState = {
   release: string
   ssid: string
   bssid: string
+  // The multiroom protocol version `getStatusEx` reports ("4.3" here). Empty
+  // means the device does not answer the group commands at all, which is the
+  // first thing to rule out when a group refuses to form.
+  wmrmVersion: string
   group: GroupState
   rssi: number | null
   volume: number | null
@@ -173,6 +177,10 @@ export type DevicePatch = {
   release: string
   ssid: string
   bssid: string
+  // The multiroom protocol version `getStatusEx` reports ("4.3" here). Empty
+  // means the device does not answer the group commands at all, which is the
+  // first thing to rule out when a group refuses to form.
+  wmrmVersion: string
   group: GroupState
   rssi: number | null
   volume: number | null
@@ -1022,6 +1030,7 @@ export const parseDevice = (input: {
     release: text(status?.Release),
     ssid: maybeHex(text(status?.essid)),
     bssid: text(status?.BSSID),
+    wmrmVersion: text(status?.wmrm_version),
     group: parseGroup(slaves, text(status?.group), registry),
     rssi: readRssi(status),
     volume: num(player?.vol),

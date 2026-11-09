@@ -238,6 +238,8 @@ describe('parseDevice', () => {
       // `essid` is hex on this firmware.
       ssid: 'HomeNet-5G',
       bssid: '02:00:00:00:00:05',
+      // The multiroom protocol the group guide checks first.
+      wmrmVersion: '4.3',
       group: {
         role: 'none',
         name: 'Apartment',
