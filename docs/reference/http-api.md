@@ -13,6 +13,10 @@ for the browser.
 | `/api/command?host=<address>`         | POST   | One intent, written through the per-device queue; answers with the device body             |
 | `/api/discover`                       | POST   | One SSDP pass, then an immediate poll; answers with the number of devices found            |
 | `/api/art?host=<address>&uri=<cover>` | GET    | Album art or preset art, relayed by the hub                                                |
+| `/api/hosts`                          | GET    | The addresses the hub polls: `host`, `ip`, `name`, `online` and the list it came from      |
+| `/api/hosts`                          | POST   | Add a host, `{ "host": "…" }`; answers the new list, or the reason it was refused          |
+| `/api/hosts`                          | PUT    | Change the address of a saved host, `{ "from": "…", "to": "…" }`                           |
+| `/api/hosts?host=<address>`           | DELETE | Remove a saved host; a seed from the environment and a discovered entry are refused        |
 
 ## Intents
 
@@ -52,6 +56,12 @@ that device: the page then shows the control as unsupported rather than offering
 never works.
 
 ## The report
+
+`GET /api/hosts` answers the list the devices dialog shows. Only a `saved` entry can be changed or
+removed: `env` comes from `DEVICE_HOSTS`, which the hub reads and never writes, and `discovered`
+comes back on the next SSDP pass, so removing it would not hold. Writes take a JSON body, for the
+same reason the command route does: an HTML form cannot send that content type, so a cross-site
+post cannot make the hub poll an address of someone else's choosing.
 
 `GET /api/report?host=<address>` answers a JSON object with the findings, the guided checks, the
 inventory, the resolution path and a `markdown` field. The Markdown is English and self-contained:

@@ -22,6 +22,31 @@ An entry is either an address or a name:
 Names are worth the extra step when your router hands out addresses freely: the hub follows the
 name, not the lease.
 
+## Adding a host from the page
+
+The devices dialog, behind the server icon in the header, lists every address the hub polls and
+says where each one came from:
+
+| Source           | What it means                                | What the page can do       |
+| ---------------- | -------------------------------------------- | -------------------------- |
+| from environment | an entry of `DEVICE_HOSTS`                   | nothing: it is the seed    |
+| saved            | added from the page, written to `HOSTS_FILE` | change the address, remove |
+| discovered       | found by the SSDP pass                       | keep it, which saves it    |
+
+A saved entry survives a restart; a discovered one comes back on the next scan anyway, which is why
+removing it changes nothing and the hub says so instead of pretending.
+
+Two rules come with the list:
+
+- **One card per machine.** An address that resolves to a speaker already in the list is refused,
+  naming the entry it clashes with. Discovery applies the same rule, so a name and its address
+  never become two cards with two write queues.
+- **Changing an address is a new entry.** The history belonged to the old one, so the card starts
+  empty rather than inheriting samples that were measured somewhere else.
+
+In Docker, mount a volume over the directory of `HOSTS_FILE`: the container otherwise writes the
+list into its own layer, and the next recreation loses it.
+
 ## Discovery
 
 `DISCOVERY=1` (the default) adds a best-effort SSDP pass: an M-SEARCH for MediaRenderer devices,

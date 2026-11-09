@@ -452,7 +452,39 @@ subscription out. It declares it degraded, and drops back to the fast poll, when
 when two polls contradict a field the subscription claims to carry; the card then says
 `polling fallback` instead of `subscribed`.
 
-## 6. Diagnostic assistance
+### 5.13 Managed host list
+
+Shipped in the release after 0.9.1. The hub used to learn its fleet from `DEVICE_HOSTS` at start,
+plus whatever an SSDP pass added in memory: adding a speaker meant editing the compose file and
+recreating the container, and a discovered one vanished on restart.
+
+**Three sources, one owned.** An entry carries the list it came from, and that is what the page
+acts on rather than a separate flag:
+
+| Source       | Written by    | Survives a restart | The page can change it |
+| ------------ | ------------- | ------------------ | ---------------------- |
+| `env`        | operator      | yes (the compose)  | no                     |
+| `saved`      | the page      | yes (`HOSTS_FILE`) | repoint, remove        |
+| `discovered` | the SSDP pass | no                 | keep, which saves it   |
+
+Removing a discovered entry is refused rather than performed and forgotten: the next scan finds the
+speaker again, so the honest answer is that the removal would not hold. Keeping it writes it to the
+saved list, which is the only way an entry changes owner.
+
+**One card per machine.** Two spellings of one speaker is not a cosmetic problem: the write queue
+is keyed by host, so a name and its address would run two writers against one device and the
+optimistic state of one card would contradict the other. The check discovery already made is
+applied to a typed address as well, and the refusal names the entry it clashes with.
+
+**An address change is a new entry.** Repointing `kitchen.local` at a replaced speaker is the real
+case, and the history belonged to the machine that left: samples, events and diagnostics are
+dropped with the old key, so the card starts empty instead of claiming a signal it never measured.
+The name shown still comes from the device, never from the hub.
+
+**Storage.** One JSON file (`HOSTS_FILE`), written whole through a temporary file and a rename, and
+read at start before the server listens. It is a plain `{ "hosts": [...] }` a human can edit while
+the hub is stopped; a broken entry is dropped and the rest kept, because a hand edit is expected on
+a file that sits on a volume. Everything else the hub holds stays in memory, as before.
 
 The hub already shows health. Diagnostic **assistance** means: turn counters into a short list
 of findings with evidence, and stop there. No invented root cause, no advice the device cannot
@@ -637,6 +669,7 @@ one empty body, so all four renderable statuses are exercised by the browser sui
 | Diagnostic assistance                | diagnostic assistant | findings with evidence, guided flows, report export (findings and report shipped in 0.7.0) |
 | Multiroom                            | v3                   | group card, per member volume, join/leave                                                  |
 | UPnP events                          | performance          | replace polling, fallback kept                                                             |
+| Managed host list                    | fleet                | three sources, one card per machine, saved on a volume                                     |
 
 ## Appendix: v2 write probe, executed
 

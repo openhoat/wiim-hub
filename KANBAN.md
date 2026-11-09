@@ -18,11 +18,6 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 - [ ] Join, leave and kick out with a confirmation naming the device and the raw answer on failure
 - [ ] Reconcile the group state after every write instead of trusting the optimistic view
 
-### #7 [UX] Manage devices from the UI (P2)
-
-- [ ] Add, rename and remove hosts, persisted server side, with the source of each entry shown
-- [ ] Distinguish a configured host, a discovered host and an offline host in one list
-
 ### #16 [UX] Explain which tier each streaming service can reach (P3)
 
 - [x] Display the sample rate, bit depth and bit rate from `getMetaInfo` as one chip (0.4.0)

@@ -10,6 +10,18 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The host list is managed from the page. A server icon in the header opens the devices dialog: it
+  lists every address the hub polls, says where each one came from, and writes the new list back to
+  one JSON file on a volume (`HOSTS_FILE`, `data/hosts.json` next to the sources by default).
+  `DEVICE_HOSTS` stays the operator's seed and cannot be edited from the page, a discovered host is
+  kept by saving it, and a saved one can be repointed at another address or removed. Two rules keep
+  the list honest: an address that resolves to a speaker already polled is refused with the entry it
+  clashes with, and changing an address starts a new card, because the samples belonged to the old
+  one and would follow the wrong machine. The demo serves the same dialog read only and says so
+  instead of pretending to save.
+
 ## [0.9.1] - 2026-11-09
 
 ### Added

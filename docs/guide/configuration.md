@@ -4,22 +4,33 @@ The server reads `.env` from the working directory when it exists (`start` and `
 inside Docker the variables come from the compose file or from `docker run -e`. A variable set in
 the environment wins over the file.
 
-| Variable        | Default | Meaning                                                                                         |
-| --------------- | ------- | ----------------------------------------------------------------------------------------------- |
-| `PORT`          | `8090`  | HTTP port of the hub                                                                            |
-| `POLL_MS`       | `3000`  | Polling period, floor 1000 ms                                                                   |
-| `SLOW_POLL_MS`  | `15000` | Polling period while every device pushes its events, floor `POLL_MS`                            |
-| `UPNP_CALLBACK` | empty   | Base URL the players can reach the hub on, e.g. `http://192.168.1.10:8091`; enables UPnP events |
-| `UPNP_PORT`     | `8091`  | Port of the event callback listener, separate from `PORT`                                       |
-| `DEVICE_HOSTS`  | empty   | Comma separated device addresses or names, authoritative list; one entry per speaker            |
-| `DISCOVERY`     | `1`     | SSDP discovery, best effort, set `0` to disable                                                 |
-| `HUB_VERSION`   | `dev`   | Version string written in the diagnostic report; the image carries no `package.json` at runtime |
+| Variable        | Default           | Meaning                                                                                         |
+| --------------- | ----------------- | ----------------------------------------------------------------------------------------------- |
+| `PORT`          | `8090`            | HTTP port of the hub                                                                            |
+| `POLL_MS`       | `3000`            | Polling period, floor 1000 ms                                                                   |
+| `SLOW_POLL_MS`  | `15000`           | Polling period while every device pushes its events, floor `POLL_MS`                            |
+| `UPNP_CALLBACK` | empty             | Base URL the players can reach the hub on, e.g. `http://192.168.1.10:8091`; enables UPnP events |
+| `UPNP_PORT`     | `8091`            | Port of the event callback listener, separate from `PORT`                                       |
+| `DEVICE_HOSTS`  | empty             | Comma separated device addresses or names, the seed list; one entry per speaker                 |
+| `HOSTS_FILE`    | `data/hosts.json` | Where the hosts added from the page are written; `DEVICE_HOSTS` stays read only                 |
+| `DISCOVERY`     | `1`               | SSDP discovery, best effort, set `0` to disable                                                 |
+| `HUB_VERSION`   | `dev`             | Version string written in the diagnostic report; the image carries no `package.json` at runtime |
 
-## The three that matter
+## The four that matter
 
-**`DEVICE_HOSTS`** is the list the hub trusts. Every entry is a speaker: an address
+**`DEVICE_HOSTS`** seeds the list the hub trusts. Every entry is a speaker: an address
 (`192.168.1.10`) or a name (`kitchen.local`, `kitchen`). Discovery only adds to it, and a device
-seen twice is kept once. See [Devices](/guide/devices).
+seen twice is kept once. It is read, never written: an entry that comes from it is marked as such
+and cannot be removed from the page. See [Devices](/guide/devices).
+
+**`HOSTS_FILE`** is where the hosts added from the page are saved, `data/hosts.json` next to the
+sources by default. It is the only file the hub writes, and the only state it keeps across a
+restart: a deployment mounts a volume over that directory. The file is plain JSON, so it can be
+edited by hand while the hub is stopped:
+
+```json
+{ "hosts": ["192.168.1.10", "kitchen.local"] }
+```
 
 **`POLL_MS`** is the heartbeat. Three seconds is the default because the page extrapolates the
 playback position between polls, and a slower poll is visible as a jump. The floor is one second:
@@ -54,5 +65,5 @@ and the last events. Memory stays under a hundred megabytes for a handful of spe
 ## Logs
 
 The process writes to stdout: one line per discovery pass, per subscription change and per refused
-write. Nothing is persisted; a restart loses the sample history and the event log, which is the
-intended scope of a hub that only reads.
+write. Apart from `HOSTS_FILE`, nothing is persisted: a restart loses the sample history and the
+event log, which is the intended scope of a hub that only reads.
