@@ -10,6 +10,23 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- UPnP event subscriptions, opt-in: with `UPNP_CALLBACK` naming an address the speakers can reach,
+  the hub subscribes on port 49152, renews on the same SID and receives the volume, the mute, the
+  transport state, the track metadata and the duration as the player emits them. Measured on the
+  reference player, a volume write reaches the page in under half a second instead of waiting for
+  the next poll, and the poll relaxes to `SLOW_POLL_MS` for the fields nobody events (position,
+  counters, group, inputs, equalizer): about five times fewer requests per minute.
+- The diagnostic card shows the push state (`subscribed`, `polling only`, `polling fallback`) with
+  the age of the last event, so a silent channel is not mistaken for a device nobody touches.
+
+### Changed
+
+- The poll loop reschedules itself: the interval follows the subscriptions instead of being fixed.
+- A subscription that fails its renewal, or that two polls contradict, is declared degraded and the
+  hub drops back to the fast poll; the entry is kept so the page can say why.
+
 ## [0.5.1] - 2026-11-09
 
 ### Fixed

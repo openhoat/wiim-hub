@@ -103,6 +103,7 @@ const emptyState = (ip: string): DeviceState => ({
   online: false,
   lastSeen: null,
   errors: 0,
+  upnp: { state: 'off', lastEventAt: null, events: 0, misses: 0 },
   samples: [],
   events: [],
 })

@@ -400,13 +400,46 @@ command is a pairing action with physical consequences. Documented only.
 
 ### 5.12 Push instead of polling (performance)
 
-- The device exposes UPnP on port 49152 (`upnp_version: 1005`, `communication_port: 8819`) and
-  Home Assistant subscribes to UPnP events for immediate state changes, with HTTP polling only
-  for availability. This is the long term path for the hub: an event subscription would remove
-  the 3 s poll and make the UI feel native.
-- Costs: one subscription per device, renewal every few minutes, a callback URL that must be
-  reachable from the device (so the hub must be on the same network, which it is), and a
-  fallback to polling when events stop. Worth a dedicated card, not a v2 requirement.
+Measured on the reference player (WiiM Pro, `Linkplay.4.8.833748`) on 09/11/2026, then implemented
+in 0.6.0 as an opt-in.
+
+**What the player advertises.** UPnP on port 49152, HTTP only (TLS is refused). The description
+lists five services; two carry playback state: `AVTransport` (`/upnp/event/rendertransport1`) and
+`RenderingControl` (`/upnp/event/rendercontrol1`). `SUBSCRIBE` with a `CALLBACK`, `NT: upnp:event`
+and `TIMEOUT: Second-300` answers 200 with a `SID` and the granted timeout, and a renewal sent on
+the same `SID` answers 200 with the same `SID`; an unknown `SID` answers 412.
+
+**What a notification carries.** An initial `NOTIFY` (SEQ 0) arrives immediately with the whole
+state, then one notification per change. A volume or mute write is delivered in under 100 ms, with
+`SEQ` incremented by one. The body is a `propertyset` whose `LastChange` property carries an escaped
+`Event` document, with the track metadata escaped a second time inside `CurrentTrackMetaData`
+(`dc:title`, `upnp:artist`, `upnp:album`, `upnp:albumArtURI`). Transport wording is UPnP
+(`PLAYING`, `PAUSED_PLAYBACK`, `STOPPED`), and the device does not emit when a command changes
+nothing (resume on an empty queue).
+
+**What it does not carry, and why polling stays.** No position: `RelativeTimePosition` is absent
+from the transport event, so the seek bar keeps its polled values. The counters, the group, the
+inputs, the equalizer and the sleep timer are not evented either. The subscription therefore
+accelerates status, volume, mute, track and duration, and a slow poll keeps the rest.
+
+**Effect, measured through the hub with `SLOW_POLL_MS=15000`.** A volume write made directly on the
+device reached `/api/state` in 0.4 s, with `upnp.events` incremented and `updatedAt` untouched: the
+value came from the event, not from a poll. The poll cycle is 6 GET (`getStatusEx`,
+`getPlayerStatusEx`, `getMetaInfo`, `getNewAudioOutputHardwareMode`, `getShutdown`, the equalizer
+query) plus the cached probes, so the cadence goes from 20 cycles and ~120 requests per minute to
+4 cycles and ~25 requests per minute: about five times fewer, for a latency roughly thirty times
+lower on the evented fields.
+
+**Deployment constraint.** The player pushes to the `CALLBACK` it was given, so the hub must be
+reachable from the speaker on the LAN. A container on a bridge network is not, which is why the
+subscription is enabled by `UPNP_CALLBACK` (the reachable base URL) and stays off by default; the
+callback listener is a dedicated port that answers `NOTIFY` only, on a per-device random path,
+validated by source address and by `SEQ`, so it cannot become a second API surface.
+
+**Fallback.** Silence proves nothing on a player nobody touches, so the hub does not age the
+subscription out. It declares it degraded, and drops back to the fast poll, when a renewal fails or
+when two polls contradict a field the subscription claims to carry; the card then says
+`polling fallback` instead of `subscribed`.
 
 ## 6. Diagnostic assistance
 

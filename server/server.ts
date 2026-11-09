@@ -3,6 +3,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, resolve, sep } from 'node:path'
 import { commandFor, parseAction } from './commands.ts'
 import {
+  artUri,
+  cleanTitle,
   type DeviceEvent,
   type DevicePatch,
   type DeviceState,
@@ -16,9 +18,20 @@ import {
 } from './device.ts'
 import { discoverSsdp } from './discovery.ts'
 import { createWriteQueue } from './queue.ts'
+import { createEventHub, type EventPatch } from './upnp.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
 const pollMs = Math.max(1000, Number.parseInt(process.env.POLL_MS ?? '3000', 10))
+// With a live subscription only the fields nobody events (counters, group,
+// inputs, equalizer) still need a poll, so the interval relaxes.
+const slowPollMs = Math.max(pollMs, Number.parseInt(process.env.SLOW_POLL_MS ?? '15000', 10))
+// The base the players can reach the callback on. Empty means eventing is off:
+// a hub behind a bridge network cannot be called back, and guessing an address
+// would subscribe devices to a URL that never answers.
+const callbackBase = (process.env.UPNP_CALLBACK ?? '').trim()
+const upnpPort = Number.parseInt(process.env.UPNP_PORT ?? '8091', 10)
+const eventsEnabled = callbackBase !== ''
+const upnpRetryMs = 60_000
 const discoveryEnabled = (process.env.DISCOVERY ?? '1') !== '0'
 const discoveryIntervalMs = 300_000
 const distDir = resolve(import.meta.dirname, '..', 'dist')
@@ -68,6 +81,7 @@ const emptyState = (host: string): DeviceState => ({
   online: false,
   lastSeen: null,
   errors: 0,
+  upnp: { state: 'off', lastEventAt: null, events: 0, misses: 0 },
   samples: [],
   events: [],
 })
@@ -122,6 +136,69 @@ const applyPatch = (state: DeviceState, patch: DevicePatch): void => {
     state.samples.splice(0, state.samples.length - MAX_SAMPLES)
 }
 
+// A notification is a partial truth: it carries what changed, never the whole
+// device. It is applied to the state the polls built, and it goes through the
+// same cleaning as a poll so the placeholder "Unknown" cannot come back through
+// the event path.
+const applyEvent = (ip: string, patch: EventPatch): void => {
+  const entry = findEntry(ip)
+  if (entry === null) return
+  const state = entry.state
+  if (!state.online) return
+  const previousStatus = state.status
+  const previousTitle = state.title
+  if (patch.status !== undefined) state.status = patch.status
+  if (patch.volume !== undefined) state.volume = patch.volume
+  if (patch.mute !== undefined) state.mute = patch.mute
+  if (patch.title !== undefined) state.title = cleanTitle(patch.title)
+  if (patch.artist !== undefined) state.artist = cleanTitle(patch.artist)
+  if (patch.album !== undefined) state.album = cleanTitle(patch.album)
+  if (patch.albumArt !== undefined) state.albumArt = artUri(patch.albumArt)
+  if (patch.totalMs !== undefined) state.totalMs = patch.totalMs
+  state.upnp = hub.status(state.ip)
+  if (previousStatus !== '' && state.status !== previousStatus) {
+    pushEvent(state, 'status', previousStatus, state.status)
+  }
+  if (state.title !== previousTitle && state.title.length > 0) {
+    pushEvent(state, 'track', previousTitle, state.title)
+  }
+}
+
+const hub = createEventHub({
+  port: upnpPort,
+  callbackBase,
+  onPatch: applyEvent,
+  log: message => console.log(message),
+})
+
+const lastSubscribeAttempt = new Map<string, number>()
+
+// One attempt per minute per device: a player that refuses the subscription
+// must not be asked on every tick.
+const ensureSubscription = (state: DeviceState): void => {
+  if (!eventsEnabled || !state.online || hub.isSubscribed(state.ip)) return
+  const attempted = lastSubscribeAttempt.get(state.ip) ?? 0
+  if (Date.now() - attempted < upnpRetryMs) return
+  lastSubscribeAttempt.set(state.ip, Date.now())
+  void hub.subscribe(state.ip).then(subscribed => {
+    state.upnp = hub.status(state.ip)
+    if (!subscribed) lastSubscribeAttempt.set(state.ip, Date.now())
+  })
+}
+
+// A poll that sees a value the subscription should have announced means the
+// notifications are not arriving: two of those and the hub goes back to the
+// fast poll instead of trusting a silent channel.
+const contradicts = (state: DeviceState, patch: DevicePatch): boolean => {
+  if (!state.online || !hub.isSubscribed(state.ip) || !patch.online) return false
+  return (
+    (patch.status !== '' && patch.status !== state.status) ||
+    (patch.volume !== null && patch.volume !== state.volume) ||
+    patch.mute !== state.mute ||
+    (patch.title !== '' && patch.title !== state.title)
+  )
+}
+
 let polling = false
 const pollAll = async (): Promise<void> => {
   if (polling) return
@@ -132,7 +209,14 @@ const pollAll = async (): Promise<void> => {
         const state = states.get(host) ?? emptyState(host)
         states.set(host, state)
         const patch = await pollDevice(host)
+        const missed = contradicts(state, patch)
         applyPatch(state, patch)
+        if (patch.online && hub.isSubscribed(state.ip)) {
+          if (missed) hub.markMiss(state.ip)
+          else hub.clearMiss(state.ip)
+        }
+        state.upnp = hub.status(state.ip)
+        ensureSubscription(state)
       })
     )
   } finally {
@@ -402,7 +486,35 @@ createServer((req, res) => {
   console.log(`wiim-hub listening on :${port} (${hosts.size} host(s), poll ${pollMs} ms)`)
 })
 
-void pollAll()
-void refreshHosts().then(() => pollAll())
-setInterval(() => void pollAll(), pollMs)
-setInterval(() => void refreshHosts().then(() => pollAll()), discoveryIntervalMs)
+// The interval follows the subscriptions: while every device pushes, only the
+// fields nobody events need polling, so the loop relaxes instead of stopping.
+const allSubscribed = (): boolean => {
+  const list = [...states.values()].filter(state => state.online)
+  return eventsEnabled && list.length > 0 && list.every(state => hub.isSubscribed(state.ip))
+}
+
+let pollTimer: NodeJS.Timeout | null = null
+const scheduleNextPoll = (): void => {
+  if (pollTimer !== null) clearTimeout(pollTimer)
+  const delay = allSubscribed() ? slowPollMs : pollMs
+  pollTimer = setTimeout(() => {
+    void pollAll().finally(scheduleNextPoll)
+  }, delay)
+}
+
+const main = async (): Promise<void> => {
+  if (eventsEnabled) await hub.start().catch(() => undefined)
+  else console.log('wiim-hub: UPnP events off (UPNP_CALLBACK is empty)')
+  await pollAll()
+  scheduleNextPoll()
+  void refreshHosts().then(() => pollAll())
+  setInterval(() => void refreshHosts().then(() => pollAll()), discoveryIntervalMs)
+}
+
+const shutdown = (): void => {
+  void hub.close().finally(() => process.exit(0))
+}
+process.once('SIGTERM', shutdown)
+process.once('SIGINT', shutdown)
+
+void main()

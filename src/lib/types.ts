@@ -89,8 +89,19 @@ export type Device = {
   online: boolean
   lastSeen: number | null
   errors: number
+  // What the UPnP subscription is doing: `off` when the hub has no callback the
+  // players can reach, `subscribed` when they push their changes, `degraded`
+  // when a poll contradicted the channel and the fast poll took over.
+  upnp: UpnpStatus
   samples: Sample[]
   events: DeviceEvent[]
+}
+
+export type UpnpStatus = {
+  state: 'off' | 'subscribed' | 'degraded'
+  lastEventAt: number | null
+  events: number
+  misses: number
 }
 
 export type HubState = {

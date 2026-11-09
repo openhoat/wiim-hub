@@ -74,6 +74,11 @@
     "idle": "au repos",
     "loading": "chargement"
   },
+  "upnp": {
+    "off": "sondage seul",
+    "subscribed": "abonné",
+    "degraded": "repli sur le sondage"
+  },
   "inputs": {
     "wifi": "Wi-Fi",
     "line-in": "Entrée ligne",
@@ -90,7 +95,8 @@
     "state": "État",
     "source": "Source",
     "lastSeen": "Dernière vue",
-    "failures": "Échecs"
+    "failures": "Échecs",
+    "push": "Événements"
   },
   "table": {
     "time": "Heure",

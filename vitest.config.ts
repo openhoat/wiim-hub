@@ -10,7 +10,7 @@ export default defineConfig({
     include: ['server/**/*.test.ts'],
     coverage: {
       provider: 'v8',
-      include: ['server/commands.ts', 'server/queue.ts'],
+      include: ['server/commands.ts', 'server/queue.ts', 'server/upnp.ts'],
       reporter: ['text', 'lcov'],
       reportsDirectory: 'coverage',
       thresholds: {

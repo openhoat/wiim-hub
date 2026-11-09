@@ -74,6 +74,11 @@
     "idle": "idle",
     "loading": "loading"
   },
+  "upnp": {
+    "off": "polling only",
+    "subscribed": "subscribed",
+    "degraded": "polling fallback"
+  },
   "inputs": {
     "wifi": "Wi-Fi",
     "line-in": "Line input",
@@ -90,7 +95,8 @@
     "state": "State",
     "source": "Source",
     "lastSeen": "Last seen",
-    "failures": "Failures"
+    "failures": "Failures",
+    "push": "Push"
   },
   "table": {
     "time": "Time",

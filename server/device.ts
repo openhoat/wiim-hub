@@ -3,6 +3,7 @@ import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
 import { isIP } from 'node:net'
 import { isIpLiteral, resolveMdns } from './mdns.ts'
+import type { EventStatus } from './upnp.ts'
 
 export type Sample = {
   t: number
@@ -106,6 +107,10 @@ export type DeviceState = {
   online: boolean
   lastSeen: number | null
   errors: number
+  // The UPnP subscription behind the playback fields: `subscribed` means the
+  // device pushes volume, mute and transport changes, `degraded` means a poll
+  // contradicted it and the hub is back on the fast poll.
+  upnp: EventStatus
   samples: Sample[]
   events: DeviceEvent[]
 }
@@ -244,12 +249,13 @@ const cleanModel = (value: string): string =>
 
 // Idle firmware reports the placeholder "Unknown" as the track title: it is a
 // device artefact, not a track, so it must not reach the card.
-const cleanTitle = (value: string): string => (/^unknow?n?$/i.test(value.trim()) ? '' : value)
+export const cleanTitle = (value: string): string =>
+  /^unknow?n?$/i.test(value.trim()) ? '' : value
 
 // The same firmware answers `un_known` for a cover it does not have: relaying
 // that string produces a broken image on every poll of a stopped player. The
 // spelling varies by model (`unknown`, `unknow`, `un-known`), so match the stem.
-const artUri = (value: string): string => {
+export const artUri = (value: string): string => {
   const uri = value.trim()
   return /^(un[_-]?know?n?|-)$/i.test(uri) ? '' : uri
 }

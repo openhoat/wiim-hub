@@ -9,9 +9,10 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
-Nothing in progress: 0.5.x shipped the quality pass, the demo and its end-to-end suite, the public
-release and the external-input fix (#20 closed, see git history). #4 keeps its write half blocked on
-a second reachable unit.
+Card #5 in progress: the subscription, the callback listener, the degraded fallback and the slow
+poll are written and tested (`server/upnp.test.ts`), and measured against the reference player.
+Remaining: the deployment side (a container behind a bridge network cannot be called back, so
+publishing the callback port is an infra decision) and the 0.6.0 release.
 
 ## Backlog
 
@@ -33,9 +34,10 @@ a second reachable unit.
 
 ### #5 [PERFORMANCE] Replace polling with UPnP event subscriptions (P2)
 
-- [ ] Subscribe to the device events on port 49152, renew the subscription, keep polling as a fallback
-- [ ] Detect a stale subscription and fall back within one poll interval
-- [ ] Measure the effect on request count and on UI latency, and record both in the docs
+- [x] Subscribe to the device events on port 49152, renew the subscription, keep polling as a fallback
+- [x] Detect a stale subscription and fall back within one poll interval
+- [x] Measure the effect on request count and on UI latency, and record both in the docs
+- [ ] Publish the callback port on the deployment so the speakers can reach the hub
 
 ### #7 [UX] Manage devices from the UI (P2)
 

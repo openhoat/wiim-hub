@@ -220,12 +220,22 @@ disturbed. The suite and the demo are typechecked with the rest of the code, and
 The server reads `.env` from the working directory when it exists (`start` and `start:server`);
 inside Docker the variables come from the compose file instead.
 
-| Variable       | Default | Meaning                                                                              |
-| -------------- | ------- | ------------------------------------------------------------------------------------ |
-| `PORT`         | `8090`  | HTTP port of the hub                                                                 |
-| `POLL_MS`      | `3000`  | Polling period, floor 1000 ms                                                        |
-| `DEVICE_HOSTS` | empty   | Comma separated device addresses or names, authoritative list; one entry per speaker |
-| `DISCOVERY`    | `1`     | SSDP discovery, best effort, set `0` to disable                                      |
+| Variable        | Default | Meaning                                                                                          |
+| --------------- | ------- | ------------------------------------------------------------------------------------------------ |
+| `PORT`          | `8090`  | HTTP port of the hub                                                                             |
+| `POLL_MS`       | `3000`  | Polling period, floor 1000 ms                                                                    |
+| `SLOW_POLL_MS`  | `15000` | Polling period while every device pushes its events, floor `POLL_MS`                             |
+| `UPNP_CALLBACK` | empty   | Base URL the players can reach the hub on, e.g. `http://192.168.1.146:8091`; enables UPnP events |
+| `UPNP_PORT`     | `8091`  | Port of the event callback listener, separate from `PORT`                                        |
+| `DEVICE_HOSTS`  | empty   | Comma separated device addresses or names, authoritative list; one entry per speaker             |
+| `DISCOVERY`     | `1`     | SSDP discovery, best effort, set `0` to disable                                                  |
+
+UPnP events are off unless `UPNP_CALLBACK` names an address the speakers can reach: the player
+pushes its notifications to that URL, so a hub on a different network (a bridged container, a
+remote host) would subscribe the speaker to a URL that never answers. With events on, the playback
+fields arrive in under a second and the poll relaxes to `SLOW_POLL_MS`; the hub keeps polling for
+the fields nobody events (position, counters, group, inputs, equalizer) and falls back to the fast
+poll when a renewal fails or when two polls contradict the channel.
 
 ## Endpoints
 

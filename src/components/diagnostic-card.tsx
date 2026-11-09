@@ -34,6 +34,13 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
   const live = useMemo(() => device.samples.slice(-120), [device.samples])
   const rssi = device.rssi
   const SignalIcon = rssi === null ? SignalZero : rssi <= -70 ? SignalLow : SignalHigh
+  // The push state is a diagnostic fact of its own: a silent channel and a
+  // device that never changes look the same from the page.
+  const push = device.upnp
+  const pushLabel =
+    push.state === 'subscribed' && push.lastEventAt !== null
+      ? `${t('upnp.subscribed')} · ${agoLabel(t, push.lastEventAt, now)}`
+      : t(`upnp.${push.state}`)
 
   const copy = async (): Promise<void> => {
     try {
@@ -117,6 +124,7 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
             />
             <Field label={t('labels.lastSeen')} value={agoLabel(t, device.lastSeen, now)} />
             <Field label={t('labels.failures')} value={String(device.errors)} />
+            <Field label={t('labels.push')} value={pushLabel} />
           </dl>
         </section>
 
