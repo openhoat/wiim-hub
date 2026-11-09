@@ -1,0 +1,20 @@
+name: GitHub Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - run: node scripts/github-release.mjs --backfill
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

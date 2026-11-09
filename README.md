@@ -184,6 +184,16 @@ Then open <http://localhost:8090>, or <http://localhost:5173> in development.
 
 ## Tests
 
+`npm run validate` is the one gate, locally and in CI: biome (lint and format), markdownlint and
+prettier on the Markdown, the unit suite with its coverage thresholds, `tsc --noEmit` over the UI,
+the server, the suite and the configs, then the Vite build. The tasks are wired with
+[wireit](https://github.com/google/wireit), so an unchanged one is not run twice, and `npm run
+qa:fix` rewrites the formatting instead of reporting it.
+
+The unit suite (`npm run test:coverage`) covers the pure server layer: the intents the hub accepts,
+the commands it builds from them, and the per-device writer that keeps one write in flight at a
+time.
+
 The end-to-end suite drives the demo mode in a real browser: the two cards, the group panel, the
 sound card, the diagnostic view and its CSV export, a volume write that survives a poll, the
 persisted view, language and theme, and the phone layout. No speaker is involved, so the suite runs
@@ -196,8 +206,8 @@ npm run test:e2e
 ```
 
 `playwright.config.ts` starts `server/demo.ts` on port 8091, so a hub left running on 8090 is not
-disturbed. `npm run typecheck` also covers the suite and the demo, and
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the same command on every push.
+disturbed. The suite and the demo are typechecked with the rest of the code, and
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the gate and the suite on every push.
 
 ## Configuration
 
@@ -246,13 +256,15 @@ open proxy. Beyond that check:
 ```text
 server/device.ts     device client: transport fallback, mDNS name resolution, parsing, art relay
 server/commands.ts   accepted intents, validation against the device state, command mapping
+server/queue.ts      per-device write queue: one command in flight, coalescing by family
 server/discovery.ts  SSDP discovery, filtered on WiiM and LinkPlay descriptions
 server/mdns.ts       dependency-free mDNS A record resolver
-server/server.ts     polling loop, write queue, ring buffers, HTTP routes, static bundle, SPA fallback
+server/server.ts     polling loop, ring buffers, HTTP routes, static bundle, SPA fallback
 server/demo.ts       the same routes over simulated speakers, for the demo mode and the e2e suite
 e2e/                 Playwright suite, run against the demo mode
 src/                 React UI: components, settings and i18n provider, formatting helpers
 src/locales/         en and fr dictionaries
+docs/adr/            architecture decision records
 scripts/build.sh     image build and push
 ```
 
@@ -278,7 +290,8 @@ REGISTRY=registry.example IMAGE=my-hub ./scripts/build.sh 1.0.0
 The hub has no built-in authentication, by design: identity belongs to the ingress. Run it on a
 private network, or behind a forward-auth proxy such as oauth2-proxy or Authelia, and keep
 `/health` reachable without a session if a probe needs it. The control version writes to the
-device, so exposing it without an authentication layer is not supported.
+device, so exposing it without an authentication layer is not supported. The reporting path for a
+vulnerability is in [`SECURITY.md`](SECURITY.md).
 
 ## Roadmap
 
@@ -287,6 +300,8 @@ device, so exposing it without an authentication layer is not supported.
 - [`docs/feature-research.md`](docs/feature-research.md): what the LinkPlay API exposes, what was
   measured on a real player, and the behaviour requirements for the control, diagnostic and
   multiroom versions.
+- [`docs/adr/`](docs/adr): the decisions that are not obvious from the code.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md): setup, the gate and the conventions.
 
 ## License
 

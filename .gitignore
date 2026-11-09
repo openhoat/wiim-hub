@@ -2,6 +2,7 @@ node_modules/
 dist/
 .wireit/
 coverage/
+.scannerwork/
 .env
 *.log
 .DS_Store
