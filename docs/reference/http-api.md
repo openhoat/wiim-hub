@@ -9,6 +9,7 @@ for the browser.
 | `/health`                             | GET    | `ok`, for container healthchecks. Reads no device.                                         |
 | `/api/state`                          | GET    | Devices with their state, samples, events and the findings of the moment                   |
 | `/api/report?host=<address>`          | GET    | The diagnostic report as Markdown (English), with the raw answers and the findings as JSON |
+| `/api/services?host=<address>`        | GET    | The streaming services the firmware can drive, with the tiers it publishes for each        |
 | `/api/settings?host=<address>`        | GET    | Name, LED, touch controls, balance, maximum volume and fade, read live                     |
 | `/api/command?host=<address>`         | POST   | One intent, written through the per-device queue; answers with the device body             |
 | `/api/discover`                       | POST   | One SSDP pass, then an immediate poll; answers with the number of devices found            |
@@ -54,6 +55,22 @@ instead of reaching the speaker:
 An intent that reaches the device and comes back `unknown command` is recorded as unsupported for
 that device: the page then shows the control as unsupported rather than offering a button that
 never works.
+
+## The streaming tiers
+
+`GET /api/services?host=<address>` answers `{ts, host, services}`. Each service is
+`{id, version, levels, replayGain, configurable, active}`, with `levels` in the order the device
+published them and empty when the firmware publishes none.
+
+`active` says the endpoint is running on the player, not that it is playing: the Pro answers
+`active: true` for Spotify while it streams YouTube Music. The service in use comes from
+`getPlayerStatusEx.vendor`, matched against the service ids.
+
+The table is reference data, cached for 5 min per address, and never part of `/api/state`: it
+changes with a firmware update, not with a track. A failed probe keeps the last table the model
+published, and an offline player is not probed at all (`services: []`). The levels are not
+normalised by the API either: the page translates the vendor enums that have a documented mapping
+and prints the rest as published.
 
 ## The report
 

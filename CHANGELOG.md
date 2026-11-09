@@ -10,6 +10,19 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The diagnostic card states the streaming tier each service reaches on this model. A new panel
+  reads `streamServicesCapability` when the card opens (five minute cache, never in the poll) and
+  lists the services the firmware can drive with the top of the quality ladder it publishes for
+  each one: `HI_RES` for Tidal, `UHD` for Prime, `FLAC 24 <= 192 kHz` for Qobuz (its format ids are
+  translated), `FLAC 24 bit` for KKBOX. The full ladder sits in the row tooltip, the service playing
+  comes first with an "in use" badge read from `getPlayerStatusEx.vendor`, and a dash says the
+  firmware publishes nothing, which is the case for the cast endpoints the vendor app drives. No
+  named tier is turned into a bitrate, and the 22 families that publish no level stay behind a
+  count rather than being hidden.
+- `GET /api/services?host=` answers that table as `{ts, host, services}`.
+
 ## [0.9.3] - 2026-11-09
 
 ### Fixed

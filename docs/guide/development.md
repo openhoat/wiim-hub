@@ -31,8 +31,8 @@ end-to-end suite.
 The unit suite covers the pure layer on both sides of the HTTP boundary: the intents the hub
 accepts, the commands it builds from them, the device parsers pinned against answers a real player
 sent (`server/fixtures/`), the per-device write queue, the diagnostic rules, the guided checks, the
-capability inventory, the UPnP event hub, and the optimistic reconciliation the page paints before a
-poll confirms it.
+capability inventory, the streaming tiers, the UPnP event hub, and the optimistic reconciliation the
+page paints before a poll confirms it.
 
 ```sh
 npm run test:coverage    # with the thresholds from vitest.config.ts

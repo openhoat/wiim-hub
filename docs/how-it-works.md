@@ -105,6 +105,23 @@ knows (18 of them, cached for 60 s) and classifies each answer: supported, `unkn
 that worked (`host`, then address, then scheme), which is the first thing to check when a device is
 configured by name.
 
+## The streaming tiers
+
+`streamServicesCapability` answers the services a player can drive, with the quality tiers its
+firmware publishes for each one. The hub reads it when the diagnostic card opens, keeps it for five
+minutes per address, and never in the poll payload: it changes with a firmware update, not with a
+track.
+
+The payload has no uniform shape. Some families list a ladder of names (`SD < HD < UHD`), Qobuz
+lists format ids, CalmRadio lists bitrates, KKBOX lists codec tokens, and most services (the cast
+endpoints above all) list nothing because the app that casts to them owns the levels. The card shows
+the top of the ladder the device listed, the whole ladder in the row tooltip, and a dash where the
+firmware says nothing. A named tier is never turned into a bitrate: `HI_RES` is what this model
+reports, and `24 bit / 192 kHz` would be a claim about a catalogue.
+
+The "in use" badge comes from `getPlayerStatusEx.vendor`, not from the `active` flag: the Pro
+answers `active` for Spotify while it streams YouTube Music.
+
 ## The cover relay
 
 Album art is fetched by the hub, not by the browser. Two reasons: an https page cannot load a cover
@@ -152,6 +169,7 @@ server/upnp.ts       event subscriptions, notifications, renewal and fallback
 server/findings.ts   diagnostic rules and the Markdown report
 server/guides.ts     the four guided flows
 server/inventory.ts  capability probing and its cache
+server/services.ts   streaming services and the tiers the firmware publishes
 server/server.ts     polling loop, ring buffers, HTTP routes, static bundle
 server/demo.ts       the same routes over simulated speakers
 src/                 React UI: components, settings and i18n provider, formatting helpers

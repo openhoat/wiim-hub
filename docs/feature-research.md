@@ -398,8 +398,8 @@ and never let the optimistic "grouped" view outlive one poll interval.
 - `getMetaInfo` gives `sampleRate`, `bitDepth`, `bitRate` (`44100`, `32`, `257` here). Show them
   as a quality chip (for example `44.1 kHz / 32 bit / 257 kbps`), because "is my stream really
   lossless" is the most asked WiiM question.
-- `streamServicesCapability` lists per service quality tiers and versions. Use it to explain
-  why a service only offers HD on this model, and to show supported services without guessing.
+- `streamServicesCapability` lists per service quality tiers and versions. It is now read and
+  shown: section 5.14 below records the measured shapes and the rules the card follows.
 - Hex encoded metadata in `getPlayerStatus` is a trap: if `getMetaInfo` is absent or empty
   (`subtitle: "unknow"` is normal on Bluetooth), decode the hex fields rather than showing
   gibberish.
@@ -624,6 +624,64 @@ Two deliberate choices:
 
 The demo serves its own inventory, built from the recorded answers plus one `unknown command` and
 one empty body, so all four renderable statuses are exercised by the browser suite.
+
+### 5.14 Streaming tiers (shipped after 0.9.3)
+
+One command, twenty-nine entries. `streamServicesCapability` answers the whole table in one
+2 001 byte body, and the question it settles is the one every owner asks about a streamer: "which
+tier does this model reach on that service". Measured on the reference player (09/11/2026): 29
+services, each with a `version` and, sometimes, a `quality` list.
+
+**The shapes are not uniform, and that is the design problem.** Five shapes came back:
+
+| Shape             | Service      | The firmware answered                                             |
+| ----------------- | ------------ | ----------------------------------------------------------------- |
+| a ladder of names | Prime        | `["SD", "HD", "UHD"]`                                             |
+| a ladder of names | Tidal        | `["LOW", "HIGH", "LOSSLESS", "HI_RES"]`, plus `replayGain: true`  |
+| a ladder of names | Deezer2      | `["LOW", "MEDIUM", "HIGH", "LOSSLESS"]`, plus `brand` and `hw`    |
+| a ladder of names | Pandora2     | `["Low", "Medium", "High"]`                                       |
+| a vendor enum     | Qobuz        | `["5", "6", "7", "27"]`, plus `replayGain: true`                  |
+| bitrates          | CalmRadio    | `["64", "128", "192", "320"]`                                     |
+| codec tokens      | KKBOX        | `["aac_320_dash_cenc", "flac_16_dash_cenc", "flac_24_dash_cenc"]` |
+| nothing           | the other 22 | no `quality` key at all                                           |
+
+The last row is the majority, for two different reasons. Eight entries carry `configurable: true`
+(`SpotifyConnect`, `TidalConnect`, `QobuzConnect`, `AudioCast`, `AVS_MRM`, `Squeezelite`, `Roon`,
+`Soundtrack`): the app that drives them owns the levels, so there is nothing for the player to
+publish. The others are radio directories and fixed endpoints (`iHeart`, `vTuner`, `Samba`,
+`YouTubeMusic`, `Presto`): they report no `quality` key at all.
+
+**Rules the card follows.**
+
+- **The top tier is the last level the firmware listed.** On every family measured, the list is
+  ascending, so trusting its order states a fact; ranking vendors in the hub would encode a table
+  with no source behind it. The whole ladder stays in the row tooltip, in the published order.
+- **Translate only what the payload carries a meaning for.** A named level is printed as published
+  (`HI_RES`, `UHD`). Qobuz answers format ids, documented by its own API: `5` is MP3 320, `6` is CD
+  quality, `7` and `27` are the two Hi-Res steps. A codec token spells itself (`flac_24_…` becomes
+  `FLAC 24 bit`). A bare number in any other family stays a bare number: without a source it is a
+  vendor id, not a bitrate.
+- **No bitrate for a named tier.** `HI_RES` is what this model reports; turning it into
+  `24 bit / 192 kHz` would be a claim about a catalogue, not a reading of the player in front of you.
+- **A dash is an answer.** A service with no `quality` key is listed and shows `—`, and the casting
+  apps say so too, instead of being hidden from a table that claims to be complete.
+
+**Trap found on the real device**: `active` does not mean "playing". The Pro answered
+`active: true` for `SpotifyConnect` while `getPlayerStatusEx` reported `vendor: "YouTubeMusic"`. The
+flag says the endpoint is running on the player; the source in use is read from `getPlayerStatusEx`
+and matched against the service ids, which is why the "in use" badge never comes from this field.
+
+**Served on demand, not per poll.** The table is reference data: it changes with a firmware update,
+not with a track, so it has no business in the 3 s payload.
+`GET /api/services?host=` answers `{ts, host, services}` from a 5 min cache keyed by address, and a
+failed probe keeps the last table the model published instead of emptying the page. An offline
+player is not probed: the panel says the table is read when it answers, which is the same choice the
+capability inventory makes for its eighteen commands.
+
+The page shows the panel under the guided checks: the service in use first, then the families that
+publish a tier, then a count that opens the rest. Parsing and presentation are pure and tested
+against the recorded body (`server/services.ts`, `src/lib/services.ts`); the demo serves the same
+recorded table.
 
 ## 7. Interaction rules (apply to every feature)
 
