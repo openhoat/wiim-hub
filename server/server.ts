@@ -19,6 +19,7 @@ import {
 } from './device.ts'
 import { discoverSsdp } from './discovery.ts'
 import { buildReport, findingsFor } from './findings.ts'
+import { readInventory, resolutionFor } from './inventory.ts'
 import { createWriteQueue } from './queue.ts'
 import { createEventHub, type EventPatch } from './upnp.ts'
 
@@ -468,16 +469,24 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     const findings = findingsFor({ state: entry.state, diagnostics: entry.state.diagnostics })
+    // Probing eighteen commands costs about five seconds on a dead device and
+    // says nothing useful there: an offline player is already the first finding.
+    const inventory = entry.state.online ? await readInventory(entry.key) : null
+    const resolution = resolutionFor(entry.key)
     const report = buildReport({
       state: entry.state,
       diagnostics: entry.state.diagnostics,
       findings,
       hub: { version: hubVersion, pollMs, slowPollMs, eventsEnabled },
+      inventory,
+      resolution,
     })
     sendJson(res, 200, {
       ts: report.generatedAt,
       host: entry.key,
       findings,
+      inventory,
+      resolution,
       markdown: report.markdown,
     })
     return

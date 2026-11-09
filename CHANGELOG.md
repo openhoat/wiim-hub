@@ -21,6 +21,14 @@ Releases are cut from `package.json`: the version in that file names the section
 - The optimistic reconciliation left the hook: `src/lib/optimistic.ts` holds what a click paints
   and how long it survives, and `src/lib/optimistic.test.ts` covers it without a browser. The unit
   suite now spans `src/**/*.test.ts` as well as `server/**/*.test.ts`.
+- The support report carries a capability inventory: `server/inventory.ts` asks the eighteen
+  commands the hub depends on (`getStatusEx` … `getShutdown`), classifies each answer as
+  `supported`, `unsupported` (`unknown command`), `failed` (`Failed`, an HTTP answer that refuses),
+  `empty` or `unreachable`, and prints the command, the area, the status and the first 160
+  characters of the body, followed by the counts. The probe path (`host` → address → scheme that
+  answered) rides the same section, and `/api/report` returns `inventory` and `resolution` next to
+  the Markdown. An offline player is not probed: eighteen timeouts would say nothing the offline
+  finding does not already say, so the section states that the probe was skipped.
 
 ### Fixed
 

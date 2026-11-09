@@ -118,7 +118,8 @@ The device client is split into pure seams so those shapes are testable without 
 answers a real player returned, sanitised in `server/fixtures/wiim-pro.ts`: hex titles, a number
 where a string is documented, `unknown command`, empty bodies, and the `unknow` placeholders. A
 seam returns `null` for an answer it cannot read, which is how the caches keep the last good
-value instead of blanking a panel.
+value instead of blanking a panel. The support report asks those commands once, on demand, and
+prints the answer each one gave: that is the capability inventory in §6.
 
 ## 4. Write surface (measured on the reference player)
 
@@ -529,15 +530,48 @@ Guided flows (deterministic, no LLM needed):
 - "Cannot join group": show both devices' `wmrm_version`, group state and RSSI (a slave on 2.4
   GHz far from the master is a classic cause).
 
-Report export: `GET /api/report?host=` answers `{ts, host, findings, markdown}` and the page
-offers both copy and download. The Markdown carries the identity, firmware, link metrics,
-network name, playback, group, the findings with their evidence lines, then the raw answers
-(`diagnostics`, `link`, the last samples) in a JSON block. It is the artefact a user pastes into
-a support thread, and it is English by design: one artefact, not one per language.
+Report export: `GET /api/report?host=` answers `{ts, host, findings, inventory, resolution,
+markdown}` and the page offers both copy and download. The Markdown carries the identity,
+firmware, link metrics, network name, playback, group, the findings with their evidence lines, the
+capability inventory, then the raw answers (`diagnostics`, `link`, the last samples) in a JSON
+block. It is the artefact a user pastes into a support thread, and it is English by design: one
+artefact, not one per language.
 
-Still missing from the report: the capability inventory (every probed command with `supported`,
-raw body and probe time) and the resolution path (which address answered). The recorded fixtures
-and the parser seams shipped with `#8` are what makes both cheap to add.
+### Capability inventory (shipped with the report)
+
+`server/inventory.ts` probes the eighteen commands the hub depends on, once per report (60 s cache,
+no cost per poll), and classifies each answer instead of trusting the firmware's own capability
+flags:
+
+| Status        | Meaning                                                     | Measured on the reference player (09/11/2026) |
+| ------------- | ----------------------------------------------------------- | --------------------------------------------- |
+| `supported`   | anything that is not a known refusal                        | 17 of 18                                      |
+| `unsupported` | `unknown command` (the old LinkPlay commands)               | 0                                             |
+| `failed`      | `Failed` or `{"status":"Failed"}`: known, refused right now | 1 (`getModeRename`)                           |
+| `empty`       | the device answered with an empty body                      | 0                                             |
+| `unreachable` | no answer on either scheme after the timeout                | 0                                             |
+
+Four different repair paths, and a support reader needs to tell them apart: a firmware without the
+command, a firmware that refuses it, a firmware that answers nothing, and a device that is not
+there. A refusal the hub does not recognise counts as `supported` with its body in the table, which
+is the honest failure mode: showing the answer beats hiding it behind a guess.
+
+The same section carries the **probe path**: the configured host, the address it resolved to, and
+the scheme that answered (`https` on recent firmware, `http` on older builds, `no successful call
+yet` before the first answer). `fetchCommand` now records the scheme that answered on the first
+attempt too, not only on the fallback, so the report can state it.
+
+Two deliberate choices:
+
+- **The equalizer curve is probed with its argument.** `EQGetLV2SourceBandEx` is only readable with
+  the plugin uri and a source name, so the probe sends the real command and the table shows the
+  bare name a reader recognises.
+- **An offline player is not probed.** Eighteen requests against a dead address cost about five
+  seconds and produce eighteen `unreachable` rows; the offline finding already says it, so the
+  section states that the probe was skipped and keeps the probe path, which is what matters then.
+
+The demo serves its own inventory, built from the recorded answers plus one `unknown command` and
+one empty body, so all four renderable statuses are exercised by the browser suite.
 
 ## 7. Interaction rules (apply to every feature)
 

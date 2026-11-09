@@ -7,6 +7,7 @@
 // The module is pure on purpose: the thresholds and the wording can be tested
 // without a speaker, and the same findings feed the page and the support report.
 import type { DeviceState, Diagnostics } from './device.ts'
+import { type Inventory, inventorySection, type Resolution } from './inventory.ts'
 
 // Measured on the reference player (09/11/2026): a healthy link reads -53 dBm,
 // 35 dB SNR and 433 Mb/s at 5 GHz.
@@ -268,6 +269,10 @@ export const buildReport = (input: {
   diagnostics: Diagnostics | null
   findings: Finding[]
   hub: { version: string; pollMs: number; slowPollMs: number; eventsEnabled: boolean }
+  // Omitted state reads as "not probed": the demo and the tests that only care
+  // about the findings do not have to fabricate an inventory.
+  inventory?: Inventory | null
+  resolution?: Resolution | null
   now?: number
 }): { generatedAt: number; markdown: string } => {
   const { state, diagnostics, findings, hub } = input
@@ -314,6 +319,7 @@ export const buildReport = (input: {
     }
     lines.push('')
   }
+  lines.push(...inventorySection(input.inventory ?? null, input.resolution ?? null, generatedAt))
   lines.push('## Raw answers', '', '```json')
   lines.push(
     JSON.stringify({ diagnostics, link: state.link, samples: state.samples.slice(-10) }, null, 2)

@@ -21,6 +21,19 @@ import { extname, resolve, sep } from 'node:path'
 import { type Action, commandFor, parseAction } from './commands.ts'
 import { type DeviceSettings, type DeviceState, MAX_SAMPLES, type Sample } from './device.ts'
 import { buildReport, findingsFor } from './findings.ts'
+import {
+  eqList,
+  inputCapability,
+  inputEnable,
+  metaInfo,
+  modeRename,
+  outputList,
+  presetInfo,
+  savedGroups,
+  slaveList,
+  statusEx,
+} from './fixtures/wiim-pro.ts'
+import { buildInventory, type Inventory, type Resolution } from './inventory.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
 const tickMs = 3000
@@ -599,6 +612,35 @@ const findState = (host: string): DeviceState | null => {
   return null
 }
 
+// The inventory of a real player, from the answers recorded on the reference
+// unit: the demo has to print every status the report can carry, otherwise a
+// change in how one of them renders is only caught by hand.
+const demoInventory = (): Inventory =>
+  buildInventory(
+    [
+      { command: 'getStatusEx', area: 'identity', raw: statusEx },
+      { command: 'getMetaInfo', area: 'playback', raw: metaInfo },
+      { command: 'getPresetInfo', area: 'playback', raw: presetInfo },
+      { command: 'getSoundCardModeSupportList', area: 'routing', raw: outputList },
+      { command: 'getAudioInputCapbility', area: 'inputs', raw: inputCapability },
+      { command: 'getAudioInputEnable', area: 'inputs', raw: inputEnable },
+      { command: 'getModeRename', area: 'inputs', raw: modeRename },
+      { command: 'EQGetList', area: 'equalizer', raw: eqList },
+      { command: 'multiroom:getSlaveList', area: 'group', raw: slaveList },
+      { command: 'multiroom:getnamegrouplist', area: 'group', raw: savedGroups },
+      { command: 'getInfo', area: 'legacy', raw: 'unknown command' },
+      { command: 'getAllRoutines', area: 'routines', raw: '' },
+    ],
+    Date.now()
+  )
+
+// The simulated speakers answer on the transport the real ones do.
+const demoResolution = (state: DeviceState): Resolution => ({
+  host: state.ip,
+  ip: state.ip,
+  transport: 'https',
+})
+
 // The art route keeps the hub's rule: only a cover the simulated device
 // reported is served, so the route cannot become a proxy even in a demo.
 const artFor = (url: URL, res: ServerResponse): void => {
@@ -695,16 +737,20 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       return
     }
     const findings = findingsFor({ state, diagnostics: state.diagnostics })
+    const inventory = state.online ? demoInventory() : null
     const report = buildReport({
       state,
       diagnostics: state.diagnostics,
       findings,
       hub: { version: 'demo', pollMs: tickMs, slowPollMs: tickMs, eventsEnabled: false },
+      inventory,
+      resolution: demoResolution(state),
     })
     sendJson(res, 200, {
       ts: report.generatedAt,
       host: state.ip,
       findings,
+      inventory,
       markdown: report.markdown,
     })
     return

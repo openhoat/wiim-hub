@@ -202,7 +202,7 @@ export type DevicePatch = {
 export const MAX_SAMPLES = 400
 export const MAX_EVENTS = 40
 
-type Scheme = 'https' | 'http'
+export type Scheme = 'https' | 'http'
 
 const transports = new Map<string, Scheme>()
 const timeoutMs = 2500
@@ -360,12 +360,22 @@ const getOnce = (ip: string, command: string, scheme: Scheme): Promise<string | 
 export const fetchCommand = async (ip: string, command: string): Promise<string | null> => {
   const preferred = transports.get(ip) ?? 'https'
   const first = await getOnce(ip, command, preferred)
-  if (first !== null) return first
+  if (first !== null) {
+    // Remember the transport that answered, including the default one: the
+    // report names it, and a device that stops answering on its first scheme
+    // is retried on the other one without waiting for a failure.
+    transports.set(ip, preferred)
+    return first
+  }
   const fallback: Scheme = preferred === 'https' ? 'http' : 'https'
   const second = await getOnce(ip, command, fallback)
   if (second !== null) transports.set(ip, fallback)
   return second
 }
+
+// The scheme the device answered on, `null` before the first successful call:
+// "the hub talks to this address over https" is part of a support report.
+export const transportOf = (ip: string): Scheme | null => transports.get(ip) ?? null
 
 type Binary = { body: Buffer; type: string }
 

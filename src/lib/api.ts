@@ -28,7 +28,8 @@ const readJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
 export const fetchState = (): Promise<HubState> => readJson<HubState>('/api/state')
 
 // The report is built by the server, in English, so the page and the support
-// thread show the same sentences and the same evidence.
+// thread show the same sentences and the same evidence. The page only reads the
+// Markdown: the inventory and the resolution are carried for the API consumer.
 export type Report = { ts: number; host: string; findings: Finding[]; markdown: string }
 
 export const fetchReport = (device: Device): Promise<Report> =>

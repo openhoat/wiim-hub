@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { DeviceState, Diagnostics } from './device.ts'
 import { buildReport, findingsFor } from './findings.ts'
+import { buildInventory } from './inventory.ts'
 
 // A device that answers, with a link and counters a real unit reported on
 // 09/11/2026: this is the baseline every test bends one signal away from.
@@ -356,5 +357,45 @@ describe('buildReport', () => {
     expect(report.markdown).toContain('  - getHwErrorInfo ethError non zero')
     expect(report.markdown).not.toContain('slow poll')
     expect(report.markdown).not.toContain('No anomaly detected')
+  })
+
+  it('puts the capability inventory between the findings and the raw answers', () => {
+    const inventory = buildInventory(
+      [
+        { command: 'getStatusEx', area: 'identity', raw: '{ "DeviceName": "Kitchen" }' },
+        { command: 'getModeRename', area: 'inputs', raw: 'Failed' },
+      ],
+      Date.UTC(2026, 10, 9, 12, 0, 0)
+    )
+    const report = buildReport({
+      state: device(),
+      diagnostics: diagnostics(),
+      findings: [],
+      hub,
+      inventory,
+      resolution: { host: 'wiim.local', ip: '192.0.2.150', transport: 'https' },
+      now: Date.UTC(2026, 10, 9, 12, 0, 0),
+    })
+    const section = report.markdown.indexOf('## Capability inventory')
+    expect(section).toBeGreaterThan(report.markdown.indexOf('## Findings'))
+    expect(section).toBeLessThan(report.markdown.indexOf('## Raw answers'))
+    expect(report.markdown).toContain('Probe path: `wiim.local` → `192.0.2.150` over https.')
+    expect(report.markdown).toContain('| `getModeRename` | inputs | failed | `Failed` |')
+    expect(report.markdown).toContain(
+      '1 supported, 0 unsupported, 1 failed, 0 empty, 0 unreachable.'
+    )
+  })
+
+  it('says the inventory was skipped when the report has none', () => {
+    const report = buildReport({
+      state: device({ online: false }),
+      diagnostics: null,
+      findings: [],
+      hub,
+      now: 0,
+    })
+    expect(report.markdown).toContain('## Capability inventory')
+    expect(report.markdown).toContain('Not probed: the player was offline')
+    expect(report.markdown).not.toContain('| Command | Area |')
   })
 })

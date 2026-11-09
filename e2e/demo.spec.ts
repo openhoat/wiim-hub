@@ -117,6 +117,18 @@ test('states the findings, and says explicitly when there is nothing to report',
   const report: { markdown: string } = await response.json()
   expect(report.markdown).toContain('## Findings')
   expect(report.markdown).toContain('The player does not answer: 3 consecutive poll failure(s).')
+  // An offline player is not probed, and the report says so instead of printing
+  // an empty table a reader would take for a model without capabilities.
+  expect(report.markdown).toContain('Not probed: the player was offline')
+  expect(report.markdown).toContain('Probe path: `192.0.2.22` over https.')
+
+  const speaking = await page.request.get('/api/report?host=192.0.2.21')
+  const inventory: { markdown: string } = await speaking.json()
+  expect(inventory.markdown).toContain('## Capability inventory')
+  expect(inventory.markdown).toContain('| `getStatusEx` | identity | supported |')
+  expect(inventory.markdown).toContain('| `getModeRename` | inputs | failed | `Failed` |')
+  expect(inventory.markdown).toContain('| `getInfo` | legacy | unsupported | `unknown command` |')
+  expect(inventory.markdown).toContain('| `getAllRoutines` | routines | empty | `empty body` |')
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Download the report' }).first().click()

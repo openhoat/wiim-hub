@@ -16,7 +16,7 @@ are what remains on the card.
 
 - [x] Derive findings from the link, health, hardware and playback signals, each with its evidence
 - [x] Export one JSON report plus a Markdown summary, and copy it from the UI (the report is served
-      by `/api/report` and carries the raw answers; the capability inventory is still missing)
+      by `/api/report` and carries the raw answers, the capability inventory and the probe path)
 - [x] Say "no anomaly detected" when nothing is wrong, with the values that support it
 - [ ] Add the deterministic guided flows: no sound, drops, wrong output, cannot join a group
 
