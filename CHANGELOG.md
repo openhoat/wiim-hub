@@ -10,6 +10,34 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The event hub is now tested against a player that breaks: it drops the subscription in the
+  middle of it, refuses to renew one, sends a notification without a `SID`, and sends one larger
+  than the listener buffers. Coverage of `server/upnp.ts` goes from 92.8 % to 99.1 % of its lines,
+  and the listener's `close` is checked to be idempotent.
+- `server/guides.test.ts` pins the wording of every verdict the four flows can emit, one case per
+  identifier, so a sentence cannot drift from the row it explains.
+- The README carries a static `sonar ratings` badge (`docs/img/sonar-ratings.svg`), and
+  `CONTRIBUTING.md` says how it is kept: the scan runs where the instance is reachable, never in the
+  pipeline, and the badge is updated by hand when the ratings change.
+
+### Changed
+
+- The support report quotes a verdict, not a pass: a flow with nothing to report now says so in one
+  sentence instead of quoting the row that settled it. The page is untouched, it keeps every
+  sentence in both languages.
+- The view switch is a `fieldset` with a visually hidden legend: the same segmented control, with
+  the native element for a group of related buttons instead of a `div` carrying `role="group"`.
+- The play-URL field no longer sets `autoFocus`: the dialog already moves the focus to its first
+  field when it opens, so the attribute only repeated it.
+- Sonar reads clean: 62 open issues to none, with the four ratings at A. The write vocabulary is a
+  table of one parser per action (`server/commands.ts`), the three route chains are a route table
+  plus one handler per endpoint (`server.ts`, `demo.ts`), and the device readings are one function
+  per area, which removed the cognitive-complexity findings rather than suppressing them. Three
+  findings are recorded in Sonar instead: the two multicast group addresses (protocol constants,
+  not configuration) and the per-device drain loop, whose `await` is the serialisation.
+
 ## [0.8.1] - 2026-11-09
 
 ### Fixed

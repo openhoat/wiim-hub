@@ -3,6 +3,7 @@
 [![CI](https://github.com/openhoat/wiim-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/openhoat/wiim-hub/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22.18-informational.svg)](package.json)
+![Sonar ratings](docs/img/sonar-ratings.svg)
 
 Hub for WiiM devices (and other LinkPlay-based players) on a local network: what each device is
 playing, what it reports about itself, and the controls you need when the vendor app is not at
@@ -223,6 +224,10 @@ npm run test:e2e
 `playwright.config.ts` starts `server/demo.ts` on port 8091, so a hub left running on 8090 is not
 disturbed. The suite and the demo are typechecked with the rest of the code, and
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the gate and the suite on every push.
+
+Sonar is read, not run by the pipeline: see [`CONTRIBUTING.md`](CONTRIBUTING.md#sonarqube-optional).
+The badge in the header is a file in this repository, updated by hand when the ratings change, so
+no client is sent to a scanner instance it cannot reach.
 
 ## Configuration
 

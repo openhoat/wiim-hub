@@ -52,6 +52,11 @@ instance and a token, both taken from the environment, never from the repository
 SONAR_HOST_URL=... SONAR_TOKEN=... npm run sonar
 ```
 
+The scan is not part of the pipeline: it runs where the instance is reachable, and the gate it
+enforces is read back by hand. That also means the ratings badge in the README header is a static
+file (`docs/img/sonar-ratings.svg`), updated at release time when the ratings change, rather than an
+image served by a scanner nobody else can query.
+
 ## Reporting a bug
 
 Open an issue with the hub version, the speaker model and its firmware (the diagnostic view shows
