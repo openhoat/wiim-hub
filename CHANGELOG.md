@@ -12,6 +12,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ### Changed
 
+- The README opens on a notice: the hub is an independent, community project, not affiliated with
+  or endorsed by WiiM or LinkPlay Technology, and it ships no vendor code.
 - TypeScript 7 (`7.0.2`): the `baseUrl` option is gone, so the `@/*` paths now resolve from the
   configuration directory, and the stylesheet side-effect import is typed by the Vite client
   declarations (`src/vite-env.d.ts`). `@types/node` follows, at 26.

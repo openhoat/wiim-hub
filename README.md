@@ -8,6 +8,12 @@ Hub for WiiM devices (and other LinkPlay-based players) on a local network: what
 playing, what it reports about itself, and the controls you need when the vendor app is not at
 hand. Devices are polled every few seconds and served as a small web page.
 
+This is an independent, community project. It is not affiliated with, endorsed by or supported by
+WiiM or LinkPlay Technology, and it ships no vendor code: it only calls the HTTP interface the
+players expose on the local network, as documented in
+[`docs/feature-research.md`](docs/feature-research.md). WiiM and LinkPlay are trademarks of their
+respective owners, named here to say what the hub works with and nothing more.
+
 A local, self-hosted complement to the vendor app: the same device data, on a screen you already
 have open, with an interface that fits a browser and a phone. Every device gets its own card,
 state and write queue, so a mixed fleet (Pro, Mini, Amp, Ultra, and OEM LinkPlay players) is the
