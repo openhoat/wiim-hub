@@ -112,6 +112,14 @@ Fields worth knowing inside `getStatusEx`, all measured: `DeviceName`, `GroupNam
 `audio_channel_config`, `app_timezone_id`, `power_mode`, `privacy_mode`, `temp_uuid`,
 `update_check_count`, `streams` (bitmask of supported services), `plm_support`.
 
+The device client is split into pure seams so those shapes are testable without a speaker:
+`parseDiagnostics`, `parseDevice`, and one seam per cached probe (`parseCapability`,
+`parsePresets`, `parseAcoustic`, `parseRegistry`). `server/device.test.ts` pins them against the
+answers a real player returned, sanitised in `server/fixtures/wiim-pro.ts`: hex titles, a number
+where a string is documented, `unknown command`, empty bodies, and the `unknow` placeholders. A
+seam returns `null` for an answer it cannot read, which is how the caches keep the last good
+value instead of blanking a panel.
+
 ## 4. Write surface (measured on the reference player)
 
 Every command below was sent to the reference player one at a time, and the state it is supposed

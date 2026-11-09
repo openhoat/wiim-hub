@@ -10,6 +10,22 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The device parsers are pinned by tests against the answers a real player sent:
+  `server/fixtures/wiim-pro.ts` keeps those answers verbatim (sanitised), and
+  `server/device.test.ts` runs them through the pure seams `parseDevice`, `parseCapability`,
+  `parsePresets`, `parseAcoustic` and `parseRegistry` — hex titles, `unknown command`, empty
+  bodies, numeric counters, the `unknow` placeholders, an external input with no position, a live
+  stream with no duration, and an unmapped playback mode that must light up no input.
+
+### Fixed
+
+- The album and the artist fall back to the player's own hex fields when `getMetaInfo` answers
+  nothing, as the title already did: a failed metadata read used to blank two thirds of the track.
+- A failed `multiroom:getnamegrouplist` probe no longer erases the saved group from the panel for a
+  minute; the other cached probes already kept the last good answer.
+
 ## [0.7.0] - 2026-11-09
 
 ### Added

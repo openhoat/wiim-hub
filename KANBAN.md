@@ -22,6 +22,18 @@ are what remains on the card.
 
 Card #4 keeps its write half blocked on a second reachable unit.
 
+### #8 [TEST] Cover the device client and the write queue (P2) — started 2026-11-09 14:55
+
+- [x] Test the write queue and its coalescing by family (`server/queue.test.ts`, quality pass)
+- [x] Unit test the parsing of the awkward payload shapes the device client reads, including
+      `unknown command`, empty bodies, numeric counters and hex titles
+- [ ] Test the optimistic reconciliation and the position unit heuristic (milliseconds locally,
+      microseconds on the streaming services): the heuristic is documented in
+      `docs/feature-research.md` §5.10 and waits for a measured streaming session, and the
+      reconciliation lives in `src/lib/use-controls.ts`
+- [x] Add a recorded fixture per endpoint for those tests (`server/fixtures/wiim-pro.ts`): the
+      interface side already runs without a player (`npm run demo`), the device client now does too
+
 ## Backlog
 
 ### #4 [UX] Add a multiroom group view with per member control (P2)
@@ -37,13 +49,6 @@ Card #4 keeps its write half blocked on a second reachable unit.
 
 - [ ] Add, rename and remove hosts, persisted server side, with the source of each entry shown
 - [ ] Distinguish a configured host, a discovered host and an offline host in one list
-
-### #8 [TEST] Cover the device client and the write queue (P2)
-
-- [x] Test the write queue and its coalescing by family (`server/queue.test.ts`, quality pass)
-- [ ] Unit test the parsing of the awkward payload shapes the device client reads, including `unknown command` and empty bodies
-- [ ] Test the optimistic reconciliation and the position unit heuristic (milliseconds locally, microseconds on the streaming services)
-- [ ] Add a recorded fixture per endpoint for those tests: the interface side already runs without a player (`npm run demo` and `e2e/`), the device client side does not
 
 ### #16 [UX] Explain which tier each streaming service can reach (P3)
 

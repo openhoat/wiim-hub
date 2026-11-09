@@ -659,7 +659,25 @@ const readOutputs = (raw: string | null): OutputOption[] => {
   return outputs
 }
 
+type CapabilityView = Omit<Capability, 'at'>
+
 const emptyCapability = (): Capability => ({ at: 0, inputs: [], inputLabels: {}, outputs: [] })
+
+// A pure seam: the four capability answers in, the merged view out, `null` when
+// this model answered nothing the hub understands. The cache stamp and the
+// fallback to what was already known stay in `capabilityFor`, which is what
+// makes the awkward answers testable without a speaker.
+export const parseCapability = (answers: {
+  inputs: string | null
+  enable: string | null
+  rename: string | null
+  outputs: string | null
+}): CapabilityView | null => {
+  const inputs = readInputs(answers.inputs, answers.enable)
+  const outputs = readOutputs(answers.outputs)
+  if (inputs.length === 0 && outputs.length === 0) return null
+  return { inputs, inputLabels: readLabels(answers.rename), outputs }
+}
 
 // Probing a capability costs four requests and the answer almost never
 // changes: cache it per address, and never let a failed probe erase what was
@@ -678,22 +696,29 @@ const capabilityFor = async (ip: string): Promise<Capability> => {
   // input list, so the miss costs one retry once per cache window.
   const capabilityRaw =
     parseJson(primaryRaw) === null ? await fetchCommand(ip, 'getAudioInputCapability') : primaryRaw
-  const inputs = readInputs(capabilityRaw, enableRaw)
-  const outputs = readOutputs(outputRaw)
-  if (inputs.length === 0 && outputs.length === 0) return cached ?? emptyCapability()
-  const value: Capability = { at: Date.now(), inputs, inputLabels: readLabels(renameRaw), outputs }
+  const parsed = parseCapability({
+    inputs: capabilityRaw,
+    enable: enableRaw,
+    rename: renameRaw,
+    outputs: outputRaw,
+  })
+  if (parsed === null) return cached ?? emptyCapability()
+  const value: Capability = { at: Date.now(), ...parsed }
   capabilityCache.set(ip, value)
   return value
 }
 
 const presetTtlMs = 60_000
 const presetCache = new Map<string, { at: number; value: Preset[] }>()
-const presetsFor = async (ip: string): Promise<Preset[]> => {
-  const cached = presetCache.get(ip)
-  if (cached !== undefined && Date.now() - cached.at < presetTtlMs) return cached.value
-  const info = parseJson(await fetchCommand(ip, 'getPresetInfo'))
+
+// Same seam as `parseCapability`: an answer that is not a preset list (an
+// `unknown command`, an empty body) returns `null` so the caller can keep what
+// it already knew. A slot without a usable number is skipped, an absent name
+// falls back to the number, and the list comes out ordered.
+export const parsePresets = (raw: string | null): Preset[] | null => {
+  const info = parseJson(raw)
   const entries = Array.isArray(info?.preset_list) ? info.preset_list : null
-  if (entries === null) return cached?.value ?? []
+  if (entries === null) return null
   const value: Preset[] = []
   for (const entry of entries) {
     if (!isRecord(entry)) continue
@@ -706,8 +731,16 @@ const presetsFor = async (ip: string): Promise<Preset[]> => {
     })
   }
   value.sort((left, right) => left.number - right.number)
-  presetCache.set(ip, { at: Date.now(), value })
   return value
+}
+
+const presetsFor = async (ip: string): Promise<Preset[]> => {
+  const cached = presetCache.get(ip)
+  if (cached !== undefined && Date.now() - cached.at < presetTtlMs) return cached.value
+  const parsed = parsePresets(await fetchCommand(ip, 'getPresetInfo'))
+  if (parsed === null) return cached?.value ?? []
+  presetCache.set(ip, { at: Date.now(), value: parsed })
+  return parsed
 }
 
 // The graphic EQ plugin the firmware exposes. Reading a curve takes this URI
@@ -718,7 +751,25 @@ export const eqPluginUri = 'http://moddevices.com/plugins/caps/Eq10HP'
 export const eqQuery = `EQGetLV2SourceBandEx:${JSON.stringify({ EQLevel: 1, source_name: '', pluginURI: eqPluginUri })}`
 
 type Acoustic = { at: number; presets: string[]; roomFit: boolean }
+type AcousticView = Omit<Acoustic, 'at'>
 const acousticCache = new Map<string, Acoustic>()
+
+// Same seam: each field is kept when its own answer is unreadable, because a
+// player without EQ answers `unknown command` and turning the panel off on one
+// bad request is worse than showing what the last good probe knew.
+export const parseAcoustic = (
+  answers: { presets: string | null; capability: string | null },
+  cached: AcousticView | null
+): AcousticView => {
+  const list = parseArray(answers.presets)
+  const capability = parseJson(answers.capability)
+  const presets =
+    list === null
+      ? (cached?.presets ?? [])
+      : list.filter((name): name is string => typeof name === 'string' && name !== '')
+  const roomFit = isRecord(capability?.RC) ? true : (cached?.roomFit ?? false)
+  return { presets, roomFit }
+}
 
 // The factory curve names and the room-correction capability are static for a
 // firmware: neither changes while a player is streaming, so both ride the same
@@ -730,16 +781,10 @@ const acousticFor = async (ip: string): Promise<Acoustic> => {
     fetchCommand(ip, 'EQGetList'),
     fetchCommand(ip, 'GetAcousticCapability'),
   ])
-  const list = parseArray(listRaw)
-  const capability = parseJson(capabilityRaw)
-  // A player without EQ answers `unknown command`: keep what was known rather
-  // than turning the panel off on one bad request.
-  const presets =
-    list === null
-      ? (cached?.presets ?? [])
-      : list.filter((name): name is string => typeof name === 'string' && name !== '')
-  const roomFit = isRecord(capability?.RC) ? true : (cached?.roomFit ?? false)
-  const value: Acoustic = { at: Date.now(), presets, roomFit }
+  const value: Acoustic = {
+    at: Date.now(),
+    ...parseAcoustic({ presets: listRaw, capability: capabilityRaw }, cached ?? null),
+  }
   acousticCache.set(ip, value)
   return value
 }
@@ -857,6 +902,30 @@ const readMembers = (value: unknown): GroupMember[] => {
 
 type SavedGroup = { id: string; name: string; members: GroupMember[] }
 type Registry = { at: number; groups: SavedGroup[]; current: string }
+type RegistryView = Omit<Registry, 'at'>
+
+const emptyRegistry = (): Registry => ({ at: 0, groups: [], current: '' })
+
+// Same seam again: an answer the hub cannot read returns `null` rather than an
+// empty registry, so a failed probe does not make the saved group vanish from
+// the panel for a minute. A readable answer with no group is a real "nothing
+// saved" and clears the view.
+export const parseRegistry = (raw: string | null): RegistryView | null => {
+  const parsed = parseJson(raw)
+  if (parsed === null) return null
+  const groups: SavedGroup[] = []
+  if (Array.isArray(parsed.grouplist)) {
+    for (const entry of parsed.grouplist) {
+      if (!isRecord(entry)) continue
+      const id = text(entry.group_id)
+      if (id === '') continue
+      groups.push({ id, name: text(entry.group_name), members: readMembers(entry.slavelist) })
+    }
+  }
+  // `current_group_id` is kept by a player that drives no group at all here, so
+  // a non-empty value means "the app points at that group", not "it is running".
+  return { groups, current: text(parsed.current_group_id) }
+}
 
 const groupTtlMs = 60_000
 const groupCache = new Map<string, Registry>()
@@ -867,19 +936,9 @@ const groupCache = new Map<string, Registry>()
 const groupsFor = async (ip: string): Promise<Registry> => {
   const cached = groupCache.get(ip)
   if (cached !== undefined && Date.now() - cached.at < groupTtlMs) return cached
-  const parsed = parseJson(await fetchCommand(ip, 'multiroom:getnamegrouplist'))
-  const groups: SavedGroup[] = []
-  if (Array.isArray(parsed?.grouplist)) {
-    for (const entry of parsed.grouplist) {
-      if (!isRecord(entry)) continue
-      const id = text(entry.group_id)
-      if (id === '') continue
-      groups.push({ id, name: text(entry.group_name), members: readMembers(entry.slavelist) })
-    }
-  }
-  // `current_group_id` is kept by a player that drives no group at all here, so
-  // a non-empty value means "the app points at that group", not "it is running".
-  const value: Registry = { at: Date.now(), groups, current: text(parsed?.current_group_id) }
+  const parsed = parseRegistry(await fetchCommand(ip, 'multiroom:getnamegrouplist'))
+  const value: Registry =
+    parsed === null ? (cached ?? emptyRegistry()) : { at: Date.now(), ...parsed }
   groupCache.set(ip, value)
   return value
 }
@@ -907,65 +966,65 @@ export const parseGroup = (
   }
 }
 
-// `host` is either an address or a resolvable name (`kitchen.local`), so the
-// caller never has to care which one the configuration carries.
-export const pollDevice = async (host: string): Promise<DevicePatch> => {
-  const ip = resolveTarget(host)
-  const [statusRaw, playerRaw, metaRaw, outputRaw, sleepRaw, eqRaw] = await Promise.all([
-    fetchCommand(ip, 'getStatusEx'),
-    fetchCommand(ip, 'getPlayerStatusEx'),
-    fetchCommand(ip, 'getMetaInfo'),
-    fetchCommand(ip, 'getNewAudioOutputHardwareMode'),
-    fetchCommand(ip, 'getShutdown'),
-    fetchCommand(ip, eqQuery),
-  ])
-  const status = parseJson(statusRaw)
-  const player = parseJson(playerRaw)
-  const meta = parseJson(metaRaw)
-  const output = parseJson(outputRaw)
+// A pure seam, like `parseDiagnostics`: the answers and the caches already
+// resolved, one `DevicePatch` out. `pollDevice` only owns the transport and the
+// cache policy, which is what makes the awkward payload shapes testable without
+// a speaker (see `server/device.test.ts`).
+export const parseDevice = (input: {
+  host: string
+  ip: string
+  status: Record<string, unknown> | null
+  player: Record<string, unknown> | null
+  meta: Record<string, unknown> | null
+  output: Record<string, unknown> | null
+  sleepRaw: string | null
+  eqRaw: string | null
+  slaves: Record<string, unknown> | null
+  registry: Registry
+  capability: Capability
+  presets: Preset[]
+  acoustic: Acoustic
+}): DevicePatch => {
+  const {
+    host,
+    ip,
+    status,
+    player,
+    meta,
+    output,
+    sleepRaw,
+    eqRaw,
+    slaves,
+    registry,
+    capability,
+    presets,
+    acoustic,
+  } = input
   const metaData = meta && isRecord(meta.metaData) ? meta.metaData : {}
-  const online = status !== null
-  if (!online) forgetTarget(host)
-  const groupId = text(status?.group)
-  const registry = online
-    ? await groupsFor(ip)
-    : (groupCache.get(ip) ?? { at: 0, groups: [], current: '' })
-  // The slave list is the only call that tells membership, so it costs one more
-  // request when the player is grouped or when the registry points at a saved
-  // group; a player with no group at all never pays for it.
-  const grouped = (groupId !== '' && groupId !== '0') || registry.current !== ''
-  const slavesRaw = grouped ? parseJson(await fetchCommand(ip, 'multiroom:getSlaveList')) : null
-  const capability = online
-    ? await capabilityFor(ip)
-    : (capabilityCache.get(ip) ?? emptyCapability())
-  const presets = online ? await presetsFor(ip) : (presetCache.get(ip)?.value ?? [])
-  const acoustic = online
-    ? await acousticFor(ip)
-    : (acousticCache.get(ip) ?? { at: 0, presets: [], roomFit: false })
-  const input = inputFromMode(text(player?.mode))
-  const external = isExternalInput(input)
+  const inputId = inputFromMode(text(player?.mode))
+  const external = isExternalInput(inputId)
   return {
     ip,
-    online,
+    online: status !== null,
     name: text(status?.DeviceName) || host,
     model: cleanModel(text(status?.model) || text(status?.project)),
     firmware: text(status?.firmware),
     release: text(status?.Release),
     ssid: maybeHex(text(status?.essid)),
     bssid: text(status?.BSSID),
-    group: parseGroup(slavesRaw, groupId, registry),
+    group: parseGroup(slaves, text(status?.group), registry),
     rssi: readRssi(status),
     volume: num(player?.vol),
     status: text(player?.status),
     title: cleanTitle(text(metaData.title) || maybeHex(text(player?.Title))),
-    artist: cleanTitle(text(metaData.artist)),
-    album: cleanTitle(text(metaData.album)),
+    artist: cleanTitle(text(metaData.artist) || maybeHex(text(player?.Artist))),
+    album: cleanTitle(text(metaData.album) || maybeHex(text(player?.Album))),
     albumArt: artUri(text(metaData.albumArtURI)),
     curposMs: external ? null : num(player?.curpos),
     totalMs: external ? null : num(player?.totlen),
     source: text(player?.vendor),
     mode: text(player?.mode),
-    input,
+    input: inputId,
     maxVolume: num(status?.max_volume),
     mute: num(player?.mute) === 1,
     sleepSeconds: num(sleepRaw),
@@ -983,6 +1042,54 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
       rateMbps: num(status?.wlanDataRate),
     },
   }
+}
+
+// `host` is either an address or a resolvable name (`kitchen.local`), so the
+// caller never has to care which one the configuration carries.
+export const pollDevice = async (host: string): Promise<DevicePatch> => {
+  const ip = resolveTarget(host)
+  const [statusRaw, playerRaw, metaRaw, outputRaw, sleepRaw, eqRaw] = await Promise.all([
+    fetchCommand(ip, 'getStatusEx'),
+    fetchCommand(ip, 'getPlayerStatusEx'),
+    fetchCommand(ip, 'getMetaInfo'),
+    fetchCommand(ip, 'getNewAudioOutputHardwareMode'),
+    fetchCommand(ip, 'getShutdown'),
+    fetchCommand(ip, eqQuery),
+  ])
+  const status = parseJson(statusRaw)
+  const online = status !== null
+  if (!online) forgetTarget(host)
+  const groupId = text(status?.group)
+  const registry = online
+    ? await groupsFor(ip)
+    : (groupCache.get(ip) ?? { at: 0, groups: [], current: '' })
+  // The slave list is the only call that tells membership, so it costs one more
+  // request when the player is grouped or when the registry points at a saved
+  // group; a player with no group at all never pays for it.
+  const grouped = (groupId !== '' && groupId !== '0') || registry.current !== ''
+  const slaves = grouped ? parseJson(await fetchCommand(ip, 'multiroom:getSlaveList')) : null
+  const capability = online
+    ? await capabilityFor(ip)
+    : (capabilityCache.get(ip) ?? emptyCapability())
+  const presets = online ? await presetsFor(ip) : (presetCache.get(ip)?.value ?? [])
+  const acoustic = online
+    ? await acousticFor(ip)
+    : (acousticCache.get(ip) ?? { at: 0, presets: [], roomFit: false })
+  return parseDevice({
+    host,
+    ip,
+    status,
+    player: parseJson(playerRaw),
+    meta: parseJson(metaRaw),
+    output: parseJson(outputRaw),
+    sleepRaw,
+    eqRaw,
+    slaves,
+    registry,
+    capability,
+    presets,
+    acoustic,
+  })
 }
 
 // The probes are three separate commands and each answer is optional: a build
