@@ -23,6 +23,19 @@ Releases are cut from `package.json`: the version in that file names the section
   workflow runs it on every push, so the suite needs no real player.
 - Continuous integration: type check and build on every push and pull request, on Node 22.18 and
   24 (`.github/workflows/ci.yml`).
+- Quality gate (`npm run validate`): biome for lint and format, markdownlint and prettier on the
+  Markdown, the unit suite with its coverage thresholds, the type check and the build, wired as a
+  wireit task graph that CI caches. `npm run qa:fix` rewrites the formatting.
+- Unit suite (`npm run test:coverage`, vitest): the intents the hub accepts, the commands it builds
+  from the state, and the per-device write queue now extracted to `server/queue.ts`, so its
+  ordering and coalescing are tested without a speaker.
+- Contributor material: `CONTRIBUTING.md`, `SECURITY.md` and `GLOSSARY.md`, plus architecture
+  decision records in `docs/adr/` (zero runtime dependencies, the demo mode as the e2e substrate).
+- Repository automation: weekly Dependabot updates for npm and the actions, a tag-driven GitHub
+  release that reads the notes from this changelog, and commitlint behind a Husky hook.
+- SonarQube scan (`npm run sonar`, `sonar-project.properties`): sources, tests, coverage from the
+  vitest report; the instance URL and the token come from the environment, never from the
+  repository.
 - This changelog.
 
 ### Changed
@@ -34,6 +47,8 @@ Releases are cut from `package.json`: the version in that file names the section
 - `scripts/build.sh` defaults to the published image namespace.
 - Device, group and member names, addresses and uuids quoted in the documentation are anonymised;
   the payload shapes and the firmware wording are unchanged.
+- The CI validate job runs `npm run validate` behind the wireit cache instead of running the type
+  check and the build as separate steps.
 
 ## [0.4.3] - 2026-11-09
 

@@ -44,8 +44,9 @@ history), the CI workflow closed #9, and #4 keeps its write half blocked on a se
 
 ### #8 [TEST] Cover the device client and the write queue (P2)
 
-- [ ] Unit test the parsing of the awkward payload shapes, including `unknown command` and empty bodies
-- [ ] Test the queue, coalescing, optimistic reconciliation and the position unit heuristic
+- [x] Test the write queue and its coalescing by family (`server/queue.test.ts`, quality pass)
+- [ ] Unit test the parsing of the awkward payload shapes the device client reads, including `unknown command` and empty bodies
+- [ ] Test the optimistic reconciliation and the position unit heuristic (milliseconds locally, microseconds on the streaming services)
 - [ ] Add a recorded fixture per endpoint for those tests: the interface side already runs without a player (`npm run demo` and `e2e/`), the device client side does not
 
 ### #16 [UX] Explain which tier each streaming service can reach (P3)
@@ -77,3 +78,12 @@ history), the CI workflow closed #9, and #4 keeps its write half blocked on a se
 
 - [ ] Review every string in context, including the diagnostic findings and the guided flows
 - [ ] Localise numbers, dates and durations through `Intl`, with no concatenated sentences
+
+### #19 [ARCHITECTURE] Expose the hub over MCP (P3)
+
+- [ ] Mirror the HTTP surface as tools: reads on `/api/state` and `/api/settings`, writes on
+      `/api/command` with the same intent validation and the same error answers
+- [ ] Pick the shape before coding: a sidecar over the hub HTTP API keeps `server/` dependency
+      free, an endpoint inside the hub process avoids a second deployment
+- [ ] Develop and test the tools against the demo mode, as the e2e suite does, and state the
+      security boundary: no authentication of its own, it inherits the ingress
