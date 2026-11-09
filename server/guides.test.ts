@@ -261,6 +261,175 @@ describe('guidesFor', () => {
   })
 })
 
+// Each flow can end on a known set of verdicts. The report quotes the one the
+// flow stopped on, so every verdict the flows can produce needs its English
+// sentence: the table below walks all of them and pins the wording, which is
+// also how the "no wording" fallback stays where it belongs, out of the way.
+describe('report wording', () => {
+  const section = (guides: Guide[]): string => guideSection(guides).join('\n')
+
+  type Case = {
+    flow: Guide['id']
+    state: Partial<DeviceState>
+    diagnostics?: Diagnostics | null
+    sentence: string
+  }
+
+  const external = { wifi: 'Wi-Fi', optical: 'Optical', 'line-in': 'Line In' }
+
+  const cases: Case[] = [
+    {
+      flow: 'no-sound',
+      state: { online: false, errors: 2 },
+      sentence: 'The player does not answer: 2 consecutive poll failure(s).',
+    },
+    { flow: 'no-sound', state: { mute: true }, sentence: 'The player is muted.' },
+    {
+      flow: 'no-sound',
+      state: { volume: null },
+      sentence: 'The player did not report its volume.',
+    },
+    { flow: 'no-sound', state: { volume: 0 }, sentence: 'The volume is 0: nothing audible.' },
+    { flow: 'no-sound', state: { volume: 4 }, sentence: 'The volume is 4: barely audible.' },
+    {
+      flow: 'no-sound',
+      state: { sleepSeconds: 600 },
+      sentence: 'A sleep timer will stop the player in 10 min.',
+    },
+    {
+      flow: 'no-sound',
+      state: { status: '' },
+      sentence: 'The player did not report its transport state.',
+    },
+    {
+      flow: 'no-sound',
+      state: { status: 'stop' },
+      sentence: 'The transport is stopped: nothing is playing.',
+    },
+    { flow: 'no-sound', state: { status: 'pause' }, sentence: 'The transport is paused.' },
+    {
+      flow: 'no-sound',
+      state: { input: 'optical', mode: '43', status: 'stop', inputLabels: external },
+      sentence:
+        'The Optical input is selected and it is not playing: no signal reaches the player.',
+    },
+    {
+      flow: 'no-sound',
+      state: { outputs: [], outputHardware: null },
+      sentence: 'The player did not report its outputs.',
+    },
+    {
+      flow: 'no-sound',
+      state: { outputHardware: null },
+      sentence: 'The player did not report its active output.',
+    },
+    {
+      flow: 'no-sound',
+      state: { outputHardware: 9 },
+      sentence: 'The active output (9) is not in the list the player reports.',
+    },
+    {
+      flow: 'no-sound',
+      state: { group: { role: 'member', name: 'Appart', members: [], saved: false } },
+      sentence: 'This player is a group member and the group lists no member.',
+    },
+    {
+      flow: 'drops',
+      state: { rssi: -53, link: { ...device().link, snr: 12 } },
+      sentence: 'The radio link is weak: -53 dBm, 12 dB SNR.',
+    },
+    {
+      flow: 'drops',
+      state: { rssi: null, link: { ...device().link, snr: 12 } },
+      sentence: 'The radio link is weak: unknown dBm, 12 dB SNR.',
+    },
+    {
+      flow: 'drops',
+      state: {},
+      diagnostics: null,
+      sentence: 'The network counters are not read yet.',
+    },
+    {
+      flow: 'drops',
+      state: {},
+      diagnostics: diagnostics({
+        health: { ...diagnostics().health!, disconnected: 3, lastMinutes: 7 },
+      }),
+      sentence: 'The Wi-Fi dropped 3 time(s), the last one 7 min ago.',
+    },
+    {
+      flow: 'drops',
+      state: {},
+      diagnostics: diagnostics({
+        health: { ...diagnostics().health!, pingFailures: 2 },
+      }),
+      sentence: '2 ping check(s) failed.',
+    },
+    {
+      flow: 'drops',
+      state: {},
+      diagnostics: diagnostics({
+        health: { ...diagnostics().health!, ethDisconnected: 1 },
+      }),
+      sentence: 'The wired link dropped 1 time(s).',
+    },
+    {
+      flow: 'drops',
+      state: {},
+      diagnostics: diagnostics({
+        health: { ...diagnostics().health!, abnormalReboots: 1 },
+      }),
+      sentence: 'The player rebooted abnormally 1 time(s).',
+    },
+    {
+      flow: 'drops',
+      state: {},
+      diagnostics: diagnostics({
+        debug: { ...diagnostics().debug!, crashes: { ...diagnostics().debug!.crashes, mcu: 1 } },
+      }),
+      sentence: '1 crash counter(s) are non zero: the firmware restarted.',
+    },
+    {
+      flow: 'cannot-join-group',
+      state: { wmrmVersion: '' },
+      sentence: 'The player does not report the group protocol version.',
+    },
+    {
+      flow: 'cannot-join-group',
+      state: { group: { role: 'none', name: 'Appart', members: [], saved: true } },
+      sentence: 'A saved group exists but nothing runs on it.',
+    },
+  ]
+
+  it('has wording for every verdict the flows can produce', () => {
+    for (const entry of cases) {
+      const probed = entry.diagnostics === undefined ? diagnostics() : entry.diagnostics
+      const guide = guideOf(run(device(entry.state), probed), entry.flow)
+      expect(guide.verdict, `${entry.flow}: ${entry.sentence}`).not.toBeNull()
+      expect(guideSection([guide]).join('\n'), `${entry.flow}: ${entry.sentence}`).toContain(
+        entry.sentence
+      )
+    }
+  })
+
+  it('never quotes a pass row, because a pass is not a verdict', () => {
+    const text = section(run(device(), diagnostics()))
+    expect(text).not.toContain('The player answers.')
+    expect(text).not.toContain('The radio link reads')
+  })
+
+  it('falls back to the evidence when a check has no wording yet', () => {
+    const check = { id: 'notWritten', status: 'warn' as const, values: {}, evidence: 'getFoo 1' }
+    const fabricated: Guide = {
+      id: 'drops',
+      checks: [check],
+      verdict: check,
+      settled: true,
+    }
+    expect(section([fabricated])).toContain('warn at `notWritten`: notWritten: getFoo 1')
+  })
+})
+
 describe('guideSection', () => {
   const section = (guides: Guide[]): string => guideSection(guides).join('\n')
 

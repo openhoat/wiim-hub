@@ -59,6 +59,9 @@ type FakeDevice = {
   // SIDs handed out, in subscription order: the test compares them with the
   // ones the hub sends back on renewal.
   issued: string[]
+  // The callback URLs the hub asked for, so a test can address the listener
+  // without knowing the token it minted.
+  callbacks: string[]
   notify: (body: string, options: { seq: number; sid?: string }) => Promise<number>
   close: () => Promise<void>
 }
@@ -67,10 +70,16 @@ type FakeDevice = {
 // answers SUBSCRIBE with a SID, renews on the same SID, and accepts
 // UNSUBSCRIBE. The test drives the notifications so it can choose the moment.
 const startFakeDevice = async (
-  options: { refuseSubscribe?: boolean; paths?: { transport: string; control: string } } = {}
+  options: {
+    refuseSubscribe?: boolean
+    crashSubscribe?: boolean
+    refuseRenew?: boolean
+    paths?: { transport: string; control: string }
+  } = {}
 ): Promise<FakeDevice> => {
   const calls: FakeDevice['calls'] = []
   const issued: string[] = []
+  const callbacks: string[] = []
   const subscriptions = new Map<string, string>()
   const advertised = description
     .replace(
@@ -87,6 +96,19 @@ const startFakeDevice = async (
       res.end(advertised)
       return
     }
+    // A device that disappears mid-subscription: the hub has to read that as a
+    // refusal, not as a subscription it can use.
+    if (method === 'SUBSCRIBE' && options.crashSubscribe === true) {
+      req.destroy()
+      return
+    }
+    // A device that answers the first subscription and then refuses to extend
+    // it: the SID is about to expire, so polling has to take over.
+    if (method === 'SUBSCRIBE' && options.refuseRenew === true && req.headers.sid !== undefined) {
+      res.writeHead(500)
+      res.end()
+      return
+    }
     if (method === 'SUBSCRIBE' && options.refuseSubscribe !== true) {
       const renew = typeof req.headers.sid === 'string'
       const sid = renew ? (req.headers.sid as string) : `uuid:${randomUUID()}`
@@ -94,7 +116,10 @@ const startFakeDevice = async (
       const callback = (req.headers.callback as string | undefined)
         ?.replace(/^</, '')
         .replace(/>$/, '')
-      if (callback !== undefined) subscriptions.set(sid, callback)
+      if (callback !== undefined) {
+        subscriptions.set(sid, callback)
+        callbacks.push(callback)
+      }
       res.writeHead(200, { sid, timeout: 'Second-1' })
       res.end()
       return
@@ -113,6 +138,7 @@ const startFakeDevice = async (
     port,
     calls,
     issued,
+    callbacks,
     notify: async (body, input) => {
       const sid = input.sid ?? [...subscriptions.keys()][0]
       const callback = subscriptions.get(sid)
@@ -354,6 +380,46 @@ describe('createEventHub', () => {
     expect(hub.status('127.0.0.1').state).toBe('off')
   })
 
+  it('falls back to polling when the subscription connection breaks', async () => {
+    // A device that answers the description and then drops the SUBSCRIBE: the
+    // hub must not keep a half-open entry it would renew forever.
+    device = await startFakeDevice({ crashSubscribe: true })
+    const port = await freePort()
+    hub = createEventHub({
+      port,
+      devicePort: device.port,
+      callbackBase: `http://127.0.0.1:${port}`,
+      onPatch: () => undefined,
+    })
+    await hub.start()
+
+    await expect(hub.subscribe('127.0.0.1')).resolves.toBe(false)
+    expect(hub.isSubscribed('127.0.0.1')).toBe(false)
+    expect(hub.status('127.0.0.1')).toMatchObject({ state: 'off', misses: 0 })
+  })
+
+  it('degrades when the device refuses to renew the subscription', async () => {
+    device = await startFakeDevice({ refuseRenew: true })
+    const port = await freePort()
+    hub = createEventHub({
+      port,
+      devicePort: device.port,
+      callbackBase: `http://127.0.0.1:${port}`,
+      onPatch: () => undefined,
+      timeoutSeconds: 1,
+      renewRatio: 0.05,
+    })
+    await hub.start()
+    await expect(hub.subscribe('127.0.0.1')).resolves.toBe(true)
+
+    // The SID is about to expire and the device will not extend it: the fast
+    // channel is over, so the status has to say `degraded` before the poll
+    // actually takes over.
+    await waitFor(() => hub?.status('127.0.0.1').state === 'degraded')
+    expect(hub.isSubscribed('127.0.0.1')).toBe(false)
+    expect(hub.status('127.0.0.1').misses).toBe(2)
+  })
+
   it('reads the event paths the device advertises instead of the measured defaults', async () => {
     // A firmware that moves its endpoints: the description is the contract.
     device = await startFakeDevice({
@@ -426,5 +492,76 @@ describe('createEventHub', () => {
     // The listener serves no other verb and no other path.
     const probe = await fetch(`http://127.0.0.1:${port}/upnp/deadbeef`)
     expect(probe.status).toBe(404)
+  })
+
+  it('refuses a notification that carries no SID', async () => {
+    device = await startFakeDevice()
+    const port = await freePort()
+    const patches: EventPatch[] = []
+    hub = createEventHub({
+      port,
+      devicePort: device.port,
+      callbackBase: `http://127.0.0.1:${port}`,
+      onPatch: (_ip, patch) => patches.push(patch),
+    })
+    await hub.start()
+    await expect(hub.subscribe('127.0.0.1')).resolves.toBe(true)
+
+    // The token and the source address say who is talking, not which
+    // subscription: without a SID the sequence number would be kept for none.
+    const response = await fetch(device.callbacks[0], {
+      method: 'NOTIFY',
+      headers: { 'content-type': 'text/xml', SEQ: '0' },
+      body: renderingBody({ volume: 20, mute: false }),
+    })
+    expect(response.status).toBe(412)
+    expect(patches).toHaveLength(0)
+  })
+
+  it('drops a notification larger than the limit instead of buffering it', async () => {
+    device = await startFakeDevice()
+    const port = await freePort()
+    const patches: EventPatch[] = []
+    hub = createEventHub({
+      port,
+      devicePort: device.port,
+      callbackBase: `http://127.0.0.1:${port}`,
+      onPatch: (_ip, patch) => patches.push(patch),
+    })
+    await hub.start()
+    await expect(hub.subscribe('127.0.0.1')).resolves.toBe(true)
+
+    // A player that sends more than 64 KiB is not sending a state change: the
+    // request is cut rather than buffered, so the hub cannot be made to hold an
+    // arbitrary body.
+    const oversized = await fetch(device.callbacks[0], {
+      method: 'NOTIFY',
+      headers: {
+        'content-type': 'text/xml',
+        SID: device.issued[0],
+        SEQ: '1',
+      },
+      body: 'x'.repeat(100 * 1024),
+    }).then(
+      () => 'answered',
+      () => 'cut'
+    )
+    expect(oversized).toBe('cut')
+    expect(patches).toHaveLength(0)
+  })
+
+  it('closes twice, because a shutdown can reach it twice', async () => {
+    device = await startFakeDevice()
+    const port = await freePort()
+    hub = createEventHub({
+      port,
+      devicePort: device.port,
+      callbackBase: `http://127.0.0.1:${port}`,
+      onPatch: () => undefined,
+    })
+    await hub.start()
+    await hub.close()
+    await expect(hub.close()).resolves.toBeUndefined()
+    hub = null
   })
 })

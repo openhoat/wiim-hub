@@ -15,6 +15,8 @@ export default defineConfig({
       include: [
         'server/commands.ts',
         'server/findings.ts',
+        'server/guides.ts',
+        'server/inventory.ts',
         'server/queue.ts',
         'server/upnp.ts',
         'src/lib/optimistic.ts',

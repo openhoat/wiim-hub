@@ -18,6 +18,8 @@ import {
   inventorySection,
   probeList,
   type Resolution,
+  readInventory,
+  resolutionFor,
 } from './inventory.ts'
 
 const at = Date.UTC(2026, 10, 9, 15, 0, 0)
@@ -91,7 +93,7 @@ describe('buildInventory', () => {
     const preview = inventory.rows[0].preview
     expect(preview.startsWith('{ "language": "fr-FR"')).toBe(true)
     expect(preview).not.toContain('\n')
-    expect(preview.length).toBe(160)
+    expect(preview).toHaveLength(160)
     expect(preview.endsWith('…')).toBe(true)
   })
 
@@ -157,5 +159,56 @@ describe('inventorySection', () => {
     expect(inventorySection(inventory(), resolution, at + 25_000).join('\n')).toContain(
       '(25 s ago).'
     )
+  })
+})
+
+describe('readInventory', () => {
+  const probeRecorder = () => {
+    const seen: string[] = []
+    const probe = async (_ip: string, command: string): Promise<string | null> => {
+      seen.push(command)
+      return command === 'getModeRename' ? 'Failed' : 'OK'
+    }
+    return { seen, probe }
+  }
+
+  it('names the address and the scheme a host resolved to', () => {
+    // A literal is not resolved again: the report shows it once, and no call
+    // has succeeded yet on that address.
+    expect(resolutionFor('192.0.2.40')).toEqual({
+      host: '192.0.2.40',
+      ip: '192.0.2.40',
+      transport: null,
+    })
+  })
+
+  it('probes every command, with the argument the API requires', async () => {
+    const { seen, probe } = probeRecorder()
+    const inventory = await readInventory('192.0.2.41', at, probe)
+
+    expect(inventory.at).toBe(at)
+    expect(inventory.rows).toHaveLength(probeList.length)
+    // One request per command, in the order the report lists them.
+    expect(seen).toEqual(probeList.map(entry => entry.send ?? entry.command))
+    expect(inventory.counts.failed).toBe(1)
+    expect(inventory.counts.supported).toBe(probeList.length - 1)
+  })
+
+  it('serves the cached inventory instead of probing eighteen times twice', async () => {
+    const { seen, probe } = probeRecorder()
+    const first = await readInventory('192.0.2.42', at, probe)
+    const second = await readInventory('192.0.2.42', at + 30_000, probe)
+
+    expect(second).toBe(first)
+    expect(seen).toHaveLength(probeList.length)
+  })
+
+  it('probes again once the answer is older than a minute', async () => {
+    const { seen, probe } = probeRecorder()
+    await readInventory('192.0.2.43', at, probe)
+    const fresh = await readInventory('192.0.2.43', at + 60_001, probe)
+
+    expect(fresh.at).toBe(at + 60_001)
+    expect(seen).toHaveLength(probeList.length * 2)
   })
 })
