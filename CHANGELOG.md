@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-11-09
+
+### Fixed
+
+- The guided-flow end-to-end test no longer pins a signal value the demo drifts on every tick
+  (the RSSI walks a couple of dBm around -52): it asserts the sentence's shape, so the suite stops
+  failing on a render that landed between two samples.
+
 ## [0.8.0] - 2026-11-09
 
 ### Added

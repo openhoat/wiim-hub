@@ -203,7 +203,9 @@ test('walks the four guided flows, cheapest question first', async ({ page }) =>
 
   // Another flow is a different reading: the link, then the counters.
   await card.getByRole('tab', { name: 'It drops' }).click()
-  await expect(card.getByText('The radio link reads -52 dBm, 35 dB SNR.')).toBeVisible()
+  // The demo drifts the RSSI on every tick: assert the sentence's shape, not a
+  // value that moves between the render and the assertion.
+  await expect(card.getByText(/The radio link reads -\d+ dBm, 35 dB SNR\./)).toBeVisible()
   await expect(card.getByText('The Wi-Fi link is stable.')).toBeVisible()
 })
 
