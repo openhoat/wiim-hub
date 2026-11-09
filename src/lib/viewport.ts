@@ -34,7 +34,13 @@ export const keyboardInset = (
 export const visibleHeight = (
   innerHeight: number,
   viewport: { height: number; scale: number } | null
-): number => Math.round(viewport === null || viewport.scale !== 1 ? innerHeight : viewport.height)
+): number => {
+  // A pinch zoom shrinks the visual viewport for a reason that has nothing to
+  // do with a keyboard, and a zoom on a phone is the reader's own doing: the
+  // window is then the honest answer.
+  if (viewport?.scale !== 1) return Math.round(innerHeight)
+  return Math.round(viewport.height)
+}
 
 // Written on the root element so the stylesheet can read them, and re-measured
 // on every change of the visual viewport: the keyboard opens, closes, and the
