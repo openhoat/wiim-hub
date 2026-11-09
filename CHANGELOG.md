@@ -18,6 +18,9 @@ Releases are cut from `package.json`: the version in that file names the section
   `parsePresets`, `parseAcoustic` and `parseRegistry` — hex titles, `unknown command`, empty
   bodies, numeric counters, the `unknow` placeholders, an external input with no position, a live
   stream with no duration, and an unmapped playback mode that must light up no input.
+- The optimistic reconciliation left the hook: `src/lib/optimistic.ts` holds what a click paints
+  and how long it survives, and `src/lib/optimistic.test.ts` covers it without a browser. The unit
+  suite now spans `src/**/*.test.ts` as well as `server/**/*.test.ts`.
 
 ### Fixed
 

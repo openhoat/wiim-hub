@@ -27,10 +27,12 @@ Card #4 keeps its write half blocked on a second reachable unit.
 - [x] Test the write queue and its coalescing by family (`server/queue.test.ts`, quality pass)
 - [x] Unit test the parsing of the awkward payload shapes the device client reads, including
       `unknown command`, empty bodies, numeric counters and hex titles
-- [ ] Test the optimistic reconciliation and the position unit heuristic (milliseconds locally,
-      microseconds on the streaming services): the heuristic is documented in
-      `docs/feature-research.md` §5.10 and waits for a measured streaming session, and the
-      reconciliation lives in `src/lib/use-controls.ts`
+- [x] Test the optimistic reconciliation (`src/lib/optimistic.ts`: what a click paints, the six
+      second window, the nested equalizer merge), pulled out of the hook so it runs without a
+      browser
+- [ ] Test the position unit heuristic (milliseconds locally, microseconds on the streaming
+      services): the rule is documented in `docs/feature-research.md` §5.10 but not implemented, so
+      it waits for a measured streaming session rather than for a test
 - [x] Add a recorded fixture per endpoint for those tests (`server/fixtures/wiim-pro.ts`): the
       interface side already runs without a player (`npm run demo`), the device client now does too
 

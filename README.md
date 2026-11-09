@@ -203,9 +203,11 @@ the server, the suite and the configs, then the Vite build. The tasks are wired 
 [wireit](https://github.com/google/wireit), so an unchanged one is not run twice, and `npm run
 qa:fix` rewrites the formatting instead of reporting it.
 
-The unit suite (`npm run test:coverage`) covers the pure server layer: the intents the hub accepts,
-the commands it builds from them, and the per-device writer that keeps one write in flight at a
-time.
+The unit suite (`npm run test:coverage`) covers the pure layer on both sides of the HTTP boundary:
+the intents the hub accepts, the commands it builds from them, the per-device writer that keeps one
+write in flight at a time, the device parsers pinned against the answers a real player sent
+(`server/fixtures/`), and the optimistic reconciliation the page paints before a poll confirms it.
+Components, the transport and the browser stay with the end-to-end suite below.
 
 The end-to-end suite drives the demo mode in a real browser: the two cards, the group panel, the
 sound card, the diagnostic view and its CSV export, a volume write that survives a poll, the

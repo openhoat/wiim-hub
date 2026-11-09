@@ -536,14 +536,15 @@ network name, playback, group, the findings with their evidence lines, then the 
 a support thread, and it is English by design: one artefact, not one per language.
 
 Still missing from the report: the capability inventory (every probed command with `supported`,
-raw body and probe time) and the resolution path (which address answered). Both are what
-`#8` fixture work would make cheap to add.
+raw body and probe time) and the resolution path (which address answered). The recorded fixtures
+and the parser seams shipped with `#8` are what makes both cheap to add.
 
 ## 7. Interaction rules (apply to every feature)
 
 - **State is a hypothesis.** The hub polls, so every control is optimistic with visible pending
   state, then confirmed by the next poll. A control that is optimistic without reconciliation
-  is a lie.
+  is a lie. The painted value lives six seconds at most and any poll newer than the click erases
+  it (`src/lib/optimistic.ts`, tested without a browser).
 - **One writer per device.** A queue per device serialises writes; the last value of a slider
   wins. Reads stay parallel.
 - **Errors are content.** Show the device body, the command attempted, and the time. Never
