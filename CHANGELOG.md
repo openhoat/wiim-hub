@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-09
+
 ### Added
 
 - The page installs as a web app. A manifest declares the name, the standalone display, the theme
