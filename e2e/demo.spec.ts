@@ -1,4 +1,23 @@
+import { readFileSync, writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { expect, type Page, test } from '@playwright/test'
+
+// The install metadata and the worker are files a release replaces on the
+// server; a test that changes them has to put them back, whatever happened in
+// between, or the next test inherits a worker nobody published.
+const replaceTemporarily = async (
+  path: string,
+  content: string,
+  run: () => Promise<void>
+): Promise<void> => {
+  const original = readFileSync(path, 'utf8')
+  try {
+    writeFileSync(path, content)
+    await run()
+  } finally {
+    writeFileSync(path, original)
+  }
+}
 
 // Every test starts from the demo's English dark default, whatever the
 // browser would have picked: the assertions below read the page, not the
@@ -356,12 +375,94 @@ test('opens on the cached shell when the network is gone', async ({ page, contex
   await expect(page.getByText(/Last state received/)).toBeVisible()
 })
 
+test('offers a new version to a window that stayed open, instead of a reinstall', async ({
+  page,
+}) => {
+  await openHub(page)
+
+  // The installed app launches on the version it finds: one worker controls the
+  // page, and no other waits behind it.
+  expect(
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready
+      return {
+        controller: navigator.serviceWorker.controller !== null,
+        waiting: registration.waiting !== null,
+      }
+    })
+  ).toEqual({ controller: true, waiting: false })
+
+  // A deploy, from the page's side: the worker script changes. It is the one
+  // file the browser checks on its own, so touching it is what a release looks
+  // like here, without rebuilding the bundle.
+  const worker = resolve('dist/app/sw.js')
+  await replaceTemporarily(
+    worker,
+    `${readFileSync(worker, 'utf8')}\n// the next release\n`,
+    async () => {
+      await page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.ready
+        await registration.update()
+        for (let index = 0; index < 50 && registration.waiting === null; index += 1) {
+          await new Promise(done => setTimeout(done, 100))
+        }
+      })
+
+      // The new worker waits instead of taking over: the banner is how the page
+      // says so, and the reload is offered rather than forced, because the hand
+      // may be in the middle of a rename.
+      await expect(page.getByText('A new version of the hub is ready.')).toBeVisible()
+
+      const navigation = page.waitForEvent('framenavigated')
+      await page.getByRole('button', { name: 'Reload' }).click()
+      await navigation
+      await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
+
+      // Reloaded once, on the new worker, and the banner is gone: nothing is left
+      // waiting and nothing invites a second click.
+      const after = await page.evaluate(async () => {
+        const registration = await navigator.serviceWorker.ready
+        return {
+          waiting: registration.waiting !== null,
+          banner: document.body.innerText.includes('A new version of the hub is ready.'),
+        }
+      })
+      expect(after).toEqual({ waiting: false, banner: false })
+    }
+  )
+})
+
+test('serves the manifest of this release, not the cached one', async ({ page }) => {
+  await openHub(page)
+  // The page has to be controlled, otherwise the assertion would only prove
+  // that the server answers.
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true)
+
+  const manifest = resolve('dist/app/manifest.webmanifest')
+  const original = readFileSync(manifest, 'utf8')
+  const edited = original.replace(/"description": "[^"]*"/, '"description": "the next release"')
+  await replaceTemporarily(manifest, edited, async () => {
+    const body = await page.evaluate(() =>
+      fetch('/manifest.webmanifest').then(answer => answer.json())
+    )
+    // Served from the cache, the browser would read the manifest of the release
+    // it installed, and a changed name, colour or shortcut would never arrive.
+    expect(body.description).toBe('the next release')
+    expect(body.id).toBe('/')
+  })
+})
+
 test('keeps the last state it received, dated, when the hub goes quiet', async ({ page }) => {
   await openHub(page)
   await expect(page.getByText('Late Ferry', { exact: true })).toBeVisible()
 
   await page.route('**/api/state*', route => route.abort())
-  await expect(page.getByText('Hub unreachable')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText('Hub unreachable')).toBeVisible({
+    timeout: 20_000,
+  })
   await expect(page.getByText(/Last state received .* ago/)).toBeVisible()
   await expect(page.getByText('Late Ferry', { exact: true })).toBeVisible()
 })

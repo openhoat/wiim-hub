@@ -151,6 +151,11 @@
     "subscribed": "subscribed",
     "degraded": "polling fallback"
   },
+  "update": {
+    "ready": "A new version of the hub is ready.",
+    "hint": "Reload to apply it. Your view and settings stay.",
+    "reload": "Reload"
+  },
   "inputs": {
     "wifi": "Wi-Fi",
     "line-in": "Line input",

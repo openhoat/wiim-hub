@@ -10,13 +10,29 @@
 
 const CACHE = 'wiim-hub-shell-v1'
 
+// Install metadata and icons are read by the browser itself, at launch, to
+// decide what the app looks like. Served from the cache they would answer last
+// release's manifest to a browser asking about this one, so they are fetched
+// first and the cached copy only answers a launch with no network: an icon one
+// launch late is a smaller lie than a manifest that never moves.
+const METADATA = [
+  '/manifest.webmanifest',
+  '/favicon.svg',
+  '/apple-touch-icon.png',
+  '/icon-192.png',
+  '/icon-512.png',
+  '/icon-maskable-512.png',
+]
+
 // Pre-cached so a first visit that ends offline still opens on something. The
 // bundle is not listed here: its name carries a hash the worker cannot know
 // before the page loads, so the install reads it from the document instead.
-const SHELL = ['/', '/manifest.webmanifest', '/favicon.svg', '/icon-192.png', '/icon-512.png']
+const SHELL = ['/', ...METADATA]
 
 const neverCache = pathname =>
   pathname.startsWith('/api/') || pathname === '/health' || pathname === '/sw.js'
+
+const isMetadata = pathname => METADATA.includes(pathname)
 
 // A response worth keeping: a real 200 of our own origin. An ingress that
 // expires the session answers a redirect to its login page, and caching that
@@ -85,6 +101,9 @@ const cacheShell = async response => {
   await pruneAssets(cache)
 }
 
+// The new worker waits instead of taking over at once: the page decides when to
+// swap, so a deploy never replaces the bundle under a hand that is using it.
+// A first install has no predecessor and activates on its own.
 self.addEventListener('install', event => {
   event.waitUntil(
     (async () => {
@@ -92,9 +111,12 @@ self.addEventListener('install', event => {
       // One by one: a single unreachable icon must not fail the whole install.
       for (const url of SHELL) await fill(cache, url)
       await fillShell(cache)
-      await self.skipWaiting()
     })()
   )
+})
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') void self.skipWaiting()
 })
 
 self.addEventListener('activate', event => {
@@ -118,6 +140,24 @@ const navigation = request =>
       return response
     } catch {
       const cached = await caches.match('/')
+      return cached ?? Response.error()
+    }
+  })()
+
+// Network first, cache behind: what the browser reads about the app itself has
+// to be the current answer, and the cached copy only covers a launch with no
+// network, where the app opens on the shell it already has.
+const metadata = request =>
+  (async () => {
+    try {
+      const response = await fetch(request)
+      if (cacheable(response)) {
+        const cache = await caches.open(CACHE)
+        await cache.put(request, response.clone())
+      }
+      return response
+    } catch {
+      const cached = await caches.match(request)
       return cached ?? Response.error()
     }
   })()
@@ -150,6 +190,10 @@ self.addEventListener('fetch', event => {
 
   if (request.mode === 'navigate') {
     event.respondWith(navigation(request))
+    return
+  }
+  if (isMetadata(url.pathname)) {
+    event.respondWith(metadata(request))
     return
   }
   event.respondWith(asset(request, event))

@@ -9,6 +9,7 @@ import { SoundCard } from '@/components/sound-card'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/toaster'
+import { UpdateBanner } from '@/components/update-banner'
 import { cn } from '@/lib/cn'
 import { inputLabel, isExternalInput } from '@/lib/labels'
 import { SettingsProvider, useSettings } from '@/lib/settings'
@@ -123,6 +124,8 @@ const Hub = () => {
         </p>
 
         <div className="space-y-4">
+          <UpdateBanner />
+
           {hub.error !== null && <HubBanner onRetry={hub.refresh} since={hub.shownAt} now={now} />}
 
           {hub.loading && hub.state === null && (

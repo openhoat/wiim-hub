@@ -1,5 +1,6 @@
 {
   "name": "WiiM Hub",
+  "id": "/",
   "short_name": "WiiM Hub",
   "description": "Self-hosted hub for WiiM devices and other LinkPlay-based players",
   "start_url": "/",
