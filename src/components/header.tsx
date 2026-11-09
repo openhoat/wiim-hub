@@ -1,4 +1,5 @@
 import { AudioLines, RefreshCw } from 'lucide-react'
+import { HostsDialog } from '@/components/hosts-dialog'
 import { SettingsMenu } from '@/components/settings-menu'
 import { Button } from '@/components/ui/button'
 import { ViewSwitch } from '@/components/view-switch'
@@ -9,6 +10,7 @@ type HeaderProps = {
   view: View
   onChangeView: (view: View) => void
   onDiscover: () => void
+  onHostsChanged: () => void
   discovering: boolean
   online: number
   total: number
@@ -18,6 +20,7 @@ export const Header = ({
   view,
   onChangeView,
   onDiscover,
+  onHostsChanged,
   discovering,
   online,
   total,
@@ -51,6 +54,7 @@ export const Header = ({
           >
             <RefreshCw className={discovering ? 'size-4 animate-spin' : 'size-4'} />
           </Button>
+          <HostsDialog onChanged={onHostsChanged} />
           <SettingsMenu />
         </div>
       </div>

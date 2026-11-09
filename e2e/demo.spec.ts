@@ -275,6 +275,26 @@ test('remembers the view, the language and the theme', async ({ page }) => {
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light')
 })
 
+test('lists the addresses it polls, and says which ones it does not own', async ({ page }) => {
+  await openHub(page)
+
+  await page.getByRole('button', { name: 'Devices' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByText('192.0.2.21')).toBeVisible()
+  await expect(dialog.getByText('192.0.2.22')).toBeVisible()
+
+  // The demo fleet is fixed, like a seed from the environment: the list is
+  // readable, and it says where the entries come from instead of offering an
+  // edit that would not persist.
+  await expect(dialog.getByText('from the environment')).toHaveCount(2)
+  await expect(dialog.getByRole('button', { name: 'Remove' })).toHaveCount(0)
+
+  // A write is refused with the reason, not silently dropped.
+  await dialog.getByLabel('Address to add').fill('192.0.2.99')
+  await dialog.getByRole('button', { name: 'Add' }).click()
+  await expect(dialog.getByText('The hub refused: the demo does not manage hosts')).toBeVisible()
+})
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 

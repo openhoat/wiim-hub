@@ -20,6 +20,13 @@ import {
 import { discoverSsdp } from './discovery.ts'
 import { buildReport, findingsFor } from './findings.ts'
 import { guidesFor } from './guides.ts'
+import {
+  type HostEntry,
+  hostEntries,
+  normalizeHost,
+  readHostsFile,
+  writeHostsFile,
+} from './hosts.ts'
 import { readInventory, resolutionFor } from './inventory.ts'
 import { createWriteQueue } from './queue.ts'
 import { createEventHub, type EventPatch } from './upnp.ts'
@@ -46,13 +53,32 @@ const discoveryEnabled = (process.env.DISCOVERY ?? '1') !== '0'
 const discoveryIntervalMs = 300_000
 const distDir = resolve(import.meta.dirname, '..', 'dist', 'app')
 
-const hosts = new Set(
+const envHosts = new Set(
   (process.env.DEVICE_HOSTS ?? '')
     .split(',')
     .map(entry => entry.trim())
     .filter(entry => entry.length > 0)
 )
+// The hosts the page saved, and the ones discovery found: only the first list
+// is written to disk, the two others have an owner already.
+const savedHosts = new Set<string>()
+const discoveredHosts = new Set<string>()
+// The polled set is the union of the three, so a card exists for a host whatever
+// brought it in, and removing one is removing it from here as well.
+const hosts = new Set(envHosts)
+// The saved list is a JSON file on a volume: the hub owns it, but a hand edit is
+// expected, so it is read at start and written whole on every change.
+const hostsFile =
+  (process.env.HOSTS_FILE ?? '').trim() || resolve(import.meta.dirname, '..', 'data', 'hosts.json')
 const states = new Map<string, DeviceState>()
+// Read before the server listens, so the startup line and the first poll already
+// count what the page kept. Top-level await is available here: this module is
+// the process entry point.
+for (const host of await readHostsFile(hostsFile)) {
+  if (envHosts.has(host)) continue
+  savedHosts.add(host)
+  hosts.add(host)
+}
 
 // Keys are the configured hosts (address or name), so a device keeps its card
 // and its history when its DHCP lease moves it to another address.
@@ -282,10 +308,173 @@ const refreshHosts = async (): Promise<number> => {
     // spellings must not run two writers against it.
     const known = [...hosts].some(host => host === ip || resolveTarget(host) === ip)
     if (known) continue
+    discoveredHosts.add(ip)
     hosts.add(ip)
     added += 1
   }
   return added
+}
+
+// The hosts the page owns, with what the last poll knows: the source decides
+// what can be edited, and the online flag is what the list shows next to it.
+const hostList = (): (HostEntry & { ip: string; online: boolean; name: string })[] =>
+  hostEntries(hosts, { env: envHosts, saved: savedHosts }).map(entry => {
+    const state = states.get(entry.host)
+    return {
+      ...entry,
+      ip: state?.ip ?? entry.host,
+      online: state?.online ?? false,
+      name: state?.name ?? entry.host,
+    }
+  })
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+
+const sendHosts = (res: ServerResponse): void => {
+  sendJson(res, 200, { hosts: hostList() })
+}
+
+const persistHosts = (): Promise<void> => writeHostsFile(hostsFile, [...savedHosts])
+
+// Two spellings of one machine must not become two cards, and must not run two
+// writers against it: the check discovery makes is the one a typed address gets
+// too. `ignore` is the entry being renamed, which is allowed to collide with
+// itself.
+const clashFor = (host: string, ignore = ''): string | null => {
+  const target = resolveTarget(host)
+  for (const known of hosts) {
+    if (known === host || known === ignore) continue
+    if (resolveTarget(known) === target) return known
+  }
+  return null
+}
+
+// The hosts routes read a JSON body for the same reason the command route does:
+// an HTML form cannot send that content type, so a cross-site post cannot make
+// the hub poll an address of someone else's choosing.
+const jsonBody = async (req: IncomingMessage, res: ServerResponse): Promise<unknown> => {
+  const type = req.headers['content-type'] ?? ''
+  if (!type.toLowerCase().includes('application/json')) {
+    sendJson(res, 415, { error: 'content-type must be application/json' })
+    return undefined
+  }
+  const raw = await readBody(req)
+  if (raw === null) {
+    sendJson(res, 413, { error: 'body too large' })
+    return undefined
+  }
+  try {
+    return JSON.parse(raw)
+  } catch {
+    sendJson(res, 400, { error: 'invalid json' })
+    return undefined
+  }
+}
+
+const addHostRoute = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  const body = await jsonBody(req, res)
+  if (body === undefined) return
+  const host = normalizeHost(isRecord(body) ? body.host : null)
+  if (host === null) {
+    sendJson(res, 400, { error: 'invalid host' })
+    return
+  }
+  if (envHosts.has(host)) {
+    sendJson(res, 409, { error: 'host comes from DEVICE_HOSTS' })
+    return
+  }
+  if (savedHosts.has(host)) {
+    sendJson(res, 409, { error: 'host already saved' })
+    return
+  }
+  const clash = clashFor(host)
+  if (clash !== null) {
+    sendJson(res, 409, { error: `host already polled as ${clash}` })
+    return
+  }
+  // A host discovery already found is kept rather than refused: that is how a
+  // device the network sees becomes an entry the page owns and keeps across
+  // restarts.
+  savedHosts.add(host)
+  hosts.add(host)
+  await persistHosts()
+  void pollAll()
+  sendHosts(res)
+}
+
+const renameHostRoute = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  const body = await jsonBody(req, res)
+  if (body === undefined) return
+  const from = normalizeHost(isRecord(body) ? body.from : null)
+  const to = normalizeHost(isRecord(body) ? body.to : null)
+  if (from === null || to === null) {
+    sendJson(res, 400, { error: 'invalid host' })
+    return
+  }
+  if (envHosts.has(from)) {
+    sendJson(res, 409, { error: 'host comes from DEVICE_HOSTS' })
+    return
+  }
+  if (!savedHosts.has(from)) {
+    // A discovered entry is not the page's, so repointing it would be a silent
+    // adoption. Keeping it first is one click and says what happens.
+    sendJson(res, hosts.has(from) ? 409 : 404, {
+      error: hosts.has(from) ? 'host was found by discovery, save it first' : 'unknown host',
+    })
+    return
+  }
+  if (from === to) {
+    sendHosts(res)
+    return
+  }
+  if (envHosts.has(to) || savedHosts.has(to)) {
+    sendJson(res, 409, { error: 'host already known' })
+    return
+  }
+  const clash = clashFor(to, from)
+  if (clash !== null) {
+    sendJson(res, 409, { error: `host already polled as ${clash}` })
+    return
+  }
+  savedHosts.delete(from)
+  savedHosts.add(to)
+  discoveredHosts.delete(from)
+  hosts.delete(from)
+  hosts.add(to)
+  // The card follows the entry: a state keyed by the old spelling would keep a
+  // device nobody lists any more, and its history with it.
+  states.delete(from)
+  await persistHosts()
+  void pollAll()
+  sendHosts(res)
+}
+
+const removeHostRoute = async (url: URL, res: ServerResponse): Promise<void> => {
+  const host = normalizeHost(url.searchParams.get('host'))
+  if (host === null) {
+    sendJson(res, 400, { error: 'invalid host' })
+    return
+  }
+  if (envHosts.has(host)) {
+    sendJson(res, 409, { error: 'host comes from DEVICE_HOSTS' })
+    return
+  }
+  if (!savedHosts.has(host)) {
+    const known = hosts.has(host)
+    sendJson(res, known ? 409 : 404, {
+      error: known
+        ? 'host was found by discovery, it would come back on the next scan'
+        : 'unknown host',
+    })
+    return
+  }
+  savedHosts.delete(host)
+  discoveredHosts.delete(host)
+  hosts.delete(host)
+  states.delete(host)
+  await persistHosts()
+  sendHosts(res)
 }
 
 const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
@@ -295,7 +484,6 @@ const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
   })
   res.end(JSON.stringify(body))
 }
-
 // A WiiM answers only its own interface: the hub refuses to fetch an address
 // it does not already poll, and the cover uri must be the one the device
 // reported on its last poll. The route cannot become an open proxy.
@@ -541,6 +729,28 @@ const routes: Record<string, Route> = {
     await pollAll()
     sendJson(res, 200, { ts: Date.now(), added, devices: states.size })
     return true
+  },
+  // One route for the list the page manages: reading it is what the dialog
+  // does when it opens, and the three writes answer the new list so the page
+  // never has to re-read to know what it got.
+  '/api/hosts': async (url, req, res) => {
+    if (req.method === 'GET') {
+      sendHosts(res)
+      return true
+    }
+    if (req.method === 'POST') {
+      await addHostRoute(req, res)
+      return true
+    }
+    if (req.method === 'PUT') {
+      await renameHostRoute(req, res)
+      return true
+    }
+    if (req.method === 'DELETE') {
+      await removeHostRoute(url, res)
+      return true
+    }
+    return false
   },
 }
 

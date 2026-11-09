@@ -13,3 +13,7 @@ dist/
 
 # Produced by `npm run docs:logo` from docs/img/logo.svg.
 docs/public/logo.svg
+
+# The host list the page saves, when the hub runs from a checkout: the file is
+# written at runtime and belongs to the machine, not to the repository.
+data/

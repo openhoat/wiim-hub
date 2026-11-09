@@ -231,6 +231,28 @@
     "failed": "Échec du changement :",
     "close": "Fermer"
   },
+  "hosts": {
+    "open": "Appareils",
+    "close": "Fermer",
+    "title": "Appareils",
+    "hint": "Adresses interrogées par le hub. Une entrée enregistrée survit au redémarrage, une entrée découverte revient au prochain scan.",
+    "placeholder": "192.168.1.150 ou salon.local",
+    "address": "Adresse à ajouter",
+    "newAddress": "Nouvelle adresse",
+    "add": "Ajouter",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "rename": "Changer l'adresse",
+    "remove": "Retirer",
+    "keep": "Enregistrer cette adresse",
+    "empty": "Rien à interroger pour l'instant : ajoutez une adresse ou lancez une découverte.",
+    "failed": "Le hub a refusé : {reason}",
+    "source": {
+      "env": "environnement",
+      "saved": "enregistrée",
+      "discovered": "découverte"
+    }
+  },
   "stream": {
     "open": "URL de flux",
     "title": "Lire un flux",

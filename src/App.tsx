@@ -107,6 +107,7 @@ const Hub = () => {
         view={view}
         onChangeView={setView}
         onDiscover={() => void discover()}
+        onHostsChanged={hub.refresh}
         discovering={hub.discovering}
         online={online}
         total={devices.length}

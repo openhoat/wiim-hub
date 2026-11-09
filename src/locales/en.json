@@ -231,6 +231,28 @@
     "failed": "Change failed:",
     "close": "Close"
   },
+  "hosts": {
+    "open": "Devices",
+    "close": "Close",
+    "title": "Devices",
+    "hint": "Addresses the hub polls. A saved entry survives a restart; a discovered one comes back on the next scan.",
+    "placeholder": "192.168.1.150 or living-room.local",
+    "address": "Address to add",
+    "newAddress": "New address",
+    "add": "Add",
+    "save": "Save",
+    "cancel": "Cancel",
+    "rename": "Change the address",
+    "remove": "Remove",
+    "keep": "Save this address",
+    "empty": "Nothing to poll yet: add an address, or run a discovery.",
+    "failed": "The hub refused: {reason}",
+    "source": {
+      "env": "from the environment",
+      "saved": "saved",
+      "discovered": "discovered"
+    }
+  },
   "stream": {
     "open": "Stream URL",
     "title": "Play a stream",

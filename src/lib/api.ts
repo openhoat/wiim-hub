@@ -38,6 +38,38 @@ export const fetchReport = (device: Device): Promise<Report> =>
 export const runDiscovery = (): Promise<{ added: number }> =>
   readJson<{ added: number }>('/api/discover', { method: 'POST' })
 
+// The addresses the hub polls, with the list they came from. Only a `saved`
+// entry belongs to the page: the environment seed is the operator's, and a
+// discovered host is kept by saving it.
+export type HostSource = 'env' | 'saved' | 'discovered'
+
+export type HostEntry = {
+  host: string
+  source: HostSource
+  ip: string
+  online: boolean
+  name: string
+}
+
+export const fetchHosts = (): Promise<{ hosts: HostEntry[] }> => readJson('/api/hosts')
+
+// The three writes answer the list they produced, so the dialog never re-reads
+// what the server already knows.
+const writeHost = (init: RequestInit): Promise<{ hosts: HostEntry[] }> =>
+  readJson('/api/hosts', {
+    ...init,
+    headers: { 'content-type': 'application/json' },
+  })
+
+export const addHost = (host: string): Promise<{ hosts: HostEntry[] }> =>
+  writeHost({ method: 'POST', body: JSON.stringify({ host }) })
+
+export const renameHost = (from: string, to: string): Promise<{ hosts: HostEntry[] }> =>
+  writeHost({ method: 'PUT', body: JSON.stringify({ from, to }) })
+
+export const removeHost = (host: string): Promise<{ hosts: HostEntry[] }> =>
+  readJson(`/api/hosts?host=${encodeURIComponent(host)}`, { method: 'DELETE' })
+
 // The hub accepts intents, never raw device commands: the shape here is the
 // same union the server validates, so a typo fails at compile time.
 export type Action =

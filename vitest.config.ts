@@ -16,6 +16,7 @@ export default defineConfig({
         'server/commands.ts',
         'server/findings.ts',
         'server/guides.ts',
+        'server/hosts.ts',
         'server/inventory.ts',
         'server/queue.ts',
         'server/upnp.ts',

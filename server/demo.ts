@@ -874,6 +874,27 @@ const routes: Record<string, Route> = {
     sendJson(res, 200, { ts: Date.now(), added: 0, devices: states.size })
     return true
   },
+  // The demo fleet is fixed, and nothing is written to disk: the list reads like
+  // a seed from the environment, which is exactly what an entry the page cannot
+  // edit means. A write says so instead of pretending to save.
+  '/api/hosts': (_url, req, res) => {
+    if (req.method !== 'GET') {
+      sendJson(res, 409, { error: 'the demo does not manage hosts' })
+      return true
+    }
+    sendJson(res, 200, {
+      hosts: [...states.values()]
+        .map(state => ({
+          host: state.ip,
+          source: 'env',
+          ip: state.ip,
+          online: state.online,
+          name: state.name,
+        }))
+        .sort((left, right) => left.host.localeCompare(right.host)),
+    })
+    return true
+  },
 }
 
 // Anything that is not an API path is the built page: the file when it exists,

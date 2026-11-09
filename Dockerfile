@@ -21,6 +21,11 @@ COPY package.json ./
 COPY server ./server
 COPY --from=build /app/dist ./dist
 
+# The saved host list lives on a volume, and a fresh named volume inherits the
+# ownership of the directory it covers: created here as `node`, it stays
+# writable by the process once the volume is mounted over it.
+RUN mkdir -p /app/data && chown node:node /app/data
+
 USER node
 
 EXPOSE 8090
