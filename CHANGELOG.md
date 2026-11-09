@@ -12,6 +12,11 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ### Added
 
+- The page installs as a web app. A manifest declares the name, the standalone display, the theme
+  and background colours, and four icons: 192 px, 512 px, a maskable 512 px drawn inside the safe
+  zone, and the SVG. Chrome and Edge now offer "Install" from the address bar, and the installed
+  window carries the project's mark instead of a generated tile; iOS keeps using the
+  `apple-touch-icon`. Until now the page had only a favicon, which is not an installable icon.
 - A documentation site, built with VitePress from `docs/` and published to GitHub Pages by
   `.github/workflows/docs.yml`: a guide (quick start, configuration, devices, UPnP events, demo
   mode, development), a how-it-works page with Mermaid diagrams, and the API reference. The

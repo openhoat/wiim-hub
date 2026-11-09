@@ -57,6 +57,9 @@ npm start
 players, with a real write path: a volume change lands in the state the page renders. The
 end-to-end suite runs against it, which is why the project is testable without hardware.
 
+The page also **installs as a web app**: Chrome and Edge offer it from the address bar, it then runs
+in a window of its own, with the project's icon.
+
 ## What it does
 
 - **Controls, without the app**: transport, seek, volume and mute, source, presets, sleep timer,
