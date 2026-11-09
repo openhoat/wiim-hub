@@ -157,6 +157,29 @@ the hub stops answering, the cards keep the last state received (one snapshot in
 `src/lib/snapshot.ts`), dated under the banner, and their clock stops at the moment it was taken:
 a seek bar must not advance on a position nobody measured.
 
+## Updates
+
+Deploying a new image reaches the installed app on its next launch: the document is served network
+first, so the fresh `index.html` brings the fresh bundle. A window that stayed open keeps the code
+it loaded, and that is what `src/lib/updates.ts` handles.
+
+A new worker waits instead of taking over. When it reaches `installed` while a page is controlled,
+the page shows a banner with a reload button; the click activates the worker (`SKIP_WAITING`) and
+reloads once the new one controls the page (`controllerchange` guarded by `reloadPending`, so the
+first install does not reload anything). Nothing is swapped under the pointer, and the view, the
+language and the last state survive the reload. A check runs when the app returns to the foreground
+and every 30 min.
+
+The manifest and the icons are the one cached group served **network first**: the browser reads them
+at launch to decide what the app is called and how it looks, and a cache-first answer would describe
+the release that was installed rather than the one running.
+
+What the site cannot do is refresh the icon of an app already installed on desktop Chrome: `icons`
+is not in the list of manifest fields Chrome updates, so that one still needs a reinstall. The
+manifest carries `"id": "/"` so that a changed `start_url` updates the app instead of installing a
+second one. Both rules come from
+[How Chrome handles updates to the web app manifest](https://web.dev/articles/manifest-updates).
+
 ## Module map
 
 ```text
@@ -173,6 +196,7 @@ server/services.ts   streaming services and the tiers the firmware publishes
 server/server.ts     polling loop, ring buffers, HTTP routes, static bundle
 server/demo.ts       the same routes over simulated speakers
 src/                 React UI: components, settings and i18n provider, formatting helpers
+src/lib/updates.ts   worker registration, version checks, the reload the banner offers
 public/sw.js         service worker: the shell is cached, the API never is
 e2e/                 Playwright suite, run against the demo mode
 ```

@@ -10,6 +10,30 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- A deployed hub now reaches the app installed from it, without a reinstall. The document was
+  already served network first, so a launch picked the new bundle up; a window left open kept the
+  one it loaded. A new service worker now waits instead of taking over, and the page offers a
+  reload: the click activates it (`SKIP_WAITING`) and reloads once when it controls the page, so
+  nothing is swapped under the pointer, and the view, the language and the last state survive. A
+  check runs when the app returns to the foreground and every 30 min. A worker found waiting at
+  startup is activated silently, since the page on screen already came from the network.
+
+### Changed
+
+- The web manifest and the icons are served network first, with the cached copy as a fallback. Served
+  cache first, they answered the installed release's manifest to a browser asking about this one, so
+  a changed name, colour or description never arrived. The manifest also carries `"id": "/"`, without
+  which a changed `start_url` installs a second app instead of updating the first.
+
+### Notes
+
+- The icon of an app already installed on desktop Chrome still needs a reinstall: `icons` is not a
+  field Chrome updates on desktop, and no site can change that
+  ([manifest-updates](https://web.dev/articles/manifest-updates)). Android updates it with the rest
+  of the manifest.
+
 ## [0.9.4] - 2026-11-09
 
 ### Added

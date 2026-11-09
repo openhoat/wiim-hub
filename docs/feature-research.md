@@ -683,6 +683,50 @@ publish a tier, then a count that opens the rest. Parsing and presentation are p
 against the recorded body (`server/services.ts`, `src/lib/services.ts`); the demo serves the same
 recorded table.
 
+### 5.15 Updating the installed app (shipped after 0.9.4)
+
+An installed hub has to take a deploy the way any other web app does: no reinstall, no clearing
+site data, no button nobody presses. Two layers decide that, and only one of them is ours.
+
+**The content is ours.** The document is served network first by the worker, so a launch fetches
+the current `index.html` and its hashed bundle; a window left open for days keeps the code it
+loaded. The release closes that gap:
+
+- the installed worker **waits** instead of activating at once. A deploy no longer replaces the
+  bundle under a hand that is using it: `install` caches the shell and stops, and the page decides;
+- the page offers a reload (`src/components/update-banner.tsx`), never forces one. A rename in
+  progress or a volume being set are worth more than the second the swap takes;
+- the offer appears when a new worker reaches `installed` **while a page is controlled**. Without a
+  controller this is the first install, and there is nothing to offer;
+- a worker found waiting at startup is activated silently: the page on screen already came from the
+  network, so asking would be a banner about the version being displayed;
+- the reload happens once, on `controllerchange`, and only when we asked for it (`reloadPending`).
+  The first install claims the page through the same event, and reloading there would cost the
+  visit for nothing;
+- a check runs when the app comes back to the foreground (`visibilitychange`) and every 30 min.
+  An installed app is launched and closed rather than reloaded, and the check is one conditional
+  request on `/sw.js`.
+
+**The install metadata is the browser's.** Chrome checks the manifest when the app is launched, at
+most once in 24 h, and applies what changed once every window is closed. Only these fields take
+effect on desktop: `name`, `short_name`, `display`, `scope`, `shortcuts`, `start_url`,
+`theme_color`, `file_handlers`. **`icons` is not among them**: Chrome on desktop does not update the
+icons of an installed app, and no site can make it
+([manifest-updates](https://web.dev/articles/manifest-updates)). Android is the exception: a WebAPK
+gets a new manifest whole, icons included, when the device is idle, charging and on Wi-Fi.
+
+Two consequences the hub respects. The manifest now carries `"id": "/"`, without which a changed
+`start_url` installs as a second app instead of updating the first. And the manifest and the icons
+are served **network first** with the cached copy as fallback: served cache first, they answered
+the installed release's manifest to a browser asking about this one, so a changed name, colour or
+description would never arrive. An icon one launch late is a smaller lie than a manifest that never
+moves.
+
+Both halves are proven by the e2e suite, which edits `dist/app/sw.js` and `dist/app/manifest.webmanifest`
+under a controlled page: the first simulates a deploy and asserts the banner, the reload and the
+empty queue afterwards; the second asserts the manifest answered to a controlled page is the one on
+disk, not the one cached at install.
+
 ## 7. Interaction rules (apply to every feature)
 
 - **State is a hypothesis.** The hub polls, so every control is optimistic with visible pending
