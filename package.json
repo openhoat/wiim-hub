@@ -27,6 +27,7 @@
   "license": "MIT",
   "scripts": {
     "build": "wireit",
+    "clean": "rm -rf dist .wireit docs/public/logo.svg",
     "demo": "node server/demo.ts",
     "docs:build": "wireit",
     "docs:dev": "npm run docs:logo && vitepress dev docs",
@@ -98,7 +99,7 @@
         "tsconfig.json"
       ],
       "output": [
-        "dist/**"
+        "dist/app/**"
       ]
     },
     "docs:build": {
@@ -113,7 +114,7 @@
         "docs/img/logo.svg"
       ],
       "output": [
-        "docs/.vitepress/dist/**"
+        "dist/docs/**"
       ]
     },
     "docs:logo": {
@@ -179,7 +180,7 @@
         "test:coverage"
       ],
       "files": [
-        "coverage/lcov.info",
+        "dist/coverage/lcov.info",
         "server/**/*.ts",
         "sonar-project.properties",
         "src/**/*"
@@ -200,7 +201,7 @@
         "package.json"
       ],
       "output": [
-        "coverage/**"
+        "dist/coverage/**"
       ]
     },
     "typecheck": {

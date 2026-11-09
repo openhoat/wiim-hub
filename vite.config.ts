@@ -20,6 +20,8 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: 'dist',
+    // Every generated artefact lives under dist/, so the tree has one place to
+    // look at and one directory to remove. See `npm run clean`.
+    outDir: 'dist/app',
   },
 })

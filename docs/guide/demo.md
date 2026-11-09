@@ -28,6 +28,8 @@ supported commands are enforced there too. Only the last step differs, the comma
 instead of reaching a speaker. Every simulated state is typed as the real `DeviceState`, so a
 change in the polling code fails the demo at compile time instead of letting it drift.
 
+![The demo, and the same page from the README](../img/now-playing.jpeg)
+
 ## What it is for
 
 - **Trying the interface** before deciding to install anything.

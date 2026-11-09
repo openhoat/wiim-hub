@@ -15,6 +15,10 @@ export default withMermaid(
     base,
     cleanUrls: true,
     lastUpdated: true,
+    // Both are generated: they belong beside the other artefacts, under dist/,
+    // so the source tree has one place to clean. See `npm run clean`.
+    outDir: '../dist/docs',
+    cacheDir: '../dist/docs-cache',
     head: [
       ['link', { rel: 'icon', type: 'image/svg+xml', href: `${base}logo.svg` }],
       ['meta', { name: 'theme-color', content: '#26894c' }],

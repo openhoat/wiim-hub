@@ -44,7 +44,7 @@ const diagnosticsMs = 60_000
 const hubVersion = (process.env.HUB_VERSION ?? 'dev').trim()
 const discoveryEnabled = (process.env.DISCOVERY ?? '1') !== '0'
 const discoveryIntervalMs = 300_000
-const distDir = resolve(import.meta.dirname, '..', 'dist')
+const distDir = resolve(import.meta.dirname, '..', 'dist', 'app')
 
 const hosts = new Set(
   (process.env.DEVICE_HOSTS ?? '')

@@ -55,7 +55,7 @@ This site is VitePress, built from `docs/`:
 
 ```sh
 npm run docs:dev      # local preview with hot reload
-npm run docs:build    # static build in docs/.vitepress/dist
+npm run docs:build    # static build in dist/docs
 ```
 
 `docs/img/logo.svg` is the source of the mark: `public/favicon.svg` is a copy for the page, and the

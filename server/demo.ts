@@ -38,7 +38,7 @@ import { buildInventory, type Inventory, type Resolution } from './inventory.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
 const tickMs = 3000
-const distDir = resolve(import.meta.dirname, '..', 'dist')
+const distDir = resolve(import.meta.dirname, '..', 'dist', 'app')
 
 // A cover is drawn from its own uri, so the same track always gets the same
 // image: a screenshot can be retaken and a test can look for a stable layout.

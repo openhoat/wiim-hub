@@ -22,7 +22,7 @@ export default defineConfig({
         'src/lib/optimistic.ts',
       ],
       reporter: ['text', 'lcov'],
-      reportsDirectory: 'coverage',
+      reportsDirectory: 'dist/coverage',
       thresholds: {
         branches: 80,
         functions: 90,

@@ -36,7 +36,7 @@ The documentation site is VitePress, built from `docs/` and published to GitHub 
 
 ```sh
 npm run docs:dev      # local server with hot reload
-npm run docs:build    # static build in docs/.vitepress/dist
+npm run docs:build    # static build in dist/docs
 ```
 
 `docs/img/logo.svg` is the only mark. `public/favicon.svg` is a copy of it for the page (refresh it

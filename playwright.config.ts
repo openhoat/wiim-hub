@@ -12,6 +12,9 @@ export default defineConfig({
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI === undefined ? 0 : 1,
   reporter: process.env.CI === undefined ? 'list' : [['github'], ['list']],
+  // Traces and screenshots of a failure land under dist/, with the rest of the
+  // generated files, so a run leaves no directory at the root.
+  outputDir: 'dist/playwright/results',
   use: {
     baseURL: `http://127.0.0.1:${port}`,
     trace: 'on-first-retry',

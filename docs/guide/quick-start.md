@@ -42,7 +42,7 @@ server sources directly, so only the UI needs a build.
 ```sh
 npm ci
 cp .env.example .env    # one file, read by the server on start
-npm run build           # writes dist/
+npm run build           # writes dist/app/
 npm start               # server and built UI on :8090
 ```
 

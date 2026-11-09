@@ -1,18 +1,15 @@
 node_modules/
-dist/
 .wireit/
-coverage/
-.scannerwork/
 .env
 *.log
 .DS_Store
 .idea/
 .scratch/
-test-results/
-playwright-report/
 
-# The docs site: its cache and its build, plus the copy of the mark produced by
-# `npm run docs:logo` from docs/img/logo.svg.
-docs/.vitepress/cache/
-docs/.vitepress/dist/
+# Every generated artefact lives under dist/ (UI bundle, docs site, coverage,
+# Playwright output, Sonar workspace), so one directory holds them and
+# `npm run clean` removes them together.
+dist/
+
+# Produced by `npm run docs:logo` from docs/img/logo.svg.
 docs/public/logo.svg

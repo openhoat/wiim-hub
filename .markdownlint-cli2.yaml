@@ -32,7 +32,4 @@ ignores:
   - ".git"
   - ".idea"
   - "dist"
-  - "coverage"
-  - "test-results"
-  - "playwright-report"
-  - "docs/.vitepress"
+  - ".wireit"
