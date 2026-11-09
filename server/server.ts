@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
-import { commandFor, commandOutcome, parseAction } from './commands.ts'
+import { commandFor, parseAction } from './commands.ts'
 import {
   type DeviceEvent,
   type DevicePatch,
@@ -15,6 +15,7 @@ import {
   resolveTarget,
 } from './device.ts'
 import { discoverSsdp } from './discovery.ts'
+import { createWriteQueue } from './queue.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
 const pollMs = Math.max(1000, Number.parseInt(process.env.POLL_MS ?? '3000', 10))
@@ -139,49 +140,12 @@ const pollAll = async (): Promise<void> => {
   }
 }
 
-// One writer per device. The device is a small embedded server: two
-// concurrent writes can interleave, and a slider drag would otherwise emit
-// dozens of requests whose answers arrive out of order. Commands are queued in
-// order, except the families marked by `commandFor` (volume, seek) where only
-// the last value matters: a pending one of the same family takes the new value
-// in place, and every caller waiting on it gets the same final answer.
-type Outcome = { ok: boolean; unsupported: boolean; command: string; body: string }
-type Resolve = (outcome: Outcome) => void
-type Job = { command: string; family: string | null; resolvers: Resolve[] }
-
-const queues = new Map<string, Job[]>()
-const draining = new Set<string>()
-
-const drain = async (key: string): Promise<void> => {
-  if (draining.has(key)) return
-  draining.add(key)
-  try {
-    const queue = queues.get(key) ?? []
-    while (queue.length > 0) {
-      const job = queue.shift() as Job
-      const state = states.get(key)
-      const body = await fetchCommand(state?.ip ?? key, job.command)
-      const outcome = { ...commandOutcome(body), command: job.command, body: body ?? '' }
-      for (const resolve of job.resolvers) resolve(outcome)
-    }
-  } finally {
-    draining.delete(key)
-  }
-}
-
-const enqueue = (key: string, command: string, family: string | null): Promise<Outcome> =>
-  new Promise(resolve => {
-    const queue = queues.get(key) ?? []
-    const pending = family === null ? undefined : queue.find(job => job.family === family)
-    if (pending !== undefined) {
-      pending.command = command
-      pending.resolvers.push(resolve)
-    } else {
-      queue.push({ command, family, resolvers: [resolve] })
-    }
-    queues.set(key, queue)
-    void drain(key)
-  })
+// The device address follows the state entry, so a host that moved to another
+// DHCP lease still receives its queued writes on the address the last poll saw.
+const writes = createWriteQueue((key, command) => {
+  const state = states.get(key)
+  return fetchCommand(state?.ip ?? key, command)
+})
 
 // A write changes the state the hub renders: read it back quickly instead of
 // waiting for the next tick, so the optimistic value is confirmed or dropped
@@ -320,7 +284,7 @@ const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse)
     sendJson(res, 422, command)
     return
   }
-  const outcome = await enqueue(entry.key, command.command, command.family)
+  const outcome = await writes.enqueue(entry.key, command.command, command.family)
   pollSoon(400)
   sendJson(res, 200, outcome)
 }

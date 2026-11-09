@@ -141,6 +141,23 @@
       ],
       "output": []
     },
+    "test": {
+      "dependencies": [
+        "test:coverage"
+      ]
+    },
+    "test:coverage": {
+      "command": "vitest run --coverage",
+      "files": [
+        "server/**/*.ts",
+        "vitest.config.ts",
+        "tsconfig.json",
+        "package.json"
+      ],
+      "output": [
+        "coverage/**"
+      ]
+    },
     "typecheck": {
       "command": "tsc --noEmit",
       "files": [
@@ -156,6 +173,7 @@
       "dependencies": [
         "build",
         "qa",
+        "test:coverage",
         "typecheck"
       ]
     }
