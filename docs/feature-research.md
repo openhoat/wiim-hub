@@ -566,14 +566,14 @@ raw body and probe time) and the resolution path (which address answered). Both 
 
 ## 9. Roadmap mapping
 
-| Area                                 | Card                 | Scope                                               |
-| ------------------------------------ | -------------------- | --------------------------------------------------- |
-| Transport, volume, sources, seek     | v2 remote control    | probe first, then controls, optimistic state, queue |
-| Presets                              | v2 remote control    | grid, play by slot, relayed art                     |
-| Output routing, EQ read, sleep timer | v2 remote control    | read first, one write each                          |
-| Diagnostic assistance                | diagnostic assistant | findings with evidence, guided flows, report export |
-| Multiroom                            | v3                   | group card, per member volume, join/leave           |
-| UPnP events                          | performance          | replace polling, fallback kept                      |
+| Area                                 | Card                 | Scope                                                                                      |
+| ------------------------------------ | -------------------- | ------------------------------------------------------------------------------------------ |
+| Transport, volume, sources, seek     | v2 remote control    | probe first, then controls, optimistic state, queue                                        |
+| Presets                              | v2 remote control    | grid, play by slot, relayed art                                                            |
+| Output routing, EQ read, sleep timer | v2 remote control    | read first, one write each                                                                 |
+| Diagnostic assistance                | diagnostic assistant | findings with evidence, guided flows, report export (findings and report shipped in 0.7.0) |
+| Multiroom                            | v3                   | group card, per member volume, join/leave                                                  |
+| UPnP events                          | performance          | replace polling, fallback kept                                                             |
 
 ## Appendix: v2 write probe, executed
 
