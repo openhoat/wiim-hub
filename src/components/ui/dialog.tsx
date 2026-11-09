@@ -19,7 +19,10 @@ export const DialogContent = ({
     <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" />
     <DialogPrimitive.Content
       className={cn(
-        'fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 rounded-t-2xl border border-border bg-card p-5 shadow-2xl shadow-black/20 outline-none sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:rounded-2xl',
+        // On a phone the sheet is pinned above the on-screen keyboard and never
+        // taller than what is left: a form the keyboard covers is a form that
+        // cannot be filled. The two variables are measured by src/lib/viewport.ts.
+        'fixed bottom-[var(--keyboard-inset)] left-1/2 z-50 max-h-[calc(var(--visible-height)-1rem)] w-full max-w-lg -translate-x-1/2 overflow-y-auto overscroll-contain rounded-t-2xl border border-border bg-card p-5 shadow-2xl shadow-black/20 outline-none sm:top-1/2 sm:bottom-auto sm:max-h-[calc(100dvh-4rem)] sm:-translate-y-1/2 sm:rounded-2xl',
         className
       )}
       {...props}

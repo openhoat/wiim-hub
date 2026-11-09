@@ -10,6 +10,17 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- A sheet pinned to the bottom no longer disappears behind the on-screen keyboard on a phone. Chrome
+  on Android keeps the layout viewport at full height and paints the keyboard over it, so the sheet
+  stayed where it was and the form it held was entirely hidden; adding an address could not be
+  finished. The document now asks for the content to be resized (`interactive-widget`), and
+  `src/lib/viewport.ts` measures the gap for the engines that ignore the hint, publishing
+  `--keyboard-inset` and `--visible-height`. A sheet sits above the keyboard and never grows past
+  what is visible, so the field and its button stay on screen. The device sheet, which holds the
+  name field, gets the same answer.
+
 ## [0.9.7] - 2026-11-09
 
 ### Changed

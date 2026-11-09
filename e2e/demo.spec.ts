@@ -437,6 +437,40 @@ test('lists the addresses it polls, and says which ones it does not own', async 
   await expect(dialog.getByText('The hub refused: the demo does not manage hosts')).toBeVisible()
 })
 
+test('lifts a sheet above the on-screen keyboard on a phone', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 760 })
+  await openHub(page)
+
+  // The watcher publishes what is left of the window before anything opens.
+  const published = await page.evaluate(() => ({
+    inset: document.documentElement.style.getPropertyValue('--keyboard-inset'),
+    height: document.documentElement.style.getPropertyValue('--visible-height'),
+  }))
+  expect(published.inset).toBe('0px')
+  expect(Number.parseFloat(published.height)).toBeGreaterThan(700)
+
+  await page.getByRole('button', { name: 'Devices' }).click()
+  const sheet = page.getByRole('dialog')
+  const before = await sheet.boundingBox()
+  expect(before).not.toBeNull()
+
+  // A browser that only paints the keyboard over the page leaves the layout
+  // viewport at full height: the sheet has to move itself up by that gap.
+  await page.evaluate(() => {
+    const root = document.documentElement
+    root.style.setProperty('--keyboard-inset', '300px')
+    root.style.setProperty('--visible-height', '460px')
+  })
+
+  const after = await sheet.boundingBox()
+  expect(Math.round((before?.y ?? 0) - (after?.y ?? 0))).toBeGreaterThan(150)
+  // Its bottom edge sits on the keyboard, and it never grows past the screen.
+  expect(Math.round((after?.y ?? 0) + (after?.height ?? 0))).toBeLessThanOrEqual(461)
+  // The field the keyboard was opened for, and its button, stay reachable.
+  await expect(sheet.getByLabel('Address to add')).toBeInViewport()
+  await expect(sheet.getByRole('button', { name: 'Add' })).toBeInViewport()
+})
+
 test('opens on the cached shell when the network is gone', async ({ page, context }) => {
   await openHub(page)
   await page.evaluate(() => navigator.serviceWorker.ready)

@@ -8,6 +8,11 @@
 /* Warm neutrals, one green accent. The palette is deliberately quiet: the
    album art is the only saturated surface on the page. */
 :root {
+  /* Measured by src/lib/viewport.ts: a sheet pinned to the bottom sits above
+     the on-screen keyboard instead of behind it, and never grows taller than
+     what is visible. */
+  --keyboard-inset: 0px;
+  --visible-height: 100dvh;
   --background: oklch(0.973 0.006 85);
   --foreground: oklch(0.25 0.012 60);
   --card: oklch(0.998 0.002 85);

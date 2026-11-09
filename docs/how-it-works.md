@@ -165,6 +165,13 @@ the hub stops answering, the cards keep the last state received (one snapshot in
 `src/lib/snapshot.ts`), dated under the banner, and their clock stops at the moment it was taken:
 a seek bar must not advance on a position nobody measured.
 
+Dialogs are bottom sheets on a phone, which puts them exactly where the on-screen keyboard appears.
+The document asks the browser to resize the content rather than paint over it
+(`interactive-widget=resizes-content`), and `src/lib/viewport.ts` measures what is left for the
+engines that ignore the hint, publishing `--keyboard-inset` and `--visible-height`: a sheet sits
+above the keyboard and never grows past the visible screen, so the field that was just focused
+stays on screen with its button.
+
 ## Updates
 
 Deploying a new image reaches the installed app on its next launch: the document is served network
@@ -206,6 +213,7 @@ server/demo.ts       the same routes over simulated speakers
 src/                 React UI: components, settings and i18n provider, formatting helpers
 src/lib/layout.ts    the card order and the folded cards, kept per browser
 src/lib/updates.ts   worker registration, version checks, the reload the banner offers
+src/lib/viewport.ts  the on-screen keyboard gap, published as two CSS variables
 public/sw.js         service worker: the shell is cached, the API never is
 e2e/                 Playwright suite, run against the demo mode
 ```
