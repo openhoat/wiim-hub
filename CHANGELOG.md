@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-11-09
+
+### Fixed
+
+- The web manifest is served as `application/manifest+json`, its media type, instead of
+  `application/octet-stream`. Chrome read the file anyway, a stricter user agent would have taken it
+  for a download.
+
 ## [0.9.2] - 2026-11-09
 
 ### Added
@@ -351,7 +359,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.2...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.3...HEAD
+[0.9.3]: https://github.com/openhoat/wiim-hub/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/openhoat/wiim-hub/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/openhoat/wiim-hub/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/openhoat/wiim-hub/compare/v0.8.1...v0.9.0
