@@ -132,6 +132,14 @@ browser.
 Language and theme follow the browser, can be overridden in the header, and are remembered per
 browser. The selected view is remembered the same way.
 
+The page also installs as a web app, and a service worker (`public/sw.js`) caches what makes that
+worth doing: the document, its bundle, the font and the icons, so the shell opens without a network.
+The split is deliberate. The shell changes only when the hub is redeployed, so a cached copy is
+never wrong; `/api/` is the live truth, so it is never cached, and its failures stay visible. When
+the hub stops answering, the cards keep the last state received (one snapshot in `localStorage`,
+`src/lib/snapshot.ts`), dated under the banner, and their clock stops at the moment it was taken:
+a seek bar must not advance on a position nobody measured.
+
 ## Module map
 
 ```text
@@ -147,6 +155,7 @@ server/inventory.ts  capability probing and its cache
 server/server.ts     polling loop, ring buffers, HTTP routes, static bundle
 server/demo.ts       the same routes over simulated speakers
 src/                 React UI: components, settings and i18n provider, formatting helpers
+public/sw.js         service worker: the shell is cached, the API never is
 e2e/                 Playwright suite, run against the demo mode
 ```
 

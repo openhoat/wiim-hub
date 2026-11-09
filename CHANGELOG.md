@@ -12,6 +12,12 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ### Added
 
+- The page opens without a network, and keeps what it last saw. A service worker caches the shell
+  (the document, its bundle, the font and the icons) and never `/api/`: the live truth stays live,
+  and its failures stay visible. When the hub stops answering, the cards keep the last state
+  received, the banner dates it, and their clock stops at that moment so a seek bar does not advance
+  on a position nobody measured. A first visit installs the whole shell, and each deploy replaces it
+  while dropping the assets of the previous one.
 - The host list is managed from the page. A server icon in the header opens the devices dialog: it
   lists every address the hub polls, says where each one came from, and writes the new list back to
   one JSON file on a volume (`HOSTS_FILE`, `data/hosts.json` next to the sources by default).

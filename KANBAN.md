@@ -23,12 +23,6 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 - [x] Display the sample rate, bit depth and bit rate from `getMetaInfo` as one chip (0.4.0)
 - [ ] Read `streamServicesCapability` and explain which tier a service can reach on this model
 
-### #10 [UX] Add a PWA shell with install and offline support (P3)
-
-- [x] Add a manifest, icons and a standalone display, so the page installs as an app (0.9.0)
-- [ ] Add a service worker caching the shell only, never the API
-- [ ] Show the last known state with its age when the hub is unreachable
-
 ### #11 [UX] Add notifications and webhooks for the alerts (P3)
 
 - [ ] Support a generic webhook and ntfy, with a per alert rule and a quiet period

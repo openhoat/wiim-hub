@@ -84,3 +84,6 @@ See [Demo mode](/guide/demo) for what is simulated and how the end-to-end suite 
    fields then arrive in under a second and the poll relaxes.
 4. Install it as an app: Chrome and Edge offer it from the address bar, and the page then gets a
    window of its own with the project's icon. On iOS and iPadOS, Share then Add to Home Screen.
+   Installed or not, a service worker caches the page itself and never the API: the shell opens
+   without a network, and when the hub stops answering the cards keep the last state they received,
+   dated under the banner.
