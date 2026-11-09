@@ -1,9 +1,14 @@
+<p><img src="docs/img/logo.svg" width="72" height="72" alt="WiiM Hub"></p>
+
 # WiiM Hub
 
 [![CI](https://github.com/openhoat/wiim-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/openhoat/wiim-hub/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D22.18-informational.svg)](package.json)
 ![Sonar ratings](docs/img/sonar-ratings.svg)
+
+**Documentation:** <https://openhoat.github.io/wiim-hub/>: the guide, the configuration table and how
+the hub works.
 
 Hub for WiiM devices (and other LinkPlay-based players) on a local network: what each device is
 playing, what it reports about itself, and the controls you need when the vendor app is not at
@@ -234,16 +239,16 @@ no client is sent to a scanner instance it cannot reach.
 The server reads `.env` from the working directory when it exists (`start` and `start:server`);
 inside Docker the variables come from the compose file instead.
 
-| Variable        | Default | Meaning                                                                                          |
-| --------------- | ------- | ------------------------------------------------------------------------------------------------ |
-| `PORT`          | `8090`  | HTTP port of the hub                                                                             |
-| `POLL_MS`       | `3000`  | Polling period, floor 1000 ms                                                                    |
-| `SLOW_POLL_MS`  | `15000` | Polling period while every device pushes its events, floor `POLL_MS`                             |
-| `UPNP_CALLBACK` | empty   | Base URL the players can reach the hub on, e.g. `http://192.168.1.146:8091`; enables UPnP events |
-| `UPNP_PORT`     | `8091`  | Port of the event callback listener, separate from `PORT`                                        |
-| `DEVICE_HOSTS`  | empty   | Comma separated device addresses or names, authoritative list; one entry per speaker             |
-| `DISCOVERY`     | `1`     | SSDP discovery, best effort, set `0` to disable                                                  |
-| `HUB_VERSION`   | `dev`   | Version string written in the diagnostic report; the image carries no `package.json` at runtime  |
+| Variable        | Default | Meaning                                                                                         |
+| --------------- | ------- | ----------------------------------------------------------------------------------------------- |
+| `PORT`          | `8090`  | HTTP port of the hub                                                                            |
+| `POLL_MS`       | `3000`  | Polling period, floor 1000 ms                                                                   |
+| `SLOW_POLL_MS`  | `15000` | Polling period while every device pushes its events, floor `POLL_MS`                            |
+| `UPNP_CALLBACK` | empty   | Base URL the players can reach the hub on, e.g. `http://192.168.1.10:8091`; enables UPnP events |
+| `UPNP_PORT`     | `8091`  | Port of the event callback listener, separate from `PORT`                                       |
+| `DEVICE_HOSTS`  | empty   | Comma separated device addresses or names, authoritative list; one entry per speaker            |
+| `DISCOVERY`     | `1`     | SSDP discovery, best effort, set `0` to disable                                                 |
+| `HUB_VERSION`   | `dev`   | Version string written in the diagnostic report; the image carries no `package.json` at runtime |
 
 UPnP events are off unless `UPNP_CALLBACK` names an address the speakers can reach: the player
 pushes its notifications to that URL, so a hub on a different network (a bridged container, a
