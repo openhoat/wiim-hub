@@ -27,7 +27,6 @@ export const UpdateBanner = () => {
         <p className="text-xs text-muted-foreground">{t('update.hint')}</p>
       </div>
       <Button variant="outline" size="sm" onClick={applyUpdate}>
-        <RefreshCw className="size-3.5" />
         {t('update.reload')}
       </Button>
     </Card>
