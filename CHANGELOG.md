@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-09
+
 ### Fixed
 
 - An external input (optical, line in) is no longer rendered as a broken player. The firmware keeps
@@ -166,7 +168,9 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/openhoat/wiim-hub/compare/v0.5.0...v0.5.1
+[0.5.0]: https://github.com/openhoat/wiim-hub/compare/v0.4.3...v0.5.0
 [0.4.3]: https://github.com/openhoat/wiim-hub/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/openhoat/wiim-hub/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/openhoat/wiim-hub/compare/v0.4.0...v0.4.1

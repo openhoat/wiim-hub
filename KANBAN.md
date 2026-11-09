@@ -9,13 +9,9 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
-### #20 [UX] Show an external input as a source, not as an empty player (started 2026-11-09 12:12)
-
-- [ ] Null the position the firmware reports for `optical` and `line-in` (`isExternalInput`), so no
-      residue of the last stream reaches any view
-- [ ] Name the source on the card and keep the transport state, drop the seek bar and the playing
-      meter
-- [ ] Record the optical measurement in `docs/feature-research.md` §5.3
+Nothing in progress: 0.5.x shipped the quality pass, the demo and its end-to-end suite, the public
+release and the external-input fix (#20 closed, see git history). #4 keeps its write half blocked on
+a second reachable unit.
 
 ## Backlog
 
