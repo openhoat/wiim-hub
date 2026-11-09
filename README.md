@@ -14,6 +14,9 @@ state and write queue, so a mixed fleet (Pro, Mini, Amp, Ultra, and OEM LinkPlay
 normal case, not a special one. Multiroom is read only for now: the hub shows the group a speaker
 belongs to, and its controls arrive once a second unit can be measured.
 
+No speaker at hand? `npm run demo` serves the same interface over two simulated players, with
+generated covers and writes that really move the state, on <http://localhost:8090>.
+
 ## Screenshots
 
 Now playing, with the control panel, one speaker online and one offline:
@@ -30,7 +33,27 @@ The same pages on a phone:
 
 <p align="center"><img src="docs/img/mobile.jpeg" width="320" alt="Now playing on a phone"></p>
 
-Device addresses and Wi-Fi identifiers are redacted in these captures.
+The captures come from the demo below: simulated speakers, invented titles, generated covers and
+documentation addresses.
+
+## Try it without a device
+
+The repository ships a demo mode: two simulated speakers (one playing, one offline with a saved
+group), deterministic signal history, generated covers, and the real write path, so a volume
+change or a track skip lands in the state the page renders. It needs no device, no network and no
+extra dependency.
+
+```sh
+npm ci
+npm run build        # the demo serves the same dist/ as the hub
+npm run demo         # http://localhost:8090, PORT=8091 to move it
+```
+
+The demo goes through the same action parser and command builder as the hub, so the volume
+ceiling and the available inputs and outputs are enforced there too; only the last step differs,
+the command mutates memory instead of reaching a speaker. Every simulated state is typed as the
+real `DeviceState`, so a change in the polling code fails the demo at compile time instead of
+letting it drift.
 
 ## Why a second view
 
@@ -159,6 +182,23 @@ first thing to check.
 
 Then open <http://localhost:8090>, or <http://localhost:5173> in development.
 
+## Tests
+
+The end-to-end suite drives the demo mode in a real browser: the two cards, the group panel, the
+sound card, the diagnostic view and its CSV export, a volume write that survives a poll, the
+persisted view, language and theme, and the phone layout. No speaker is involved, so the suite runs
+unattended.
+
+```sh
+npm run build                       # the suite serves the same bundle as the hub
+npx playwright install chromium     # once per machine
+npm run test:e2e
+```
+
+`playwright.config.ts` starts `server/demo.ts` on port 8091, so a hub left running on 8090 is not
+disturbed. `npm run typecheck` also covers the suite and the demo, and
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the same command on every push.
+
 ## Configuration
 
 The server reads `.env` from the working directory when it exists (`start` and `start:server`);
@@ -209,6 +249,8 @@ server/commands.ts   accepted intents, validation against the device state, comm
 server/discovery.ts  SSDP discovery, filtered on WiiM and LinkPlay descriptions
 server/mdns.ts       dependency-free mDNS A record resolver
 server/server.ts     polling loop, write queue, ring buffers, HTTP routes, static bundle, SPA fallback
+server/demo.ts       the same routes over simulated speakers, for the demo mode and the e2e suite
+e2e/                 Playwright suite, run against the demo mode
 src/                 React UI: components, settings and i18n provider, formatting helpers
 src/locales/         en and fr dictionaries
 scripts/build.sh     image build and push

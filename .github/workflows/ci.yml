@@ -30,3 +30,39 @@ jobs:
       - run: npm run typecheck
 
       - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # The suite drives the demo mode, which serves the real bundle: build it
+      # first, exactly as the image does.
+      - run: npm run build
+
+      - name: Cache the browser
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      # --with-deps installs the system libraries the browser needs: the runner
+      # image does not carry them, and without them Chromium fails to start.
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run test:e2e
+
+      - name: Keep the traces and the failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: test-results/
+          retention-days: 7

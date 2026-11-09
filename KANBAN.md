@@ -46,7 +46,7 @@ history), the CI workflow closed #9, and #4 keeps its write half blocked on a se
 
 - [ ] Unit test the parsing of the awkward payload shapes, including `unknown command` and empty bodies
 - [ ] Test the queue, coalescing, optimistic reconciliation and the position unit heuristic
-- [ ] Add a recorded fixture per endpoint so the tests do not need a real player
+- [ ] Add a recorded fixture per endpoint for those tests: the interface side already runs without a player (`npm run demo` and `e2e/`), the device client side does not
 
 ### #16 [UX] Explain which tier each streaming service can reach (P3)
 

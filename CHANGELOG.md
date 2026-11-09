@@ -12,12 +12,23 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ### Added
 
+- Demo mode (`npm run demo`): the real interface over two simulated speakers, one playing and one
+  offline with a saved group, with generated covers, a seeded signal history and writes that mutate
+  the state the page renders. It needs no device and no extra dependency, and every simulated state
+  is typed as the device state the hub renders, so a change in the polling code breaks it at compile
+  time.
+- End-to-end suite (`npm run test:e2e`): Playwright drives that demo in Chromium, covering the
+  cards, the group panel, the sound card, the diagnostic view and its CSV export, a volume write
+  that survives a poll, the persisted view, language and theme, and the phone layout. The CI
+  workflow runs it on every push, so the suite needs no real player.
 - Continuous integration: type check and build on every push and pull request, on Node 22.18 and
   24 (`.github/workflows/ci.yml`).
 - This changelog.
 
 ### Changed
 
+- The README screenshots are captures of the demo mode instead of a real fleet: simulated
+  speakers, invented titles, generated covers and documentation addresses.
 - The release workflow publishes to `ghcr.io` only; the private registry it also pushed to is
   gone, along with its secrets.
 - `scripts/build.sh` defaults to the published image namespace.
