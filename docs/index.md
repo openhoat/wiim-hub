@@ -40,6 +40,21 @@ It ships no vendor code and calls only the HTTP interface the players expose on 
 behaviour was measured on a real player it is recorded in the
 [feature research](/feature-research); where it is an inference, the page says so.
 
+## What it looks like
+
+![Now playing, with one speaker online and one offline](img/now-playing.jpeg)
+
+Two views on the same data: the sound card, with a per-source equalizer, and the diagnostic view,
+which turns the device's own counters into short facts. Both fit a phone, where the cards stack one
+per screen and nothing needs a zoom.
+
+|                                                                           |                                            |
+| ------------------------------------------------------------------------- | ------------------------------------------ |
+| ![Sound card](img/sound.jpeg)<br>![Diagnostic view](img/diagnostics.jpeg) | ![Now playing on a phone](img/mobile.jpeg) |
+
+The captures come from [the demo](/guide/demo): simulated speakers, invented titles, generated
+covers and documentation addresses.
+
 ## Where to go next
 
 - [Quick start](/guide/quick-start): run the published image, or build from sources.

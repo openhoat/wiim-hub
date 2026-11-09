@@ -83,6 +83,8 @@ was read, so a clean answer shows its basis.
 Diagnostics are refreshed on their own cadence (60 s) rather than on every poll, and the answer is a
 list of findings, each with the numbers that support it and the command it came from.
 
+![The diagnostic view: the readings, the findings and their evidence](img/diagnostics.jpeg)
+
 `GET /api/report?host=<address>` renders the same findings as an English Markdown report: the table
 of readings, the findings, the guided checks, the capability inventory and the raw answers it was
 built from. It is meant to be pasted into a support thread, which is why it quotes the evidence

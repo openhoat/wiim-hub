@@ -5,7 +5,7 @@ players. It needs no device, no network and no extra dependency.
 
 ```sh
 npm ci
-npm run build        # the demo serves the same dist/ as the hub
+npm run build        # the demo serves the same bundle as the hub
 npm run demo         # http://localhost:8090, PORT=8091 to move it
 ```
 

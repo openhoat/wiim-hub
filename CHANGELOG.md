@@ -10,6 +10,22 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The screenshots are on the documentation site, not only in the README: the landing page shows the
+  now-playing view, the sound card, the diagnostic view and the same page on a phone, the
+  how-it-works page shows the diagnostic view beside the findings it produces, and the demo page
+  shows what the demo serves. The README keeps the captures it needs to make the point in ten
+  seconds, and links to the site for the rest.
+
+### Changed
+
+- Every generated file now lands under `dist/`: the UI bundle in `dist/app`, the documentation site
+  in `dist/docs` with its cache in `dist/docs-cache`, coverage in `dist/coverage`, the Playwright
+  traces in `dist/playwright/results` and the Sonar workspace in `dist/sonar`. The repository root
+  keeps its sources and no longer grows a directory per tool, and `npm run clean` removes all of
+  them, plus the wireit cache and the generated `docs/public/logo.svg`, in one command.
+
 ## [0.9.0] - 2026-11-09
 
 ### Added
