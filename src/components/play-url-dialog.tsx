@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { controlErrorLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Controls } from '@/lib/use-controls'
 
@@ -51,9 +52,10 @@ export const PlayUrlDialog = ({ controls }: Readonly<{ controls: Controls }>) =>
             if (valid && !disabled) void play()
           }}
         >
+          {/* Radix moves the focus to the first focusable element when the dialog
+              opens, which is this field: an autoFocus attribute would repeat it. */}
           <input
             value={url}
-            autoFocus
             inputMode="url"
             spellCheck={false}
             placeholder="https://…"
@@ -72,7 +74,7 @@ export const PlayUrlDialog = ({ controls }: Readonly<{ controls: Controls }>) =>
           aria-live="polite"
           className={controls.error === null ? 'sr-only' : 'mt-2 text-[11px] text-warning'}
         >
-          {controls.error === null ? '' : `${t('controls.failed')} ${controls.error}`}
+          {controlErrorLabel(t, controls.error)}
         </p>
       </DialogContent>
     </Dialog>

@@ -24,7 +24,7 @@ import {
 import { presetArtUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
-import { inputLabel, isExternalInput } from '@/lib/labels'
+import { controlErrorLabel, inputLabel, isExternalInput } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Controls } from '@/lib/use-controls'
 
@@ -354,11 +354,7 @@ export const PlayerControls = ({
         aria-live="polite"
         className={cn('text-[11px] text-warning', controls.error === null && 'sr-only')}
       >
-        {controls.error === null
-          ? ''
-          : controls.error === 'unsupported'
-            ? t('controls.unsupported')
-            : `${t('controls.failed')} ${controls.error}`}
+        {controlErrorLabel(t, controls.error)}
       </p>
     </div>
   )

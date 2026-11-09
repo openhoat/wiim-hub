@@ -1,16 +1,18 @@
 import { cn } from '@/lib/cn'
 import { eventKindLabel, eventText } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
-import type { DeviceEvent } from '@/lib/types'
+import type { DeviceEvent, EventKind } from '@/lib/types'
 
-const colorOf = (kind: DeviceEvent['kind']): string =>
-  kind === 'online'
-    ? 'bg-accent'
-    : kind === 'offline'
-      ? 'bg-warning'
-      : kind === 'track'
-        ? 'bg-foreground/40'
-        : 'bg-muted-foreground/40'
+// One colour per event kind: a table reads as the list of kinds, where a
+// ternary chain reads as an accident of order.
+const colors: Record<EventKind, string> = {
+  online: 'bg-accent',
+  offline: 'bg-warning',
+  status: 'bg-muted-foreground/40',
+  track: 'bg-foreground/40',
+}
+
+const colorOf = (kind: EventKind): string => colors[kind]
 
 const clockOf = (at: number): string =>
   new Intl.DateTimeFormat(undefined, {

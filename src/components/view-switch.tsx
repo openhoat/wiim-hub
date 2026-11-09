@@ -14,12 +14,11 @@ export const ViewSwitch = ({
 }: Readonly<{ view: View; onChange: (view: View) => void }>) => {
   const { t } = useSettings()
   return (
-    // biome-ignore lint/a11y/useSemanticElements: a segmented control groups buttons, it is not a form fieldset
-    <div
-      role="group"
-      aria-label={t('settings')}
-      className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-muted/40 p-0.5"
-    >
+    // A fieldset is the native group of related buttons: the legend names it for
+    // a screen reader without taking room, and the pressed state stays on each
+    // button rather than on a container role.
+    <fieldset className="inline-flex items-center gap-0.5 rounded-xl border border-border bg-muted/40 p-0.5">
+      <legend className="sr-only">{t('settings')}</legend>
       {options.map(option => {
         const Icon = option.icon
         const active = option.value === view
@@ -44,6 +43,6 @@ export const ViewSwitch = ({
           </button>
         )
       })}
-    </div>
+    </fieldset>
   )
 }

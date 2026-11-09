@@ -30,12 +30,17 @@ const Field = ({ label, value }: Readonly<{ label: string; value: string }>) => 
   </div>
 )
 
+const SignalIconOf = (rssi: number | null): typeof SignalHigh => {
+  if (rssi === null) return SignalZero
+  return rssi <= -70 ? SignalLow : SignalHigh
+}
+
 export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: number }>) => {
   const { t } = useSettings()
   const [details, setDetails] = useState(false)
   const live = useMemo(() => device.samples.slice(-120), [device.samples])
   const rssi = device.rssi
-  const SignalIcon = rssi === null ? SignalZero : rssi <= -70 ? SignalLow : SignalHigh
+  const SignalIcon = SignalIconOf(rssi)
   // The push state is a diagnostic fact of its own: a silent channel and a
   // device that never changes look the same from the page.
   const push = device.upnp

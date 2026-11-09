@@ -11,8 +11,14 @@ import type { Device, Finding } from '@/lib/types'
 
 // Severity only drives the colour: every finding carries its own numbers, so a
 // red badge does not have to explain more than how urgent the fact is.
+const variants: Record<Finding['severity'], 'danger' | 'warning' | 'default'> = {
+  alert: 'danger',
+  warn: 'warning',
+  info: 'default',
+}
+
 const variantOf = (severity: Finding['severity']): 'danger' | 'warning' | 'default' =>
-  severity === 'alert' ? 'danger' : severity === 'warn' ? 'warning' : 'default'
+  variants[severity]
 
 // Most urgent first: the reader should not have to scan the list to find the
 // one line that matters.
@@ -63,10 +69,10 @@ export const cleanChecks = (device: Device, t: ReturnType<typeof useSettings>['t
     }
   }
   const hardware = device.diagnostics?.hardware ?? null
-  if (hardware !== null && hardware.badBlocks !== null && hardware.totalBlocks !== null) {
-    checks.push(
-      t('findings.checked.flash', { bad: hardware.badBlocks, total: hardware.totalBlocks })
-    )
+  const badBlocks = hardware?.badBlocks ?? null
+  const totalBlocks = hardware?.totalBlocks ?? null
+  if (badBlocks !== null && totalBlocks !== null) {
+    checks.push(t('findings.checked.flash', { bad: badBlocks, total: totalBlocks }))
   }
   return checks
 }

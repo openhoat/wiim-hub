@@ -10,16 +10,19 @@ import {
 import en from '@/locales/en.json'
 import fr from '@/locales/fr.json'
 
-export type Lang = 'auto' | 'en' | 'fr'
+const langNames = ['en', 'fr'] as const
+export type Lang = 'auto' | ResolvedLang
 export type Theme = 'auto' | 'dark' | 'light'
-export type ResolvedLang = 'en' | 'fr'
+export type ResolvedLang = (typeof langNames)[number]
 export type Translate = (key: string, vars?: Record<string, string | number>) => string
 
 type Dictionary = typeof en
 
 const dictionaries: Record<ResolvedLang, Dictionary> = { en, fr }
-const supported: ResolvedLang[] = ['en', 'fr']
+const supportedLangs: ReadonlySet<string> = new Set(langNames)
 const storagePrefix = 'wiim-hub:'
+
+const isResolvedLang = (value: string): value is ResolvedLang => supportedLangs.has(value)
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
@@ -44,7 +47,7 @@ const pickLang = (): ResolvedLang => {
   const tags = navigator.languages.length > 0 ? navigator.languages : [navigator.language]
   for (const tag of tags) {
     const base = tag.toLowerCase().split(/[-_]/)[0]
-    if (supported.includes(base as ResolvedLang)) return base as ResolvedLang
+    if (isResolvedLang(base)) return base
   }
   return 'en'
 }
@@ -92,8 +95,8 @@ const readTheme = (): Theme => {
 }
 
 export const SettingsProvider = ({ children }: Readonly<{ children: ReactNode }>) => {
-  const [lang, setLangState] = useState<Lang>(readLang)
-  const [theme, setThemeState] = useState<Theme>(readTheme)
+  const [lang, setLang] = useState<Lang>(readLang)
+  const [theme, setTheme] = useState<Theme>(readTheme)
   const [dark, setDark] = useState(false)
   const resolvedLang = lang === 'auto' ? pickLang() : lang
   const dictionary = dictionaries[resolvedLang]
@@ -103,13 +106,15 @@ export const SettingsProvider = ({ children }: Readonly<{ children: ReactNode }>
     [dictionary]
   )
 
-  const setLang = useCallback((next: Lang) => {
-    setLangState(next)
+  // The exposed setters write the preference as well as the state, so the state
+  // hook keeps its plain `[value, setter]` shape.
+  const updateLang = useCallback((next: Lang) => {
+    setLang(next)
     writePreference('lang', next)
   }, [])
 
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next)
+  const updateTheme = useCallback((next: Theme) => {
+    setTheme(next)
     writePreference('theme', next)
   }, [])
 
@@ -141,11 +146,11 @@ export const SettingsProvider = ({ children }: Readonly<{ children: ReactNode }>
       theme,
       resolvedLang,
       resolvedTheme: dark ? 'dark' : 'light',
-      setLang,
-      setTheme,
+      setLang: updateLang,
+      setTheme: updateTheme,
       t,
     }),
-    [lang, theme, resolvedLang, dark, setLang, setTheme, t]
+    [lang, theme, resolvedLang, dark, updateLang, updateTheme, t]
   )
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>

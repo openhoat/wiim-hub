@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
-import { useSettings } from '@/lib/settings'
+import { type Translate, useSettings } from '@/lib/settings'
 import type { CheckStatus, Device, Guide, GuideId } from '@/lib/types'
 
 const icons: Record<CheckStatus, typeof Check> = {
@@ -45,6 +45,13 @@ const CheckRow = ({ check }: Readonly<{ check: Guide['checks'][number] }>) => {
       </div>
     </li>
   )
+}
+
+// The closing line says what the flow's end means: nothing to report, a verdict
+// the flow stopped on, or a verdict the player could not answer.
+const noteOf = (guide: Guide, t: Translate): string => {
+  if (guide.verdict === null) return t('guides.note')
+  return guide.settled ? t('guides.stopped') : t('guides.unsettled')
 }
 
 // The four flows are deterministic readings, not advice: each row names the
@@ -97,13 +104,7 @@ export const GuidesPanel = ({ device }: Readonly<{ device: Device }>) => {
           </Badge>
         </p>
       )}
-      <p className="mt-1.5 text-[11px] text-muted-foreground">
-        {guide.verdict === null
-          ? t('guides.note')
-          : guide.settled
-            ? t('guides.stopped')
-            : t('guides.unsettled')}
-      </p>
+      <p className="mt-1.5 text-[11px] text-muted-foreground">{noteOf(guide, t)}</p>
     </section>
   )
 }

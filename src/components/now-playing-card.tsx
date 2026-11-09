@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card'
 import { artUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { agoLabel, inputLabel, isExternalInput, statusLabel } from '@/lib/labels'
-import { useSettings } from '@/lib/settings'
+import { type Translate, useSettings } from '@/lib/settings'
 import type { Device, GroupState } from '@/lib/types'
 import { useControls } from '@/lib/use-controls'
 
@@ -49,14 +49,16 @@ const GroupChip = ({
   )
 }
 
+// The role decides the sentence, and "saved" is the fallback: a group that
+// exists in the vendor app but is not running.
+const roleNoteOf = (role: GroupState['role'], t: Translate): string => {
+  if (role === 'master') return t('group.role.master')
+  return role === 'member' ? t('group.role.member') : t('group.saved')
+}
+
 const GroupPanel = ({ group, id }: Readonly<{ group: GroupState; id: string }>) => {
   const { t } = useSettings()
-  const note =
-    group.role === 'master'
-      ? t('group.role.master')
-      : group.role === 'member'
-        ? t('group.role.member')
-        : t('group.saved')
+  const note = roleNoteOf(group.role, t)
   return (
     <div id={id} className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3">
       <p className="text-[11px] text-muted-foreground">{note}</p>
@@ -79,18 +81,112 @@ const GroupPanel = ({ group, id }: Readonly<{ group: GroupState; id: string }>) 
   )
 }
 
+// Offline wins over playing: a speaker that stopped answering keeps its last
+// transport state, and the badge must not animate for it.
+const badgeVariant = (online: boolean, playing: boolean): 'accent' | 'default' | 'warning' => {
+  if (!online) return 'warning'
+  return playing ? 'accent' : 'default'
+}
+
+const StatusBadge = ({
+  online,
+  status,
+  playing,
+}: Readonly<{ online: boolean; status: string; playing: boolean }>) => {
+  const { t } = useSettings()
+  return (
+    <Badge variant={badgeVariant(online, playing)}>
+      {playing ? (
+        <Equalizer />
+      ) : (
+        <span
+          className={cn('size-1.5 rounded-full', online ? 'bg-muted-foreground' : 'bg-warning')}
+        />
+      )}
+      {online ? statusLabel(t, status) : t('offline')}
+    </Badge>
+  )
+}
+
+const Cover = ({ art, offline }: Readonly<{ art: string | null; offline: boolean }>) => (
+  <div className="relative size-28 shrink-0 overflow-hidden rounded-xl bg-muted ring-1 ring-black/5 sm:size-36 dark:ring-white/5">
+    {art === null ? (
+      <div className="grid size-full place-items-center bg-gradient-to-br from-muted to-muted/30 text-muted-foreground/40">
+        <Disc3 className="size-8" />
+      </div>
+    ) : (
+      <img
+        src={art}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        referrerPolicy="no-referrer"
+        className={cn('size-full object-cover', offline && 'grayscale')}
+      />
+    )}
+  </div>
+)
+
+// The track block: a headline that falls back to the source name on an external
+// input, then the metadata the player reported, then the source and the group.
+const TrackMeta = ({
+  device,
+  headline,
+  source,
+  chip,
+}: Readonly<{
+  device: Device
+  headline: string
+  source: string
+  chip: { group: GroupState; open: boolean; onToggle: () => void; panelId: string } | null
+}>) => {
+  const { t } = useSettings()
+  const showSource = source !== ''
+  return (
+    <div className="flex min-w-0 flex-1 flex-col justify-center">
+      <p
+        className={cn(
+          'truncate text-2xl leading-tight font-semibold tracking-tight sm:text-3xl',
+          headline === '' && 'text-muted-foreground'
+        )}
+      >
+        {headline === '' ? t('noPlayback') : headline}
+      </p>
+      <p className="mt-1 truncate text-sm text-muted-foreground">{device.artist || ' '}</p>
+      <p className="truncate text-xs text-muted-foreground/70">{device.album || ' '}</p>
+      {(showSource || chip !== null) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {showSource && (
+            <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Radio className="size-3" />
+              {source}
+            </span>
+          )}
+          {chip !== null && (
+            <GroupChip
+              group={chip.group}
+              open={chip.open}
+              onToggle={chip.onToggle}
+              panelId={chip.panelId}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: number }>) => {
   const { t } = useSettings()
   const controls = useControls(device)
   const live = controls.device
-  const art = artUrl(live)
-  const playing = live.online && live.status === 'play'
+  const [groupOpen, setGroupOpen] = useState(false)
   // An external input has no track to show: the card names the source, and the
   // badge keeps the transport state without the "a track is playing" meter.
   const external = isExternalInput(live.input)
   const sourceName = external ? inputLabel(t, live.inputLabels, live.input) : ''
-  const headline = sourceName !== '' ? sourceName : live.title
-  const [groupOpen, setGroupOpen] = useState(false)
+  const headline = sourceName === '' ? live.title : sourceName
+  const playing = live.online && live.status === 'play'
   const group = live.group
   // An offline speaker keeps its last known group: showing it would claim a
   // membership nothing just confirmed.
@@ -106,72 +202,27 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
         </div>
         <div className="flex items-center gap-1.5">
           <DeviceSettingsDialog controls={controls} />
-          <Badge
-            variant={device.online ? (playing && !external ? 'accent' : 'default') : 'warning'}
-          >
-            {playing && !external ? (
-              <Equalizer />
-            ) : (
-              <span
-                className={cn(
-                  'size-1.5 rounded-full',
-                  device.online ? 'bg-muted-foreground' : 'bg-warning'
-                )}
-              />
-            )}
-            {device.online ? statusLabel(t, live.status) : t('offline')}
-          </Badge>
+          <StatusBadge online={device.online} status={live.status} playing={playing && !external} />
         </div>
       </div>
 
       <div className="mt-5 flex gap-5">
-        <div className="relative size-28 shrink-0 overflow-hidden rounded-xl bg-muted ring-1 ring-black/5 sm:size-36 dark:ring-white/5">
-          {art !== null ? (
-            <img
-              src={art}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              referrerPolicy="no-referrer"
-              className={cn('size-full object-cover', !device.online && 'grayscale')}
-            />
-          ) : (
-            <div className="grid size-full place-items-center bg-gradient-to-br from-muted to-muted/30 text-muted-foreground/40">
-              <Disc3 className="size-8" />
-            </div>
-          )}
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <p
-            className={cn(
-              'truncate text-2xl leading-tight font-semibold tracking-tight sm:text-3xl',
-              headline === '' && 'text-muted-foreground'
-            )}
-          >
-            {headline !== '' ? headline : t('noPlayback')}
-          </p>
-          <p className="mt-1 truncate text-sm text-muted-foreground">{device.artist || ' '}</p>
-          <p className="truncate text-xs text-muted-foreground/70">{device.album || ' '}</p>
-          {(device.source !== '' || showGroup) && (
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              {device.source !== '' && (
-                <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                  <Radio className="size-3" />
-                  {device.source}
-                </span>
-              )}
-              {showGroup && (
-                <GroupChip
-                  group={group}
-                  open={groupOpen}
-                  onToggle={() => setGroupOpen(open => !open)}
-                  panelId={groupPanelId}
-                />
-              )}
-            </div>
-          )}
-        </div>
+        <Cover art={artUrl(live)} offline={!device.online} />
+        <TrackMeta
+          device={device}
+          headline={headline}
+          source={device.source}
+          chip={
+            showGroup
+              ? {
+                  group,
+                  open: groupOpen,
+                  onToggle: () => setGroupOpen(open => !open),
+                  panelId: groupPanelId,
+                }
+              : null
+          }
+        />
       </div>
 
       {showGroup && groupOpen && <GroupPanel group={group} id={groupPanelId} />}

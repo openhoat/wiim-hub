@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/cn'
+import { controlErrorLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Device, EqBand } from '@/lib/types'
 import { type Controls, useControls } from '@/lib/use-controls'
@@ -282,11 +283,7 @@ export const SoundCard = ({ device }: Readonly<{ device: Device }>) => {
         aria-live="polite"
         className={cn('mt-2 text-[11px] text-warning', controls.error === null && 'sr-only')}
       >
-        {controls.error === null
-          ? ''
-          : controls.error === 'unsupported'
-            ? t('controls.unsupported')
-            : `${t('controls.failed')} ${controls.error}`}
+        {controlErrorLabel(t, controls.error)}
       </p>
     </Card>
   )

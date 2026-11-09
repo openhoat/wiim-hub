@@ -44,6 +44,15 @@ export const eventText = (t: Translate, event: DeviceEvent): string => {
   return ''
 }
 
+// A write fails for two reasons worth telling apart: the firmware does not
+// support it, or it refused the value. `unsupported` is the hub's own token, so
+// it gets a sentence; anything else is the device's answer, printed as it came.
+export const controlErrorLabel = (t: Translate, error: string | null): string => {
+  if (error === null) return ''
+  if (error === 'unsupported') return t('controls.unsupported')
+  return `${t('controls.failed')} ${error}`
+}
+
 export const agoLabel = (t: Translate, at: number | null, now: number): string => {
   if (at === null) return t('never')
   const seconds = Math.max(0, Math.round((now - at) / 1000))
