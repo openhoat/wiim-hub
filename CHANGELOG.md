@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-11-09
+
 ### Added
 
 - The screenshots are on the documentation site, not only in the README. The home page opens on
