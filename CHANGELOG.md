@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-09
+
 ### Added
 
 - UPnP event subscriptions, opt-in: with `UPNP_CALLBACK` naming an address the speakers can reach,
@@ -185,7 +187,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/openhoat/wiim-hub/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/openhoat/wiim-hub/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/openhoat/wiim-hub/compare/v0.4.3...v0.5.0
 [0.4.3]: https://github.com/openhoat/wiim-hub/compare/v0.4.2...v0.4.3
