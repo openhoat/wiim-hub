@@ -62,6 +62,10 @@ const Hub = () => {
   const [now, setNow] = useState(() => Date.now())
 
   const devices = hub.state?.devices ?? []
+  // The cards render a photo of the hub, so their clock stops at the moment it
+  // was taken: a seek bar must not advance on a position nobody measured. The
+  // banner keeps the real clock, because it dates the photo.
+  const clock = hub.error === null ? now : (hub.shownAt ?? now)
   const offline = devices.filter(device => !device.online).length
   const online = devices.length - offline
 
@@ -119,7 +123,7 @@ const Hub = () => {
         </p>
 
         <div className="space-y-4">
-          {hub.error !== null && <HubBanner onRetry={hub.refresh} />}
+          {hub.error !== null && <HubBanner onRetry={hub.refresh} since={hub.shownAt} now={now} />}
 
           {hub.loading && hub.state === null && (
             <div className="grid gap-4 xl:grid-cols-2">
@@ -127,7 +131,9 @@ const Hub = () => {
             </div>
           )}
 
-          {!hub.loading && devices.length === 0 && (
+          {/* With the hub silent there is nothing to discover: offering the
+              button would fail, so the banner above is the only answer. */}
+          {hub.error === null && !hub.loading && devices.length === 0 && (
             <EmptyState onDiscover={() => void discover()} discovering={hub.discovering} />
           )}
 
@@ -142,7 +148,7 @@ const Hub = () => {
               >
                 {devices.map(device => (
                   <div key={device.name + device.ip} className="space-y-4">
-                    <NowPlayingCard device={device} now={now} />
+                    <NowPlayingCard device={device} now={clock} />
                     <SoundCard device={device} />
                   </div>
                 ))}
@@ -150,7 +156,7 @@ const Hub = () => {
             ) : (
               <div className="space-y-4">
                 {devices.map(device => (
-                  <DiagnosticCard key={device.name + device.ip} device={device} now={now} />
+                  <DiagnosticCard key={device.name + device.ip} device={device} now={clock} />
                 ))}
               </div>
             ))}

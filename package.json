@@ -144,7 +144,8 @@
         "*.mjs",
         "biome.json",
         "package.json",
-        "docs/.vitepress/**/*.{ts,mts}"
+        "docs/.vitepress/**/*.{ts,mts}",
+        "public/sw.js"
       ],
       "output": []
     },

@@ -7,7 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/*.md", "!**/*.yml", "!**/*.yaml", "!public"]
+    "includes": ["**", "!**/*.md", "!**/*.yml", "!**/*.yaml", "!public/*", "public/sw.js"]
   },
   "formatter": {
     "enabled": true,

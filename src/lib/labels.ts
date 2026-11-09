@@ -56,7 +56,8 @@ export const controlErrorLabel = (t: Translate, error: string | null): string =>
 export const agoLabel = (t: Translate, at: number | null, now: number): string => {
   if (at === null) return t('never')
   const seconds = Math.max(0, Math.round((now - at) / 1000))
-  return seconds < 60
-    ? t('secondsAgo', { n: seconds })
-    : t('minutesAgo', { n: Math.round(seconds / 60) })
+  if (seconds < 60) return t('secondsAgo', { n: seconds })
+  // Past an hour, minutes stop being readable: an outage is measured in hours.
+  if (seconds < 3600) return t('minutesAgo', { n: Math.round(seconds / 60) })
+  return t('hoursAgo', { n: Math.round(seconds / 3600) })
 }

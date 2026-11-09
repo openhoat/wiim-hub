@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchState, runDiscovery } from './api'
+import { readSnapshot, writeSnapshot } from './snapshot'
 import type { HubState } from './types'
 
 const defaultPollMs = 3000
@@ -9,6 +10,9 @@ type Hub = {
   error: string | null
   loading: boolean
   discovering: boolean
+  // When the state on screen was received. With an error, it is what the banner
+  // dates; without one it is simply the last answer.
+  shownAt: number | null
   refresh: () => void
   discover: () => Promise<number>
 }
@@ -21,12 +25,22 @@ export const useHub = (): Hub => {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [discovering, setDiscovering] = useState(false)
+  const [shownAt, setShownAt] = useState<number | null>(null)
   const timer = useRef<number | undefined>(undefined)
   // Filled by the polling effect, so the timer never calls a stale closure.
   const next = useRef<() => void>(() => {
     /* replaced once the poller mounts */
   })
   const busy = useRef(false)
+  // The state on screen, readable from the poll without waiting for a render:
+  // the first failure is what decides whether the snapshot is adopted.
+  const live = useRef<HubState | null>(null)
+
+  const show = useCallback((next: HubState | null, at: number | null): void => {
+    live.current = next
+    setState(next)
+    setShownAt(at)
+  }, [])
 
   const schedule = useCallback((delay: number) => {
     window.clearTimeout(timer.current)
@@ -42,17 +56,26 @@ export const useHub = (): Hub => {
     busy.current = true
     try {
       const answer = await fetchState()
-      setState(answer)
+      const at = Date.now()
+      show(answer, at)
+      writeSnapshot(window.localStorage, answer, at)
       setError(null)
       schedule(Math.max(1000, answer.pollMs || defaultPollMs))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause))
+      // Nothing live yet: the page may have been reopened while the hub was
+      // already unreachable, so the last state received is better than an empty
+      // page, as long as it is dated.
+      if (live.current === null) {
+        const snapshot = readSnapshot(window.localStorage)
+        if (snapshot !== null) show(snapshot.state, snapshot.at)
+      }
       schedule(defaultPollMs)
     } finally {
       busy.current = false
       setLoading(false)
     }
-  }, [schedule])
+  }, [schedule, show])
 
   useEffect(() => {
     next.current = () => void tick()
@@ -85,5 +108,5 @@ export const useHub = (): Hub => {
     }
   }, [schedule])
 
-  return { state, error, loading, discovering, refresh, discover }
+  return { state, error, loading, discovering, shownAt, refresh, discover }
 }

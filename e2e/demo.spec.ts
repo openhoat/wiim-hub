@@ -295,6 +295,41 @@ test('lists the addresses it polls, and says which ones it does not own', async 
   await expect(dialog.getByText('The hub refused: the demo does not manage hosts')).toBeVisible()
 })
 
+test('opens on the cached shell when the network is gone', async ({ page, context }) => {
+  await openHub(page)
+  await page.evaluate(() => navigator.serviceWorker.ready)
+  await expect
+    .poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null))
+    .toBe(true)
+
+  // The worker, not the HTTP cache, has to answer: the browser cache is emptied
+  // before the network goes away, otherwise this test would pass on a shell the
+  // worker never stored.
+  const session = await context.newCDPSession(page)
+  await session.send('Network.clearBrowserCache')
+  await context.setOffline(true)
+  await page.reload({ waitUntil: 'load' })
+
+  // The document, its bundle and its icons all came from the cache.
+  await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
+  await expect(page.getByText('Hub unreachable')).toBeVisible()
+  await context.setOffline(false)
+
+  // And the API was never part of it: the page kept the last state it received
+  // and dates it, instead of showing a cached answer as the live one.
+  await expect(page.getByText(/Last state received/)).toBeVisible()
+})
+
+test('keeps the last state it received, dated, when the hub goes quiet', async ({ page }) => {
+  await openHub(page)
+  await expect(page.getByText('Late Ferry', { exact: true })).toBeVisible()
+
+  await page.route('**/api/state*', route => route.abort())
+  await expect(page.getByText('Hub unreachable')).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText(/Last state received .* ago/)).toBeVisible()
+  await expect(page.getByText('Late Ferry', { exact: true })).toBeVisible()
+})
+
 test.describe('on a phone', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 

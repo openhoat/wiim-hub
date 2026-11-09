@@ -21,6 +21,7 @@ export default defineConfig({
         'server/queue.ts',
         'server/upnp.ts',
         'src/lib/optimistic.ts',
+        'src/lib/snapshot.ts',
       ],
       reporter: ['text', 'lcov'],
       reportsDirectory: 'dist/coverage',
