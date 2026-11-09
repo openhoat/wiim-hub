@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-09
+
 ### Added
 
 - Diagnostic findings: the diagnostic view now reads the device's own counters (`getNetworkHealth`,
