@@ -27,6 +27,15 @@ Releases are cut from `package.json`: the version in that file names the section
   keeps its sources and no longer grows a directory per tool, and `npm run clean` removes all of
   them, plus the wireit cache and the generated `docs/public/logo.svg`, in one command.
 
+### Fixed
+
+- A streaming position reported in microseconds is read as milliseconds. `curpos` and `totlen`
+  carry no unit: milliseconds on local and AirPlay sources, microseconds on some streaming
+  firmwares, and the hub passed the raw value through. Measured values above ten hours are now
+  read as microseconds, while the local sources keep their milliseconds so a file longer than ten
+  hours still shows its real position, and the progress bar no longer runs to the end of a track
+  on those sources.
+
 ## [0.9.0] - 2026-11-09
 
 ### Added

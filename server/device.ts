@@ -606,6 +606,24 @@ const inputFromMode = (mode: string): string => {
 export const isExternalInput = (input: string): boolean =>
   input === 'optical' || input === 'line-in'
 
+// The payload does not say which unit `curpos` and `totlen` are in: milliseconds
+// for local and AirPlay sources, microseconds for streaming services on some
+// firmwares (`docs/feature-research.md`, §5.1). Ten hours is the frontier that
+// tells the two apart: no track is long enough to reach it in milliseconds on a
+// streaming source, and a position in microseconds passes it after 36 seconds.
+// The local sources are exempt because their unit is known, which is how a file
+// longer than ten hours keeps its real position; no mode code maps to them yet
+// (`inputFromMode`), so the exemption is a guard for the day one does.
+export const POSITION_UNIT_THRESHOLD = 36_000_000
+
+const LOCAL_INPUTS = new Set(['udisk', 'HDMI'])
+
+export const positionMs = (value: number | null, input: string): number | null => {
+  if (value === null || value <= 0) return value
+  if (LOCAL_INPUTS.has(input)) return value
+  return value > POSITION_UNIT_THRESHOLD ? Math.round(value / 1000) : value
+}
+
 // The integer `setAudioOutputHardwareMode` expects, by mode name. An output
 // whose name is not in this table stays unselectable on purpose: writing a
 // guessed integer would route the audio somewhere the user did not ask for.
@@ -1047,8 +1065,8 @@ export const parseDevice = (input: {
     artist: cleanTitle(text(metaData.artist) || maybeHex(text(player?.Artist))),
     album: cleanTitle(text(metaData.album) || maybeHex(text(player?.Album))),
     albumArt: artUri(text(metaData.albumArtURI)),
-    curposMs: external ? null : num(player?.curpos),
-    totalMs: external ? null : num(player?.totlen),
+    curposMs: external ? null : positionMs(num(player?.curpos), inputId),
+    totalMs: external ? null : positionMs(num(player?.totlen), inputId),
     source: text(player?.vendor),
     mode: text(player?.mode),
     input: inputId,

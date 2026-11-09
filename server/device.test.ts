@@ -7,6 +7,7 @@ import {
   parseGroup,
   parsePresets,
   parseRegistry,
+  positionMs,
 } from './device.ts'
 import {
   acousticCapability,
@@ -151,6 +152,32 @@ describe('isExternalInput', () => {
     expect(isExternalInput('wifi')).toBe(false)
     expect(isExternalInput('bluetooth')).toBe(false)
     expect(isExternalInput('')).toBe(false)
+  })
+})
+
+describe('positionMs', () => {
+  it('keeps the milliseconds a source below the frontier already reports', () => {
+    expect(positionMs(49_489, 'wifi')).toBe(49_489)
+  })
+
+  it('reads a position above ten hours as microseconds', () => {
+    expect(positionMs(60_000_000, 'wifi')).toBe(60_000)
+    expect(positionMs(180_000_000, '')).toBe(180_000)
+  })
+
+  it('keeps milliseconds on a known local source, whatever the value', () => {
+    // A ten hour audiobook on a key would otherwise read as a few seconds.
+    expect(positionMs(36_500_000, 'udisk')).toBe(36_500_000)
+    expect(positionMs(45_000_000, 'HDMI')).toBe(45_000_000)
+  })
+
+  it('treats the frontier itself as milliseconds', () => {
+    expect(positionMs(36_000_000, 'wifi')).toBe(36_000_000)
+  })
+
+  it('leaves an absent or zero position alone', () => {
+    expect(positionMs(null, 'wifi')).toBeNull()
+    expect(positionMs(0, 'wifi')).toBe(0)
   })
 })
 
@@ -366,6 +393,16 @@ describe('parseDevice', () => {
     expect(parsed.totalMs).toBeNull()
     // The transport state is left alone: the device does know it is playing.
     expect(parsed.status).toBe('stop')
+  })
+
+  it('scales a streaming position the firmware reports in microseconds', () => {
+    const parsed = parseDevice(
+      device({
+        player: { ...json(playerStatusEx), mode: '10', curpos: '60000000', totlen: '180000000' },
+      })
+    )
+    expect(parsed.curposMs).toBe(60_000)
+    expect(parsed.totalMs).toBe(180_000)
   })
 
   it('keeps a zero duration, which is how a live stream announces itself', () => {
