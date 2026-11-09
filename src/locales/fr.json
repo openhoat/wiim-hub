@@ -123,7 +123,20 @@
   "sections": {
     "fields": "Champs",
     "signal": "Signal",
-    "timeline": "Chronologie"
+    "timeline": "Chronologie",
+    "services": "Streaming"
+  },
+  "services": {
+    "hint": "Le palier maximal que ce modèle atteint, tel que le firmware le publie. Un tiret signifie que l'application de diffusion décide.",
+    "offline": "Le lecteur est hors ligne : son tableau est lu quand il répond.",
+    "count": "{count} services",
+    "inUse": "en cours",
+    "replayGain": "ReplayGain",
+    "failed": "Lecture du tableau des services impossible.",
+    "loading": "Lecture du tableau des services…",
+    "none": "Ce firmware ne publie pas son tableau des services.",
+    "showAll": "Afficher les {count} autres",
+    "showFewer": "Afficher moins"
   },
   "statuses": {
     "play": "en lecture",

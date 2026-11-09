@@ -1,4 +1,4 @@
-import type { Device, DeviceSettings, Finding, HubState } from './types'
+import type { Device, DeviceSettings, Finding, HubState, ServiceCapability } from './types'
 
 const readJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(path, { cache: 'no-store', ...init })
@@ -34,6 +34,13 @@ export type Report = { ts: number; host: string; findings: Finding[]; markdown: 
 
 export const fetchReport = (device: Device): Promise<Report> =>
   readJson<Report>(`/api/report?host=${encodeURIComponent(device.ip)}`)
+
+// Reference data, read when the diagnostic card opens: the firmware's streaming
+// table, with the levels it publishes per service.
+export type ServicesAnswer = { ts: number; host: string; services: ServiceCapability[] }
+
+export const fetchServices = (host: string): Promise<ServicesAnswer> =>
+  readJson<ServicesAnswer>(`/api/services?host=${encodeURIComponent(host)}`)
 
 export const runDiscovery = (): Promise<{ added: number }> =>
   readJson<{ added: number }>('/api/discover', { method: 'POST' })

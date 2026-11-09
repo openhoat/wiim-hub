@@ -5,6 +5,7 @@ import { EventTimeline } from '@/components/event-timeline'
 import { FindingsPanel } from '@/components/findings-panel'
 import { GuidesPanel } from '@/components/guides-panel'
 import { SampleTable } from '@/components/sample-table'
+import { ServicesPanel } from '@/components/services-panel'
 import { Sparkline } from '@/components/sparkline'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -176,6 +177,10 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
 
       <section className="mt-5">
         <GuidesPanel device={device} />
+      </section>
+
+      <section className="mt-5">
+        <ServicesPanel device={device} />
       </section>
 
       <section className="mt-5">

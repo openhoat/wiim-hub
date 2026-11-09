@@ -32,9 +32,11 @@ import {
   savedGroups,
   slaveList,
   statusEx,
+  streamServices,
 } from './fixtures/wiim-pro.ts'
 import { guidesFor } from './guides.ts'
 import { buildInventory, type Inventory, type Resolution } from './inventory.ts'
+import { parseServicesCapability } from './services.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
 const tickMs = 3000
@@ -266,7 +268,9 @@ const livingRoom = (): DeviceState => {
     albumArt: track.art,
     curposMs: 68_000,
     totalMs: track.durationMs,
-    source: 'wifi',
+    // The vendor id equals the service id, which is what makes the streaming
+    // table able to mark the service in use.
+    source: 'Tidal',
     mode: '31',
     input: 'wifi',
     maxVolume: 100,
@@ -792,6 +796,24 @@ const sendState = (res: ServerResponse): void => {
 
 // The demo serves the same report so the copy and download buttons can be
 // exercised, and asserted, without a speaker.
+// The reference player's streaming table, parsed once: the demo shows every
+// shape the firmware publishes (a name ladder, a vendor enum, bitrates, codec
+// tokens, and families that publish nothing).
+const demoServices = parseServicesCapability(streamServices) ?? []
+
+const sendServices = (url: URL, res: ServerResponse): void => {
+  const state = findState(url.searchParams.get('host') ?? '')
+  if (state === null) {
+    sendJson(res, 404, { error: 'unknown device' })
+    return
+  }
+  sendJson(res, 200, {
+    ts: Date.now(),
+    host: state.ip,
+    services: state.online ? demoServices : [],
+  })
+}
+
 const sendReport = (url: URL, res: ServerResponse): void => {
   const state = findState(url.searchParams.get('host') ?? '')
   if (state === null) {
@@ -853,6 +875,10 @@ const routes: Record<string, Route> = {
   },
   '/api/report': (url, _req, res) => {
     sendReport(url, res)
+    return true
+  },
+  '/api/services': (url, _req, res) => {
+    sendServices(url, res)
     return true
   },
   '/api/art': (url, _req, res) => {

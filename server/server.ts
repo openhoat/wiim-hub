@@ -29,6 +29,7 @@ import {
 } from './hosts.ts'
 import { readInventory, resolutionFor } from './inventory.ts'
 import { createWriteQueue } from './queue.ts'
+import { readServices } from './services.ts'
 import { createEventHub, type EventPatch } from './upnp.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
@@ -716,6 +717,20 @@ const routes: Record<string, Route> = {
     return true
   },
   '/api/report': (url, _req, res) => sendReport(url, res).then(() => true),
+  // The streaming table is reference data, not live state: the page reads it
+  // when the diagnostic card opens, and the poll payload stays the size it was.
+  '/api/services': async (url, _req, res) => {
+    const entry = findEntry(url.searchParams.get('host') ?? '')
+    if (entry === null) {
+      sendJson(res, 404, { error: 'unknown device' })
+      return true
+    }
+    // A silent player publishes nothing, and a probe against it costs a timeout
+    // to learn the first finding again.
+    const services = entry.state.online ? await readServices(entry.key) : []
+    sendJson(res, 200, { ts: Date.now(), host: entry.key, services })
+    return true
+  },
   '/api/art': async (url, _req, res) => {
     await artFor(url, res)
     return true

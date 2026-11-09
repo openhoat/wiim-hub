@@ -201,6 +201,17 @@ export type UpnpStatus = {
   misses: number
 }
 
+// The streaming services the firmware can drive, with the quality levels it
+// publishes for each. Reference data read on demand, never part of the poll.
+export type ServiceCapability = {
+  id: string
+  version: string
+  levels: string[]
+  replayGain: boolean
+  configurable: boolean
+  active: boolean
+}
+
 export type HubState = {
   ts: number
   pollMs: number

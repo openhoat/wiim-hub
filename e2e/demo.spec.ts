@@ -226,6 +226,42 @@ test('stops a guided flow at its first anomaly on an offline speaker', async ({ 
   await expect(guides.getByText('No anomaly on this flow')).toHaveCount(0)
 })
 
+test('states the streaming tier each service reaches, and which one is playing', async ({
+  page,
+}) => {
+  await openHub(page)
+  await page.getByRole('button', { name: 'Diagnostic' }).click()
+
+  const panel = page.getByTestId('device-192.0.2.21').getByTestId('services-panel')
+  await expect(panel.getByRole('heading', { name: 'Streaming' })).toBeVisible()
+  await expect(panel.getByText('29 services')).toBeVisible()
+
+  // The service in use comes first, marked as such, with the top of the ladder
+  // the firmware published for it.
+  const tidal = panel.locator('dl > div').filter({ hasText: 'Tidal' })
+  await expect(panel.locator('dl > div').first()).toContainText('Tidal')
+  await expect(tidal.getByText('in use')).toBeVisible()
+  await expect(tidal.getByText('HI_RES')).toBeVisible()
+  // The whole ladder is kept, and ReplayGain with it, as the device said so.
+  await expect(tidal).toHaveAttribute('title', 'LOW < HIGH < LOSSLESS < HI_RES · ReplayGain')
+
+  // A family that publishes a vendor enum is translated, not printed raw.
+  const qobuz = panel.locator('dl > div').filter({ hasText: 'Qobuz' })
+  await expect(qobuz.getByText('FLAC 24 ≤ 192 kHz')).toBeVisible()
+
+  // The families that publish nothing are folded behind a count, and one click
+  // opens them: they are part of the table, they just say nothing about a tier.
+  await panel.getByRole('button', { name: 'Show the other 22' }).click()
+  const tuneIn = panel.locator('dl > div').filter({ hasText: 'newTuneIn' })
+  await expect(tuneIn.getByText('—')).toBeVisible()
+
+  // A silent player is not probed: the panel says why it has nothing to show.
+  const offline = page.getByTestId('device-192.0.2.22').getByTestId('services-panel')
+  await expect(
+    offline.getByText('The player is offline: its table is read when it answers.')
+  ).toBeVisible()
+})
+
 test('keeps a volume written from the page across a poll', async ({ page }) => {
   await openHub(page)
 

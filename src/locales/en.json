@@ -123,7 +123,20 @@
   "sections": {
     "fields": "Fields",
     "signal": "Signal",
-    "timeline": "Timeline"
+    "timeline": "Timeline",
+    "services": "Streaming"
+  },
+  "services": {
+    "hint": "The top tier this model reaches, as the firmware publishes it. A dash means the casting app decides.",
+    "offline": "The player is offline: its table is read when it answers.",
+    "count": "{count} services",
+    "inUse": "in use",
+    "replayGain": "ReplayGain",
+    "failed": "Could not read the streaming table.",
+    "loading": "Reading the streaming table…",
+    "none": "This firmware does not publish its streaming table.",
+    "showAll": "Show the other {count}",
+    "showFewer": "Show fewer"
   },
   "statuses": {
     "play": "playing",
