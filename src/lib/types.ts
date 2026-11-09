@@ -42,6 +42,18 @@ export type DeviceEvent = {
   to: string
 }
 
+export type GroupMember = { name: string; ip: string; uuid: string }
+
+// Multiroom, read only: `role` is what this speaker does in the group,
+// `members` is what the device lists, and `saved` says the vendor app keeps a
+// group while nothing runs.
+export type GroupState = {
+  role: 'none' | 'master' | 'member'
+  name: string
+  members: GroupMember[]
+  saved: boolean
+}
+
 export type Device = {
   ip: string
   name: string
@@ -50,7 +62,7 @@ export type Device = {
   release: string
   ssid: string
   bssid: string
-  group: string
+  group: GroupState
   rssi: number | null
   volume: number | null
   status: string
@@ -61,7 +73,6 @@ export type Device = {
   curposMs: number | null
   totalMs: number | null
   source: string
-  slaves: number
   mode: string
   input: string
   maxVolume: number | null

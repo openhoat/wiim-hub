@@ -105,7 +105,7 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
             <Field label={t('labels.state')} value={statusLabel(t, device.status)} />
             <Field label={t('labels.network')} value={device.ssid || '—'} />
             <Field label={t('labels.bssid')} value={device.bssid || '—'} />
-            <Field label={t('labels.group')} value={device.group || '—'} />
+            <Field label={t('labels.group')} value={device.group.name || '—'} />
             <Field label={t('labels.source')} value={device.source || '—'} />
             <Field label={t('labels.volume')} value={device.volume === null ? '—' : String(device.volume)} />
             <Field label={t('labels.lastSeen')} value={agoLabel(t, device.lastSeen, now)} />

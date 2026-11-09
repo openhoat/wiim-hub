@@ -43,7 +43,16 @@
   "rssi": "{value} dBm",
   "rssiChart": "Signal over the last 20 minutes",
   "chipVolume": "Volume {value}",
-  "groupMembers": "{n} grouped",
+  "group": {
+    "label": "Group",
+    "members": "{n} speaker(s)",
+    "role": {
+      "master": "This speaker drives the group.",
+      "member": "This speaker follows the group."
+    },
+    "saved": "Saved group, not running.",
+    "unknown": "state unknown"
+  },
   "offlineCount": "{n} offline",
   "details": "Samples",
   "hideDetails": "Hide samples",

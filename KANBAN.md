@@ -10,7 +10,8 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 ## In Progress
 
 Nothing in progress: 0.4.x shipped the equalizer, the stream quality, the device settings, the
-stream URL and the art relay constraints (#15, #17, #18, #3 closed; see git history).
+stream URL, the art relay constraints and the multiroom read view (#15, #17, #18, #3 closed; see git
+history), and #4 keeps its write half blocked on a second reachable unit.
 
 ## Backlog
 
@@ -23,9 +24,9 @@ stream URL and the art relay constraints (#15, #17, #18, #3 closed; see git hist
 
 ### #4 [UX] Add a multiroom group view with per member control (P2)
 
-[//]: # Blocked: the member payload of `multiroom:getSlaveList` and the join/leave/kick semantics cannot be measured while only one speaker is reachable (the Mini is in RMA). Reads can ship first; the writes wait for a second unit.
+[//]: # Blocked on a second reachable unit: the member payload of `multiroom:getSlaveList` (with members) and the join/leave/kick semantics cannot be measured while only one speaker answers. The read side shipped in 0.4.3; the writes wait.
 
-- [ ] Read the role from `multiroom:getSlaveList` and render master, members and orphans
+- [x] Read the role from `multiroom:getSlaveList` and render master, members and orphans
 - [ ] Per member volume and mute with coalescing, plus one synchronised volume control
 - [ ] Join, leave and kick out with a confirmation naming the device and the raw answer on failure
 - [ ] Reconcile the group state after every write instead of trusting the optimistic view

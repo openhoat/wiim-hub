@@ -7,7 +7,8 @@ hand. Devices are polled every few seconds and served as a small web page.
 A local, self-hosted complement to the vendor app: the same device data, on a screen you already
 have open, with an interface that fits a browser and a phone. Every device gets its own card,
 state and write queue, so a mixed fleet (Pro, Mini, Amp, Ultra, and OEM LinkPlay players) is the
-normal case, not a special one. Multiroom is a roadmap item, not a promise.
+normal case, not a special one. Multiroom is read only for now: the hub shows the group a speaker
+belongs to, and its controls arrive once a second unit can be measured.
 
 ## Why a second view
 
@@ -26,7 +27,7 @@ views diverge, and the device side is the one the official app consumes.
   the last known address is retained when a re-resolution fails.
 - SSDP discovery as a best-effort complement to an explicit device list.
 - **Two views on the same data**: a *now playing* view for everyday use (art, track, progress,
-  playback state, volume, group size, offline badge) and a *diagnostic* view for support (raw
+  playback state, volume, multiroom chip, offline badge) and a *diagnostic* view for support (raw
   fields, RSSI sparkline, event log, sample table, CSV export). The selected view is remembered
   per browser.
 - Now playing: track, artist, album, album art (relayed by the hub, see below), playback progress
@@ -36,6 +37,10 @@ views diverge, and the device side is the one the official app consumes.
   speaker fetches itself. Every control paints the expected value immediately and lets the next
   poll confirm or revert it, and the hub serialises one write per device so a slider drag cannot
   race itself.
+- **Multiroom, read only**: the role the speaker claims (master, member or none), the group name and
+  its members, from `multiroom:getSlaveList` and `multiroom:getnamegrouplist`. A saved group that is
+  not running says so, and a member with no address reports an unknown state instead of a fake
+  offline one. No write control is rendered until a second unit can be measured.
 - **Sound card**, folded until opened: the quality chip stays in the header, the graphic equalizer
   is read per source and edited one band at a time, with the 24 factory curves and room correction
   as a capability, read-only until its write payload is proven.

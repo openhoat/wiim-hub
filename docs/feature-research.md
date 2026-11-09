@@ -327,21 +327,40 @@ the feature. Rules marked **must** are correctness rules, not polish.
 - **Power mode intervals** (`getPowerModeTime`) are settings for the device's own idle and
   standby behaviour. Display in diagnostics; do not expose as a control.
 
-### 5.8 Multiroom (v3)
+### 5.8 Multiroom
 
-- Read `multiroom:getSlaveList` on each device to learn its role: `slaves` greater than 0
-  means master, membership is implied by appearing in another device's list.
-- `wmrm_version` 4.3 on this firmware means modern multiroom: slaves keep their LAN address,
-  so a group view is possible without the 10.10.10.x contortion that older LinkPlay devices
-  require.
-- Design: a group card that shows the master, the members, per member volume and mute
-  (`multiroom:SlaveVolume`, `multiroom:SlaveMute`), join and leave, and one **synchronised**
-  volume control that fans out to members with coalescing per member.
-- Destructive actions (`Ungroup`, `SlaveKickout`) need a confirmation with the member name, and
-  must report the device body on failure.
-- Latency: a group command is not atomic; members apply at slightly different times. Poll the
-  group after a write, and never render "grouped" from the optimistic state alone for more than
-  a poll interval.
+Measured on the Pro (`Linkplay.4.8.833748`, `wmrm_version` 4.3, `wmrm_sub_ver` 7,
+`wmrm_capability` 63):
+
+- `multiroom:getSlaveList` on a player in no group answers
+  `{"slaves":0,"wmrm_version":"4.3","surround":0,"group_type":0}`. The documented payload spells
+  the keys with a capital (`Slaves`, `Slave_list`) and carries `Name`, `Ip`, `Volume`, `Mute`,
+  `Channel`, `Version`; this firmware answers lowercase with an empty list, so both spellings are
+  read and neither is assumed to be there.
+- `multiroom:getnamegrouplist` holds the groups the vendor app remembers, not the running one:
+  `{grouplist:[{group_name:"Appart",group_id:"F38EC078-…",slavelist:[{name:"Chambre",
+  uuid:"FF97001669AA1900F9F639A0"}]}],current_group_id:"F38EC078-…"}`. A saved member carries a
+  name and a uuid, no address, and the uuid is not derived from the MAC on this firmware, so a
+  member cannot be located from the registry alone.
+- `current_group_id` is kept by a player that drives no group: it means "the app points at that
+  group", not "this group is running". Only a non-zero `slaves`, or a member list, proves a group
+  is live.
+- `status.group` is `'0'` on a player in no group, and `GroupName` carries the **device's own
+  name** ("Salon") rather than a group name. The group name therefore comes from the registry, and
+  a player with no registry entry shows no group at all.
+
+Shipped read only in 0.4.3: `role` (`master` from a member list, `member` from a group id in the
+status, `none` otherwise), the registry entry the device points at, and its members. A saved group
+with nothing running is rendered as saved: its members have no address and their state is unknown,
+never "offline". A player that is not grouped pays no extra request; one that is, or that points at
+a saved group, pays one `getSlaveList` per poll.
+
+Writes wait for a second reachable unit (`multiroom:SlaveVolume`, `multiroom:SlaveMute`,
+`multiroom:JoinGroup:IP=…:uuid=…`, `multiroom:LeaveGroup`, `multiroom:SlaveKickout`, and
+`setPlayerCmd:slave_vol` for one synchronised volume with coalescing per member). Destructive
+actions need a confirmation naming the member and must report the device body on failure. A group
+command is not atomic: members apply at slightly different times, so poll the group after a write
+and never let the optimistic "grouped" view outlive one poll interval.
 
 ### 5.9 Device settings
 

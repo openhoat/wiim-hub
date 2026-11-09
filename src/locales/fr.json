@@ -43,7 +43,16 @@
   "rssi": "{value} dBm",
   "rssiChart": "Signal sur les 20 dernières minutes",
   "chipVolume": "Volume {value}",
-  "groupMembers": "{n} groupé(s)",
+  "group": {
+    "label": "Groupe",
+    "members": "{n} enceinte(s)",
+    "role": {
+      "master": "Cette enceinte pilote le groupe.",
+      "member": "Cette enceinte suit le groupe."
+    },
+    "saved": "Groupe enregistré, inactif.",
+    "unknown": "état inconnu"
+  },
   "offlineCount": "{n} hors ligne",
   "details": "Échantillons",
   "hideDetails": "Masquer les échantillons",
