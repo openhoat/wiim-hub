@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-11-09
+
 ### Added
 
 - The device parsers are pinned by tests against the answers a real player sent:
