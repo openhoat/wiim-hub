@@ -10,6 +10,13 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- An external input (optical, line in) is no longer rendered as a broken player. The firmware keeps
+  answering the position and the duration of the last stream it played while the input has no track,
+  which showed a moving seek bar under "nothing playing"; the hub now nulls that position for those
+  inputs, keeps the real transport state and prints the name of the source instead.
+
 ### Changed
 
 - The README opens on a notice: the hub is an independent, community project, not affiliated with

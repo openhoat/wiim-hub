@@ -93,6 +93,40 @@ test('exports the sample history from the diagnostic view', async ({ page }) => 
   )
 })
 
+test('shows an external input as a source instead of an empty player', async ({ page }) => {
+  // The demo models network playback only. The optical payload measured on the
+  // reference player (mode 43, real transport state, no track, and the position
+  // residue the firmware keeps sending) is patched into a real /api/state
+  // answer, so the rest of the card still comes from the demo.
+  const state: { devices: Record<string, unknown>[] } = await (
+    await page.request.get('/api/state')
+  ).json()
+  const optical = {
+    ...state.devices[0],
+    status: 'stop',
+    mode: '43',
+    input: 'optical',
+    title: '',
+    artist: '',
+    album: '',
+    albumArt: '',
+    source: '',
+    curposMs: 25_318,
+    totalMs: 137_000,
+  }
+  await page.route('**/api/state', route =>
+    route.fulfill({ json: { ...state, devices: [optical] } })
+  )
+
+  await openHub(page)
+
+  await expect(page.getByText('Optical', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('stopped', { exact: true })).toBeVisible()
+  await expect(page.getByText('Nothing playing')).toHaveCount(0)
+  // No media means no position: the residue must not become a seek bar.
+  await expect(page.getByRole('slider', { name: 'Position' })).toHaveCount(0)
+})
+
 test('keeps a volume written from the page across a poll', async ({ page }) => {
   await openHub(page)
 

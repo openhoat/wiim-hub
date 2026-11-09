@@ -24,6 +24,7 @@ import {
 import { presetArtUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
+import { inputLabel, isExternalInput } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Controls } from '@/lib/use-controls'
 
@@ -187,14 +188,17 @@ export const PlayerControls = ({
   const busy = controls.pending
   const sleepSeconds = device.sleepSeconds ?? 0
   const sleepMinutes = Math.ceil(sleepSeconds / 60)
-  const sourceLabel = (input: string): string => device.inputLabels[input] ?? input
+  const external = isExternalInput(device.input)
+  const sourceLabel = (input: string): string => inputLabel(t, device.inputLabels, input)
   const outputName =
     device.outputs.find(output => output.hardware === device.outputHardware)?.name ??
     t('controls.outputs')
 
   return (
     <div className="mt-5 space-y-3">
-      <SeekBar controls={controls} now={now} />
+      {/* An external input has nothing to seek in: the raw position would be the
+          residue of the last stream, so the bar is left out entirely. */}
+      {!external && <SeekBar controls={controls} now={now} />}
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1">

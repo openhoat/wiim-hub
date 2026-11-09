@@ -9,9 +9,13 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
-Nothing in progress: 0.4.x shipped the equalizer, the stream quality, the device settings, the
-stream URL, the art relay constraints and the multiroom read view (#15, #17, #18, #3 closed; see git
-history), the CI workflow closed #9, and #4 keeps its write half blocked on a second reachable unit.
+### #20 [UX] Show an external input as a source, not as an empty player (started 2026-11-09 12:12)
+
+- [ ] Null the position the firmware reports for `optical` and `line-in` (`isExternalInput`), so no
+      residue of the last stream reaches any view
+- [ ] Name the source on the card and keep the transport state, drop the seek bar and the playing
+      meter
+- [ ] Record the optical measurement in `docs/feature-research.md` §5.3
 
 ## Backlog
 

@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/toaster'
 import { cn } from '@/lib/cn'
+import { inputLabel, isExternalInput } from '@/lib/labels'
 import { SettingsProvider, useSettings } from '@/lib/settings'
 import type { View } from '@/lib/types'
 import { useHub } from '@/lib/use-hub'
@@ -90,11 +91,14 @@ const Hub = () => {
   }
 
   const announce = devices
-    .map(device =>
-      device.online
-        ? `${device.name}: ${device.title === '' ? t('noPlayback') : device.title}`
-        : `${device.name}: ${t('offline')}`
-    )
+    .map(device => {
+      if (!device.online) return `${device.name}: ${t('offline')}`
+      // An external input announces the source, the same words the card shows.
+      if (isExternalInput(device.input)) {
+        return `${device.name}: ${inputLabel(t, device.inputLabels, device.input)}`
+      }
+      return `${device.name}: ${device.title === '' ? t('noPlayback') : device.title}`
+    })
     .join('. ')
 
   return (

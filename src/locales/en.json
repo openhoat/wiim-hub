@@ -74,6 +74,12 @@
     "idle": "idle",
     "loading": "loading"
   },
+  "inputs": {
+    "wifi": "Wi-Fi",
+    "line-in": "Line input",
+    "bluetooth": "Bluetooth",
+    "optical": "Optical input"
+  },
   "labels": {
     "address": "Address",
     "firmware": "Firmware",

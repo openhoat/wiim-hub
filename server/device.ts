@@ -516,6 +516,16 @@ const inputFromMode = (mode: string): string => {
   return ''
 }
 
+// An external input carries a signal, not a track: the analogue and optical
+// sources have no duration to seek in and no metadata to show. The firmware
+// keeps answering the position of the last stream it played (`curpos` 25318,
+// `totlen` 137000 measured on optical), which reads as a track that is not
+// there, so the position is neutralised at the source and every view agrees.
+// The transport state is left alone: the device does know whether the input is
+// playing. Bluetooth stays out until it has been measured the same way.
+export const isExternalInput = (input: string): boolean =>
+  input === 'optical' || input === 'line-in'
+
 // The integer `setAudioOutputHardwareMode` expects, by mode name. An output
 // whose name is not in this table stays unselectable on purpose: writing a
 // guessed integer would route the audio somewhere the user did not ask for.
@@ -870,6 +880,8 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
   const acoustic = online
     ? await acousticFor(ip)
     : (acousticCache.get(ip) ?? { at: 0, presets: [], roomFit: false })
+  const input = inputFromMode(text(player?.mode))
+  const external = isExternalInput(input)
   return {
     ip,
     online,
@@ -887,11 +899,11 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
     artist: cleanTitle(text(metaData.artist)),
     album: cleanTitle(text(metaData.album)),
     albumArt: artUri(text(metaData.albumArtURI)),
-    curposMs: num(player?.curpos),
-    totalMs: num(player?.totlen),
+    curposMs: external ? null : num(player?.curpos),
+    totalMs: external ? null : num(player?.totlen),
     source: text(player?.vendor),
     mode: text(player?.mode),
-    input: inputFromMode(text(player?.mode)),
+    input,
     maxVolume: num(status?.max_volume),
     mute: num(player?.mute) === 1,
     sleepSeconds: num(sleepRaw),

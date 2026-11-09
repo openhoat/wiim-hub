@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { artUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
-import { agoLabel, statusLabel } from '@/lib/labels'
+import { agoLabel, inputLabel, isExternalInput, statusLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Device, GroupState } from '@/lib/types'
 import { useControls } from '@/lib/use-controls'
@@ -85,6 +85,11 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
   const live = controls.device
   const art = artUrl(live)
   const playing = live.online && live.status === 'play'
+  // An external input has no track to show: the card names the source, and the
+  // badge keeps the transport state without the "a track is playing" meter.
+  const external = isExternalInput(live.input)
+  const sourceName = external ? inputLabel(t, live.inputLabels, live.input) : ''
+  const headline = sourceName !== '' ? sourceName : live.title
   const [groupOpen, setGroupOpen] = useState(false)
   const group = live.group
   // An offline speaker keeps its last known group: showing it would claim a
@@ -101,8 +106,10 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
         </div>
         <div className="flex items-center gap-1.5">
           <DeviceSettingsDialog controls={controls} />
-          <Badge variant={device.online ? (playing ? 'accent' : 'default') : 'warning'}>
-            {playing ? (
+          <Badge
+            variant={device.online ? (playing && !external ? 'accent' : 'default') : 'warning'}
+          >
+            {playing && !external ? (
               <Equalizer />
             ) : (
               <span
@@ -139,10 +146,10 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
           <p
             className={cn(
               'truncate text-2xl leading-tight font-semibold tracking-tight sm:text-3xl',
-              device.title === '' && 'text-muted-foreground'
+              headline === '' && 'text-muted-foreground'
             )}
           >
-            {device.title || t('noPlayback')}
+            {headline !== '' ? headline : t('noPlayback')}
           </p>
           <p className="mt-1 truncate text-sm text-muted-foreground">{device.artist || ' '}</p>
           <p className="truncate text-xs text-muted-foreground/70">{device.album || ' '}</p>

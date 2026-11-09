@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseGroup } from './device.ts'
+import { isExternalInput, parseGroup } from './device.ts'
 
 type Registry = Parameters<typeof parseGroup>[2]
 
@@ -113,5 +113,18 @@ describe('parseGroup', () => {
     const parsed = parseGroup({ Slaves: '2', Slave_list: [null, 'Bedroom', 3] }, '0', registry())
     expect(parsed.role).toBe('master')
     expect(parsed.members).toEqual([])
+  })
+})
+
+describe('isExternalInput', () => {
+  it('treats the analogue and optical inputs as sources without a track', () => {
+    expect(isExternalInput('optical')).toBe(true)
+    expect(isExternalInput('line-in')).toBe(true)
+  })
+
+  it('leaves the network playlist and the unmeasured inputs alone', () => {
+    expect(isExternalInput('wifi')).toBe(false)
+    expect(isExternalInput('bluetooth')).toBe(false)
+    expect(isExternalInput('')).toBe(false)
   })
 })

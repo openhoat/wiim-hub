@@ -277,6 +277,15 @@ the feature. Rules marked **must** are correctness rules, not polish.
   user can rename Optical to "Phono" and the id must not move.
 - Show which inputs are unavailable (no USB key inserted, no HDMI on this model) as disabled
   entries rather than hiding them, so the user understands the model's capability.
+- **An external input has no track**, and the firmware does not say so. On the optical input
+  (`mode` 43) the device reports `status` honestly (`play` while the TV emits, `stop` otherwise)
+  but keeps answering the position of the last stream it played: measured `curpos` 25318,
+  `totlen` 137000 and `offset_pts` 15112, with `vendor` empty and `getMetaInfo` returning
+  `unknow` for every field (the hex `Title`/`Artist`/`Album` decode to "Unknown", which
+  `cleanTitle` already drops). Rendering that payload as is shows a seek bar moving under
+  "nothing is playing", so the hub nulls the position for `optical` and `line-in`, keeps the
+  transport state, and names the source instead of a track. `bluetooth` is not in that list
+  until it is measured the same way.
 
 ### 5.4 Presets
 
