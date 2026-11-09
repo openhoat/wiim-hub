@@ -10,6 +10,12 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Changed
+
+- TypeScript 7 (`7.0.2`): the `baseUrl` option is gone, so the `@/*` paths now resolve from the
+  configuration directory, and the stylesheet side-effect import is typed by the Vite client
+  declarations (`src/vite-env.d.ts`). `@types/node` follows, at 26.
+
 ## [0.5.0] - 2026-11-09
 
 ### Added
