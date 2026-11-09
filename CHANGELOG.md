@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.4] - 2026-11-09
+
 ### Added
 
 - The diagnostic card states the streaming tier each service reaches on this model. A new panel
@@ -372,7 +374,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.3...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.4...HEAD
+[0.9.4]: https://github.com/openhoat/wiim-hub/compare/v0.9.3...v0.9.4
 [0.9.3]: https://github.com/openhoat/wiim-hub/compare/v0.9.2...v0.9.3
 [0.9.2]: https://github.com/openhoat/wiim-hub/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/openhoat/wiim-hub/compare/v0.9.0...v0.9.1
