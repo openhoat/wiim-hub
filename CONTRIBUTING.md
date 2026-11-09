@@ -29,6 +29,21 @@ need a speaker.
 The tasks are wired with [wireit](https://github.com/google/wireit), so an unchanged task is not run
 twice. `npm run qa:fix` rewrites the formatting instead of reporting it.
 
+## Docs site
+
+The documentation site is VitePress, built from `docs/` and published to GitHub Pages by
+`.github/workflows/docs.yml` on every push to `main`:
+
+```sh
+npm run docs:dev      # local server with hot reload
+npm run docs:build    # static build in docs/.vitepress/dist
+```
+
+`docs/img/logo.svg` is the only mark. `public/favicon.svg` is a copy of it for the page (refresh it
+when the source changes), and the site copy is produced by `npm run docs:logo`, which the docs build
+runs first. Edit the source, never a copy. Diagrams inside the site use Mermaid; the README keeps
+plain ASCII, because npmjs.com renders neither.
+
 ## Conventions
 
 - **Commits** follow Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`...), checked

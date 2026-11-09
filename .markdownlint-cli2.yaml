@@ -35,3 +35,4 @@ ignores:
   - "coverage"
   - "test-results"
   - "playwright-report"
+  - "docs/.vitepress"

@@ -12,6 +12,18 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ### Added
 
+- A documentation site, built with VitePress from `docs/` and published to GitHub Pages by
+  `.github/workflows/docs.yml`: a guide (quick start, configuration, devices, UPnP events, demo
+  mode, development), a how-it-works page with Mermaid diagrams, and the API reference. The
+  existing feature research and the two decision records are part of it, so the material that used
+  to sit in the repository as files is now readable as a site.
+- One mark, `docs/img/logo.svg`, drawn for the project: a green tile with three bars. It serves as
+  the page favicon, the app icon on a phone home screen (`public/apple-touch-icon.png`), the README
+  header and the site logo, so the project is recognisable at 16 px as it is in a tab.
+- `docs:dev`, `docs:build` and `docs:logo` tasks: the site builds locally the way the pipeline
+  builds it, and the two copies of the mark are produced from the source rather than redrawn.
+- The page declares two `theme-color` values, one per colour scheme, so a phone paints its browser
+  chrome in the page's own background instead of a default white or black.
 - The event hub is now tested against a player that breaks: it drops the subscription in the
   middle of it, refuses to renew one, sends a notification without a `SID`, and sends one larger
   than the listener buffers. Coverage of `server/upnp.ts` goes from 92.8 % to 99.1 % of its lines,

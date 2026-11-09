@@ -1,0 +1,24 @@
+/* The site documents the hub, so it wears the hub's colour: one green accent,
+   warm neutrals, no second brand. The values are the ones the app declares in
+   `src/index.css`, converted from oklch to sRGB because VitePress themes its
+   chrome with plain custom properties. */
+:root {
+  --vp-c-brand-1: #1f7a43;
+  --vp-c-brand-2: #26894c;
+  --vp-c-brand-3: #2f9e6a;
+  --vp-c-brand-soft: rgba(38, 137, 76, 0.14);
+}
+
+.dark {
+  --vp-c-brand-1: #60db89;
+  --vp-c-brand-2: #47c473;
+  --vp-c-brand-3: #26894c;
+  --vp-c-brand-soft: rgba(96, 219, 137, 0.16);
+}
+
+/* The mark is drawn at 32 px because it is also the favicon: the hero shows it
+   larger, which the SVG scales without loss. */
+.VPHero .image-src {
+  width: 160px;
+  height: 160px;
+}

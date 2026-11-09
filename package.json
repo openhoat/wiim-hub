@@ -28,6 +28,9 @@
   "scripts": {
     "build": "wireit",
     "demo": "node server/demo.ts",
+    "docs:build": "wireit",
+    "docs:dev": "npm run docs:logo && vitepress dev docs",
+    "docs:logo": "wireit",
     "prepare": "husky",
     "qa": "wireit",
     "qa:biome": "wireit",
@@ -73,11 +76,14 @@
     "@vitest/coverage-v8": "5.1.0",
     "husky": "9.1.7",
     "markdownlint-cli2": "0.24.0",
+    "mermaid": "11.17.2",
     "prettier": "3.9.10",
     "sonarqube-scanner": "5.0.2",
     "tailwindcss": "^4.3.5",
     "typescript": "^7.0.2",
     "vite": "^8.3.6",
+    "vitepress": "1.6.4",
+    "vitepress-plugin-mermaid": "2.0.17",
     "vitest": "5.1.0",
     "wireit": "0.15.0"
   },
@@ -93,6 +99,30 @@
       ],
       "output": [
         "dist/**"
+      ]
+    },
+    "docs:build": {
+      "command": "vitepress build docs",
+      "dependencies": [
+        "docs:logo"
+      ],
+      "files": [
+        "docs/**/*.md",
+        "docs/.vitepress/config.mts",
+        "docs/.vitepress/theme/**",
+        "docs/img/logo.svg"
+      ],
+      "output": [
+        "docs/.vitepress/dist/**"
+      ]
+    },
+    "docs:logo": {
+      "command": "mkdir -p docs/public && cp docs/img/logo.svg docs/public/logo.svg",
+      "files": [
+        "docs/img/logo.svg"
+      ],
+      "output": [
+        "docs/public/logo.svg"
       ]
     },
     "qa": {
@@ -112,7 +142,8 @@
         "*.ts",
         "*.mjs",
         "biome.json",
-        "package.json"
+        "package.json",
+        "docs/.vitepress/**/*.{ts,mts}"
       ],
       "output": []
     },
@@ -179,7 +210,8 @@
         "server/**/*.ts",
         "e2e/**/*.ts",
         "*.ts",
-        "tsconfig.json"
+        "tsconfig.json",
+        "docs/.vitepress/**/*.{ts,mts}"
       ],
       "output": []
     },

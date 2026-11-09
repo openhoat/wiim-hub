@@ -10,3 +10,9 @@ coverage/
 .scratch/
 test-results/
 playwright-report/
+
+# The docs site: its cache and its build, plus the copy of the mark produced by
+# `npm run docs:logo` from docs/img/logo.svg.
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+docs/public/logo.svg
