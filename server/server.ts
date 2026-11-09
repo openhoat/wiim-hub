@@ -436,116 +436,132 @@ const serveFile = async (pathname: string, res: ServerResponse): Promise<boolean
   }
 }
 
-const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-  const url = new URL(req.url ?? '/', 'http://localhost')
-  if (url.pathname === '/health') {
+// A stable order across polls and machines: a card must not jump when a second
+// speaker answers or renames itself, and a reachable speaker comes before a
+// silent one. Findings are derived, never stored: they are a reading of the
+// state at the moment it is served, so a counter that recovered stops showing.
+const sendState = (res: ServerResponse): void => {
+  const devices = [...states.values()]
+    .sort(
+      (left, right) =>
+        Number(right.online) - Number(left.online) ||
+        left.name.localeCompare(right.name) ||
+        left.ip.localeCompare(right.ip)
+    )
+    .map(state => ({
+      ...state,
+      findings: findingsFor({ state, diagnostics: state.diagnostics }),
+      guides: guidesFor({ state, diagnostics: state.diagnostics }),
+    }))
+  sendJson(res, 200, { ts: Date.now(), pollMs, devices })
+}
+
+// The report is what a user pastes into a support thread: the findings, the
+// evidence behind each of them, and the raw answers they came from.
+const sendReport = async (url: URL, res: ServerResponse): Promise<void> => {
+  const entry = findEntry(url.searchParams.get('host') ?? '')
+  if (entry === null) {
+    sendJson(res, 404, { error: 'unknown device' })
+    return
+  }
+  const findings = findingsFor({ state: entry.state, diagnostics: entry.state.diagnostics })
+  const guides = guidesFor({ state: entry.state, diagnostics: entry.state.diagnostics })
+  // Probing eighteen commands costs about five seconds on a dead device and
+  // says nothing useful there: an offline player is already the first finding.
+  const inventory = entry.state.online ? await readInventory(entry.key) : null
+  const resolution = resolutionFor(entry.key)
+  const report = buildReport({
+    state: entry.state,
+    diagnostics: entry.state.diagnostics,
+    findings,
+    hub: { version: hubVersion, pollMs, slowPollMs, eventsEnabled },
+    inventory,
+    resolution,
+    guides,
+  })
+  sendJson(res, 200, {
+    ts: report.generatedAt,
+    host: entry.key,
+    findings,
+    guides,
+    inventory,
+    resolution,
+    markdown: report.markdown,
+  })
+}
+
+// Settings are read when the sheet opens, not on every poll: the answer is a
+// set of four writes nobody watches between visits.
+const sendSettings = async (url: URL, res: ServerResponse): Promise<void> => {
+  const host = url.searchParams.get('host') ?? ''
+  const entry = host === '' ? null : findEntry(host)
+  if (entry === null) {
+    sendJson(res, 404, { error: 'unknown device' })
+    return
+  }
+  if (!entry.state.online) {
+    sendJson(res, 409, { error: 'device offline' })
+    return
+  }
+  const settings = await readSettings(entry.state.ip)
+  if (settings === null) {
+    sendJson(res, 502, { error: 'device did not answer' })
+    return
+  }
+  sendJson(res, 200, settings)
+}
+
+// A route answers `true` when it handled the request. One it does not serve
+// (another method) hands the request back, and the API branch below answers.
+type Route = (url: URL, req: IncomingMessage, res: ServerResponse) => boolean | Promise<boolean>
+
+const routes: Record<string, Route> = {
+  '/health': (_url, _req, res) => {
     sendJson(res, 200, { ok: true, devices: states.size })
-    return
-  }
-  if (url.pathname === '/api/state') {
-    // A stable order across polls and machines: a card must not jump when a
-    // second speaker answers or renames itself, and a reachable speaker comes
-    // before a silent one.
-    const devices = [...states.values()]
-      .sort(
-        (left, right) =>
-          Number(right.online) - Number(left.online) ||
-          left.name.localeCompare(right.name) ||
-          left.ip.localeCompare(right.ip)
-      )
-      // Findings are derived, never stored: they are a reading of the state at
-      // the moment it is served, so a counter that recovered stops showing.
-      .map(state => ({
-        ...state,
-        findings: findingsFor({ state, diagnostics: state.diagnostics }),
-        guides: guidesFor({ state, diagnostics: state.diagnostics }),
-      }))
-    sendJson(res, 200, { ts: Date.now(), pollMs, devices })
-    return
-  }
-  if (url.pathname === '/api/report') {
-    // The report is what a user pastes into a support thread: the findings, the
-    // evidence behind each of them, and the raw answers they came from.
-    const entry = findEntry(url.searchParams.get('host') ?? '')
-    if (entry === null) {
-      sendJson(res, 404, { error: 'unknown device' })
-      return
-    }
-    const findings = findingsFor({ state: entry.state, diagnostics: entry.state.diagnostics })
-    const guides = guidesFor({ state: entry.state, diagnostics: entry.state.diagnostics })
-    // Probing eighteen commands costs about five seconds on a dead device and
-    // says nothing useful there: an offline player is already the first finding.
-    const inventory = entry.state.online ? await readInventory(entry.key) : null
-    const resolution = resolutionFor(entry.key)
-    const report = buildReport({
-      state: entry.state,
-      diagnostics: entry.state.diagnostics,
-      findings,
-      hub: { version: hubVersion, pollMs, slowPollMs, eventsEnabled },
-      inventory,
-      resolution,
-      guides,
-    })
-    sendJson(res, 200, {
-      ts: report.generatedAt,
-      host: entry.key,
-      findings,
-      guides,
-      inventory,
-      resolution,
-      markdown: report.markdown,
-    })
-    return
-  }
-  if (url.pathname === '/api/art') {
+    return true
+  },
+  '/api/state': (_url, _req, res) => {
+    sendState(res)
+    return true
+  },
+  '/api/report': (url, _req, res) => sendReport(url, res).then(() => true),
+  '/api/art': async (url, _req, res) => {
     await artFor(url, res)
-    return
-  }
-  // Settings are read when the sheet opens, not on every poll: the answer is a
-  // set of four writes nobody watches between visits.
-  if (url.pathname === '/api/settings') {
-    const host = url.searchParams.get('host') ?? ''
-    const entry = host === '' ? null : findEntry(host)
-    if (entry === null) {
-      sendJson(res, 404, { error: 'unknown device' })
-      return
-    }
-    if (!entry.state.online) {
-      sendJson(res, 409, { error: 'device offline' })
-      return
-    }
-    const settings = await readSettings(entry.state.ip)
-    if (settings === null) {
-      sendJson(res, 502, { error: 'device did not answer' })
-      return
-    }
-    sendJson(res, 200, settings)
-    return
-  }
-  if (url.pathname === '/api/command' && req.method === 'POST') {
+    return true
+  },
+  '/api/settings': (url, _req, res) => sendSettings(url, res).then(() => true),
+  '/api/command': async (url, req, res) => {
+    if (req.method !== 'POST') return false
     await commandRoute(url, req, res)
-    return
-  }
-  if (url.pathname === '/api/discover' && req.method === 'POST') {
+    return true
+  },
+  '/api/discover': async (_url, req, res) => {
+    if (req.method !== 'POST') return false
     const added = await refreshHosts()
     await pollAll()
     sendJson(res, 200, { ts: Date.now(), added, devices: states.size })
-    return
-  }
+    return true
+  },
+}
+
+// A client-side route has no extension: hand it the shell and let the app
+// decide. An unknown asset stays a 404 instead of silently returning HTML.
+const servePage = async (pathname: string, res: ServerResponse): Promise<void> => {
+  if (await serveFile(pathname, res)) return
+  if (extname(pathname) === '' && (await serveFile('/index.html', res))) return
+  res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+  res.end('not found')
+}
+
+const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  const url = new URL(req.url ?? '/', 'http://localhost')
+  const route = Object.hasOwn(routes, url.pathname) ? routes[url.pathname] : null
+  if (route !== null && (await route(url, req, res))) return
   if (url.pathname.startsWith('/api/')) {
     sendJson(res, 404, { error: 'not found' })
     return
   }
-  // A client-side route has no extension: hand it the shell and let the app
-  // decide. An unknown asset stays a 404 instead of silently returning HTML.
-  const served = await serveFile(url.pathname, res)
-  if (served) return
-  if (extname(url.pathname) === '') {
-    const shell = await serveFile('/index.html', res)
-    if (shell) return
-  }
-  res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
-  res.end('not found')
+  await servePage(url.pathname, res)
 }
 
 createServer((req, res) => {
@@ -598,4 +614,7 @@ const shutdown = (): void => {
 process.once('SIGTERM', shutdown)
 process.once('SIGINT', shutdown)
 
-void main()
+// Top-level await: the module is the process entry point, so nothing imports it
+// and waiting here is the same as `void main()` with one difference, a failure
+// is reported as the module failing instead of as an unhandled rejection.
+await main()

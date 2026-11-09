@@ -63,11 +63,11 @@ const header = (req: IncomingMessage, name: string): string => {
 
 const decodeEntities = (value: string): string =>
   value
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&')
+    .replaceAll('&lt;', '<')
+    .replaceAll('&gt;', '>')
+    .replaceAll('&quot;', '"')
+    .replaceAll('&apos;', "'")
+    .replaceAll('&amp;', '&')
 
 // `HH:MM:SS`, optionally with a fraction. The device sends `00:00:00` for an
 // input with no media, which is a duration of zero, not a missing one.
@@ -93,7 +93,7 @@ export const transportStatus = (value: string): string | null =>
   transportStates[value.trim().toUpperCase()] ?? null
 
 const attribute = (xml: string, name: string): string | null => {
-  const match = new RegExp(`<${name}\\b[^>]*?\\bval="([^"]*)"`).exec(xml)
+  const match = new RegExp(String.raw`<${name}\b[^>]*?\bval="([^"]*)"`).exec(xml)
   return match === null ? null : match[1]
 }
 
@@ -244,7 +244,7 @@ const readEventPaths = async (target: {
     const xml = await response.text()
     for (const service of services) {
       const block = new RegExp(
-        `<service>(?:(?!</service>)[\\s\\S])*${service}[\\s\\S]*?</service>`
+        String.raw`<service>(?:(?!</service>)[\s\S])*${service}[\s\S]*?</service>`
       ).exec(xml)?.[0]
       const path =
         block === undefined ? null : /<eventSubURL>([^<]+)<\/eventSubURL>/.exec(block)?.[1]
@@ -318,17 +318,26 @@ export const createEventHub = (options: EventHubOptions): EventHub => {
     entry.timer.unref()
   }
 
+  const refuse = (res: ServerResponse, reason: string): void => {
+    log(`wiim-hub: UPnP notification refused (${reason})`)
+    res.writeHead(404)
+    res.end()
+  }
+
   const handleNotify = (req: IncomingMessage, res: ServerResponse, body: string): void => {
     const url = new URL(req.url ?? '/', 'http://localhost')
     const token = url.pathname.startsWith('/upnp/') ? url.pathname.slice('/upnp/'.length) : ''
     const entry = tokens.get(token)
     const source = (req.socket.remoteAddress ?? '').replace(/^::ffff:/, '')
-    if (entry === undefined || source !== entry.ip) {
-      log(
-        `wiim-hub: UPnP notification refused (token ${token === '' ? 'absent' : 'unknown'}, source ${source})`
-      )
-      res.writeHead(404)
-      res.end()
+    // Two refusals, told apart on purpose: an unknown token means the path is not
+    // one we handed out, a source mismatch means the notification comes from
+    // another host than the device we subscribed to.
+    if (entry === undefined) {
+      refuse(res, token === '' ? 'no token' : 'unknown token')
+      return
+    }
+    if (entry.ip !== source) {
+      refuse(res, `source ${source} is not ${entry.ip}`)
       return
     }
     // A notification that arrives twice or out of order is the network, not a
@@ -473,7 +482,7 @@ export const createEventHub = (options: EventHubOptions): EventHub => {
   }
 
   const close = async (): Promise<void> => {
-    for (const entry of [...entries.values()]) {
+    for (const entry of entries.values()) {
       release(entry)
       tokens.delete(entry.token)
     }

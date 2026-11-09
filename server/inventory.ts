@@ -124,7 +124,7 @@ export const buildInventory = (
 
 // A cell breaks on a pipe, and a device name or a URL may carry one. The
 // backtick wrapper is already safe: `preview` strips any it finds.
-const cell = (value: string): string => value.replaceAll('|', '\\|')
+const cell = (value: string): string => value.replaceAll('|', String.raw`\|`)
 
 const resolutionLine = (resolution: Resolution): string => {
   const scheme = resolution.transport ?? 'no successful call yet'
@@ -152,9 +152,14 @@ export const inventorySection = (
     lines.push('Not probed: the player was offline when the report was generated.', '')
     return lines
   }
-  lines.push(`Probed ${new Date(inventory.at).toISOString()} (${ago(now, inventory.at)}).`, '')
-  lines.push(`${countsLine(inventory.counts)}.`, '')
-  lines.push('| Command | Area | Status | Answer |', '| --- | --- | --- | --- |')
+  lines.push(
+    `Probed ${new Date(inventory.at).toISOString()} (${ago(now, inventory.at)}).`,
+    '',
+    `${countsLine(inventory.counts)}.`,
+    '',
+    '| Command | Area | Status | Answer |',
+    '| --- | --- | --- | --- |'
+  )
   for (const row of inventory.rows) {
     lines.push(`| \`${row.command}\` | ${row.area} | ${row.status} | \`${cell(row.preview)}\` |`)
   }
@@ -183,14 +188,22 @@ export const resolutionFor = (host: string): Resolution => {
 const inventoryTtlMs = 60_000
 const inventories = new Map<string, Inventory>()
 
-export const readInventory = async (host: string, now = Date.now()): Promise<Inventory> => {
+// The probe itself is the network seam: injecting it keeps the cache testable
+// without a fake HTTP server, and the default is the real device client.
+export type ProbeCommand = (ip: string, command: string) => Promise<string | null>
+
+export const readInventory = async (
+  host: string,
+  now = Date.now(),
+  probe: ProbeCommand = fetchCommand
+): Promise<Inventory> => {
   const ip = resolveTarget(host)
   const cached = inventories.get(ip)
   if (cached !== undefined && now - cached.at < inventoryTtlMs) return cached
   const probes = await Promise.all(
-    probeList.map(async probe => ({
-      ...probe,
-      raw: await fetchCommand(ip, probe.send ?? probe.command),
+    probeList.map(async entry => ({
+      ...entry,
+      raw: await probe(ip, entry.send ?? entry.command),
     }))
   )
   const inventory = buildInventory(probes, now)

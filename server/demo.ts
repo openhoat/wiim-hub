@@ -45,7 +45,7 @@ const distDir = resolve(import.meta.dirname, '..', 'dist')
 const fnv = (value: string): number => {
   let hash = 0x811c9dc5
   for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index)
+    hash ^= value.codePointAt(index) ?? 0
     hash = Math.imul(hash, 0x01000193) >>> 0
   }
   return hash >>> 0
@@ -441,110 +441,173 @@ const step = (state: DeviceState, direction: number): void => {
 // The write surface: the action has already been validated against the state by
 // `commandFor`, so this only has to make the simulated speaker behave like the
 // measured one (a track change resets the position, a stop keeps the track).
-const mutate = (state: DeviceState, action: Action): void => {
-  const deviceSettings = settings.get(state.ip)
+// A write lands on one of three places, and a switch per place keeps the
+// reading short: what plays, what sounds, and what the vendor app stores.
+const playbackNames = [
+  'play',
+  'pause',
+  'toggle',
+  'stop',
+  'next',
+  'prev',
+  'seek',
+  'preset',
+  'url',
+] as const
+type PlaybackAction = Extract<Action, { action: (typeof playbackNames)[number] }>
+
+const soundNames = ['volume', 'mute', 'eq', 'eqPreset', 'eqBand'] as const
+type SoundAction = Extract<Action, { action: (typeof soundNames)[number] }>
+
+// The tuples carry the literal types the narrowing needs; the sets answer the
+// question at runtime.
+const playbackSet: ReadonlySet<string> = new Set(playbackNames)
+const soundSet: ReadonlySet<string> = new Set(soundNames)
+
+const isPlayback = (action: Action): action is PlaybackAction => playbackSet.has(action.action)
+
+const isSound = (action: Action): action is SoundAction => soundSet.has(action.action)
+const playPreset = (state: DeviceState, slot: number): void => {
+  const preset = state.presets.find(entry => entry.number === slot)
+  if (preset !== undefined) {
+    state.title = preset.name
+    state.artist = 'Radio'
+    state.album = ''
+    state.albumArt = preset.artwork
+    state.curposMs = 0
+    state.totalMs = 0
+  }
+  state.status = 'play'
+}
+
+// Measured on the Pro: the player switches to its push mode and reports the
+// address as the title.
+const pushUrl = (state: DeviceState, url: string): void => {
+  state.title = url
+  state.artist = ''
+  state.album = ''
+  state.albumArt = ''
+  state.source = 'wifi'
+  state.status = 'play'
+  state.curposMs = 0
+  state.totalMs = 0
+}
+
+const applyPlayback = (state: DeviceState, action: PlaybackAction): void => {
   switch (action.action) {
     case 'play':
       state.status = 'play'
-      break
+      return
     case 'pause':
       state.status = 'pause'
-      break
+      return
     case 'toggle':
       state.status = state.status === 'play' ? 'pause' : 'play'
-      break
+      return
     case 'stop':
       state.status = 'stop'
-      break
+      return
     case 'next':
       step(state, 1)
       state.status = 'play'
-      break
+      return
     case 'prev':
       step(state, -1)
       state.status = 'play'
-      break
+      return
     case 'seek':
       state.curposMs = action.seconds * 1000
-      break
+      return
+    case 'preset':
+      playPreset(state, action.slot)
+      return
+    case 'url':
+      pushUrl(state, action.url)
+  }
+}
+
+// The firmware drops the factory name as soon as one band moves: the curve is
+// custom from then on.
+const applyBand = (state: DeviceState, name: string, value: number): void => {
+  const band = state.eq.bands.find(entry => entry.name === name)
+  if (band !== undefined) band.value = Math.round(value * 10) / 10
+  state.eq.name = ''
+}
+
+const applySound = (state: DeviceState, action: SoundAction): void => {
+  switch (action.action) {
     case 'volume':
       state.volume = action.level
       state.mute = false
-      break
+      return
     case 'mute':
       state.mute = action.muted
-      break
-    case 'source':
-      state.input = action.input
-      state.source = action.input
-      break
-    case 'preset': {
-      const preset = state.presets.find(entry => entry.number === action.slot)
-      if (preset !== undefined) {
-        state.title = preset.name
-        state.artist = 'Radio'
-        state.album = ''
-        state.albumArt = preset.artwork
-        state.curposMs = 0
-        state.totalMs = 0
-      }
-      state.status = 'play'
-      break
-    }
-    case 'sleep':
-      state.sleepSeconds = action.seconds === 0 ? null : action.seconds
-      break
-    case 'output':
-      state.outputHardware = action.hardware
-      break
+      return
     case 'eq':
       state.eq.enabled = action.enabled
-      break
+      return
     case 'eqPreset':
       state.eq.name = action.name
       state.eq.enabled = true
-      break
-    case 'eqBand': {
-      // The firmware drops the factory name as soon as one band moves: the
-      // curve is custom from then on.
-      const band = state.eq.bands.find(entry => entry.name === action.band)
-      if (band !== undefined) band.value = Math.round(action.value * 10) / 10
-      state.eq.name = ''
-      break
-    }
+      return
+    case 'eqBand':
+      applyBand(state, action.band, action.value)
+  }
+}
+
+// A device setting is stored for the vendor app to read back: a write with no
+// entry to land on is dropped rather than invented.
+const store = <K extends keyof DeviceSettings>(
+  deviceSettings: DeviceSettings | undefined,
+  key: K,
+  value: DeviceSettings[K]
+): void => {
+  if (deviceSettings !== undefined) deviceSettings[key] = value
+}
+
+const applySettings = (
+  state: DeviceState,
+  deviceSettings: DeviceSettings | undefined,
+  action: Exclude<Action, PlaybackAction | SoundAction>
+): void => {
+  switch (action.action) {
+    case 'source':
+      state.input = action.input
+      state.source = action.input
+      return
+    case 'output':
+      state.outputHardware = action.hardware
+      return
+    case 'sleep':
+      state.sleepSeconds = action.seconds === 0 ? null : action.seconds
+      return
     case 'rename':
       state.name = action.name
-      if (deviceSettings !== undefined) deviceSettings.name = action.name
-      break
+      store(deviceSettings, 'name', action.name)
+      return
     case 'led':
-      if (deviceSettings !== undefined) deviceSettings.ledOn = action.on
-      break
+      store(deviceSettings, 'ledOn', action.on)
+      return
     case 'buttons':
-      if (deviceSettings !== undefined) deviceSettings.buttonsOn = action.on
-      break
+      store(deviceSettings, 'buttonsOn', action.on)
+      return
     case 'balance':
-      if (deviceSettings !== undefined) deviceSettings.balance = Math.round(action.value * 10) / 10
-      break
+      store(deviceSettings, 'balance', Math.round(action.value * 10) / 10)
+      return
     case 'maxVolume':
       state.maxVolume = action.level
-      if (deviceSettings !== undefined) deviceSettings.maxVolume = action.level
-      break
+      store(deviceSettings, 'maxVolume', action.level)
+      return
     case 'fade':
-      if (deviceSettings !== undefined) deviceSettings.fade = action.on
-      break
-    case 'url':
-      // Measured on the Pro: the player switches to its push mode and reports
-      // the address as the title.
-      state.title = action.url
-      state.artist = ''
-      state.album = ''
-      state.albumArt = ''
-      state.source = 'wifi'
-      state.status = 'play'
-      state.curposMs = 0
-      state.totalMs = 0
-      break
+      store(deviceSettings, 'fade', action.on)
   }
+}
+
+const mutate = (state: DeviceState, action: Action): void => {
+  const deviceSettings = settings.get(state.ip)
+  if (isPlayback(action)) applyPlayback(state, action)
+  else if (isSound(action)) applySound(state, action)
+  else applySettings(state, deviceSettings, action)
   state.updatedAt = Date.now()
 }
 
@@ -710,102 +773,127 @@ const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse)
   res.end(JSON.stringify({ ok: true, unsupported: false, command: command.command, body: 'OK' }))
 }
 
-const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-  const url = new URL(req.url ?? '/', 'http://localhost')
-  if (url.pathname === '/health') {
+const sendState = (res: ServerResponse): void => {
+  // Same ordering as the hub: reachable first, then by name.
+  const devices = [...states.values()]
+    .sort(
+      (left, right) =>
+        Number(right.online) - Number(left.online) ||
+        left.name.localeCompare(right.name) ||
+        left.ip.localeCompare(right.ip)
+    )
+    .map(state => ({
+      ...state,
+      findings: findingsFor({ state, diagnostics: state.diagnostics }),
+      guides: guidesFor({ state, diagnostics: state.diagnostics }),
+    }))
+  sendJson(res, 200, { ts: Date.now(), pollMs: tickMs, devices })
+}
+
+// The demo serves the same report so the copy and download buttons can be
+// exercised, and asserted, without a speaker.
+const sendReport = (url: URL, res: ServerResponse): void => {
+  const state = findState(url.searchParams.get('host') ?? '')
+  if (state === null) {
+    sendJson(res, 404, { error: 'unknown device' })
+    return
+  }
+  const findings = findingsFor({ state, diagnostics: state.diagnostics })
+  const guides = guidesFor({ state, diagnostics: state.diagnostics })
+  const inventory = state.online ? demoInventory() : null
+  const report = buildReport({
+    state,
+    diagnostics: state.diagnostics,
+    findings,
+    hub: { version: 'demo', pollMs: tickMs, slowPollMs: tickMs, eventsEnabled: false },
+    inventory,
+    resolution: demoResolution(state),
+    guides,
+  })
+  sendJson(res, 200, {
+    ts: report.generatedAt,
+    host: state.ip,
+    findings,
+    guides,
+    inventory,
+    markdown: report.markdown,
+  })
+}
+
+const sendSettings = (url: URL, res: ServerResponse): void => {
+  const state = findState(url.searchParams.get('host') ?? '')
+  if (state === null) {
+    sendJson(res, 404, { error: 'unknown device' })
+    return
+  }
+  if (!state.online) {
+    sendJson(res, 409, { error: 'device offline' })
+    return
+  }
+  const entry = settings.get(state.ip)
+  if (entry === undefined) {
+    sendJson(res, 502, { error: 'device did not answer' })
+    return
+  }
+  sendJson(res, 200, entry)
+}
+
+// A route answers `true` when it handled the request. One it does not serve
+// (another method) hands the request back, and the API branch below answers.
+type Route = (url: URL, req: IncomingMessage, res: ServerResponse) => boolean | Promise<boolean>
+
+const routes: Record<string, Route> = {
+  '/health': (_url, _req, res) => {
     sendJson(res, 200, { ok: true, devices: states.size, demo: true })
-    return
-  }
-  if (url.pathname === '/api/state') {
-    // Same ordering as the hub: reachable first, then by name.
-    const devices = [...states.values()]
-      .sort(
-        (left, right) =>
-          Number(right.online) - Number(left.online) ||
-          left.name.localeCompare(right.name) ||
-          left.ip.localeCompare(right.ip)
-      )
-      .map(state => ({
-        ...state,
-        findings: findingsFor({ state, diagnostics: state.diagnostics }),
-        guides: guidesFor({ state, diagnostics: state.diagnostics }),
-      }))
-    sendJson(res, 200, { ts: Date.now(), pollMs: tickMs, devices })
-    return
-  }
-  if (url.pathname === '/api/report') {
-    // The demo serves the same report so the copy and download buttons can be
-    // exercised, and asserted, without a speaker.
-    const state = findState(url.searchParams.get('host') ?? '')
-    if (state === null) {
-      sendJson(res, 404, { error: 'unknown device' })
-      return
-    }
-    const findings = findingsFor({ state, diagnostics: state.diagnostics })
-    const guides = guidesFor({ state, diagnostics: state.diagnostics })
-    const inventory = state.online ? demoInventory() : null
-    const report = buildReport({
-      state,
-      diagnostics: state.diagnostics,
-      findings,
-      hub: { version: 'demo', pollMs: tickMs, slowPollMs: tickMs, eventsEnabled: false },
-      inventory,
-      resolution: demoResolution(state),
-      guides,
-    })
-    sendJson(res, 200, {
-      ts: report.generatedAt,
-      host: state.ip,
-      findings,
-      guides,
-      inventory,
-      markdown: report.markdown,
-    })
-    return
-  }
-  if (url.pathname === '/api/art') {
+    return true
+  },
+  '/api/state': (_url, _req, res) => {
+    sendState(res)
+    return true
+  },
+  '/api/report': (url, _req, res) => {
+    sendReport(url, res)
+    return true
+  },
+  '/api/art': (url, _req, res) => {
     artFor(url, res)
-    return
-  }
-  if (url.pathname === '/api/settings') {
-    const state = findState(url.searchParams.get('host') ?? '')
-    if (state === null) {
-      sendJson(res, 404, { error: 'unknown device' })
-      return
-    }
-    if (!state.online) {
-      sendJson(res, 409, { error: 'device offline' })
-      return
-    }
-    const entry = settings.get(state.ip)
-    if (entry === undefined) {
-      sendJson(res, 502, { error: 'device did not answer' })
-      return
-    }
-    sendJson(res, 200, entry)
-    return
-  }
-  if (url.pathname === '/api/command' && req.method === 'POST') {
+    return true
+  },
+  '/api/settings': (url, _req, res) => {
+    sendSettings(url, res)
+    return true
+  },
+  '/api/command': async (url, req, res) => {
+    if (req.method !== 'POST') return false
     await commandRoute(url, req, res)
-    return
-  }
-  if (url.pathname === '/api/discover' && req.method === 'POST') {
+    return true
+  },
+  '/api/discover': (_url, req, res) => {
+    if (req.method !== 'POST') return false
     // Discovery finds nothing new: the demo fleet is fixed.
     sendJson(res, 200, { ts: Date.now(), added: 0, devices: states.size })
-    return
-  }
+    return true
+  },
+}
+
+// Anything that is not an API path is the built page: the file when it exists,
+// the shell for a client route, a plain 404 otherwise.
+const servePage = async (pathname: string, res: ServerResponse): Promise<void> => {
+  if (await serveFile(pathname, res)) return
+  if (extname(pathname) === '' && (await serveFile('/index.html', res))) return
+  res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
+  res.end('not found')
+}
+
+const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  const url = new URL(req.url ?? '/', 'http://localhost')
+  const route = Object.hasOwn(routes, url.pathname) ? routes[url.pathname] : null
+  if (route !== null && (await route(url, req, res))) return
   if (url.pathname.startsWith('/api/')) {
     sendJson(res, 404, { error: 'not found' })
     return
   }
-  const served = await serveFile(url.pathname, res)
-  if (served) return
-  if (extname(url.pathname) === '') {
-    const shell = await serveFile('/index.html', res)
-    if (shell) return
-  }
-  res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' })
-  res.end('not found')
+  await servePage(url.pathname, res)
 }
 
 createServer((req, res) => {

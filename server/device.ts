@@ -308,7 +308,7 @@ const readRssi = (status: Record<string, unknown> | null): number | null =>
 const cleanModel = (value: string): string =>
   value
     .replace(/_with_.*$/i, '')
-    .replace(/_/g, ' ')
+    .replaceAll('_', ' ')
     .trim()
 
 // Idle firmware reports the placeholder "Unknown" as the track title: it is a
@@ -393,7 +393,7 @@ type Binary = { body: Buffer; type: string }
 const maxArtBytes = 6 * 1024 * 1024
 
 const privateIpv4 = (address: string): boolean => {
-  const [a, b] = address.split('.').map(part => Number(part))
+  const [a, b] = address.split('.').map(Number)
   return (
     a === 0 ||
     a === 10 ||
@@ -631,23 +631,27 @@ const capabilityCache = new Map<string, Capability>()
 // inputs the user left enabled in the vendor app. A disabled input is kept
 // when the device reports it as present, because the hardware did not vanish;
 // only an input the user enabled but the capability list missed is added.
+const pushMode = (list: string[], entry: unknown): void => {
+  if (!isRecord(entry)) return
+  const mode = text(entry.mode)
+  if (mode !== '' && !list.includes(mode)) list.push(mode)
+}
+
+const pushEnabledMode = (list: string[], entry: unknown): void => {
+  if (!isRecord(entry)) return
+  const mode = text(entry.mode)
+  if (mode !== '' && num(entry.enable) === 1 && !list.includes(mode)) list.push(mode)
+}
+
 const readInputs = (capabilityRaw: string | null, enableRaw: string | null): string[] => {
   const list: string[] = []
   const capability = parseJson(capabilityRaw)
   if (Array.isArray(capability?.audioInput)) {
-    for (const entry of capability.audioInput) {
-      if (!isRecord(entry)) continue
-      const mode = text(entry.mode)
-      if (mode !== '' && !list.includes(mode)) list.push(mode)
-    }
+    for (const entry of capability.audioInput) pushMode(list, entry)
   }
   const enable = parseJson(enableRaw)
   if (Array.isArray(enable?.audioInput)) {
-    for (const entry of enable.audioInput) {
-      if (!isRecord(entry)) continue
-      const mode = text(entry.mode)
-      if (mode !== '' && num(entry.enable) === 1 && !list.includes(mode)) list.push(mode)
-    }
+    for (const entry of enable.audioInput) pushEnabledMode(list, entry)
   }
   return list
 }
@@ -965,6 +969,11 @@ const groupsFor = async (ip: string): Promise<Registry> => {
 // list makes it a master, a group id in its status makes it a follower, and a
 // saved group with nothing running stays a saved group rather than a fake
 // offline member.
+const groupRole = (drives: boolean, follows: boolean): GroupState['role'] => {
+  if (drives) return 'master'
+  return follows ? 'member' : 'none'
+}
+
 export const parseGroup = (
   raw: Record<string, unknown> | null,
   statusGroup: string,
@@ -973,8 +982,7 @@ export const parseGroup = (
   const reported = readMembers(raw?.Slave_list ?? raw?.slavelist ?? raw?.slave_list)
   const count = num(raw?.Slaves) ?? num(raw?.slaves) ?? reported.length
   const follows = statusGroup !== '' && statusGroup !== '0'
-  const role: GroupState['role'] =
-    count > 0 || reported.length > 0 ? 'master' : follows ? 'member' : 'none'
+  const role = groupRole(count > 0 || reported.length > 0, follows)
   const saved = registry.groups.find(entry => entry.id === registry.current) ?? null
   return {
     role,

@@ -64,8 +64,8 @@ const linkCheck = (state: DeviceState): GuideCheck | null => {
   if (rssi === null && snr === null) return null
   const weak = (rssi !== null && rssi <= weakRssi) || (snr !== null && snr < weakSnr)
   const values = {
-    rssi: rssi === null ? 'unknown' : rssi,
-    snr: snr === null ? 'unknown' : snr,
+    rssi: rssi ?? 'unknown',
+    snr: snr ?? 'unknown',
   }
   return check(
     weak ? 'weakLink' : 'link',
@@ -182,6 +182,18 @@ const crashCount = (diagnostics: Diagnostics): number => {
   return Object.values(counters).reduce<number>((total, value) => total + (value ?? 0), 0)
 }
 
+// The counters come from one command, so their absence is one anomaly: it stops
+// the flow instead of letting the next checks read a state nobody measured.
+const wifiCheck = (health: Diagnostics['health']): GuideCheck => {
+  if (health === null) return check('counters', 'unknown', 'getNetworkHealth missing')
+  const count = health.disconnected ?? 0
+  if (count === 0) return check('wifiStable', 'pass', 'getNetworkHealth.disconnectedCount 0')
+  return check('wifiDrops', 'warn', `getNetworkHealth.disconnectedCount ${health.disconnected}`, {
+    count,
+    minutes: health.lastMinutes ?? 0,
+  })
+}
+
 const drops = (state: DeviceState, diagnostics: Diagnostics | null): GuideCheck[] => {
   const health = diagnostics?.health ?? null
   const counters = diagnostics === null ? 0 : crashCount(diagnostics)
@@ -189,14 +201,7 @@ const drops = (state: DeviceState, diagnostics: Diagnostics | null): GuideCheck[
     offline(state),
     // The link comes from the poll, so it is readable before the counters are.
     linkCheck(state),
-    health === null
-      ? check('counters', 'unknown', 'getNetworkHealth missing')
-      : (health.disconnected ?? 0) > 0
-        ? check('wifiDrops', 'warn', `getNetworkHealth.disconnectedCount ${health.disconnected}`, {
-            count: health.disconnected ?? 0,
-            minutes: health.lastMinutes ?? 0,
-          })
-        : check('wifiStable', 'pass', 'getNetworkHealth.disconnectedCount 0'),
+    wifiCheck(health),
     health !== null && (health.pingFailures ?? 0) > 0
       ? check(
           'pingFailures',
@@ -235,28 +240,36 @@ const drops = (state: DeviceState, diagnostics: Diagnostics | null): GuideCheck[
 
 const wrongOutput = (state: DeviceState): GuideCheck[] => [offline(state), outputCheck(state)]
 
+// The role the device claims decides the sentence: a saved group with nothing
+// running is what a user reads as "my group disappeared", and a member with an
+// empty list is the classic group failure.
+const groupCheck = (state: DeviceState): GuideCheck => {
+  const { role, name, members, saved } = state.group
+  if (saved && role === 'none') {
+    return check('groupSavedOnly', 'warn', `multiroom:getnamegrouplist ${name || 'unnamed'}`)
+  }
+  if (role === 'none') return check('groupNone', 'pass', 'getStatusEx.group 0')
+  if (role === 'member' && members.length === 0) {
+    return check('groupNoMember', 'warn', `multiroom:getSlaveList empty for ${name || 'a member'}`)
+  }
+  return check(
+    role === 'master' ? 'groupMaster' : 'groupMember',
+    'pass',
+    `getStatusEx.group ${role}, ${members.length} member(s)`,
+    { count: members.length }
+  )
+}
+
 // A slave far from its master is the classic group failure, and a saved group
 // with nothing running is what a user reads as "my group disappeared".
 const groupChecks = (state: DeviceState): GuideCheck[] => {
-  const { role, name, members, saved } = state.group
   const wmrm = state.wmrmVersion
   return optional([
     offline(state),
     wmrm === ''
       ? check('groupCommandsMissing', 'unknown', 'getStatusEx.wmrm_version missing')
       : check('groupCommands', 'pass', `getStatusEx.wmrm_version ${wmrm}`, { version: wmrm }),
-    saved && role === 'none'
-      ? check('groupSavedOnly', 'warn', `multiroom:getnamegrouplist ${name || 'unnamed'}`)
-      : role === 'none'
-        ? check('groupNone', 'pass', 'getStatusEx.group 0')
-        : role === 'member' && members.length === 0
-          ? check('groupNoMember', 'warn', `multiroom:getSlaveList empty for ${name || 'a member'}`)
-          : check(
-              role === 'master' ? 'groupMaster' : 'groupMember',
-              'pass',
-              `getStatusEx.group ${role}, ${members.length} member(s)`,
-              { count: members.length }
-            ),
+    groupCheck(state),
     linkCheck(state),
   ])
 }
@@ -268,7 +281,7 @@ const run = (id: GuideId, candidates: GuideCheck[]): Guide => {
   const index = candidates.findIndex(entry => entry.status !== 'pass')
   if (index === -1) return { id, checks: candidates, verdict: null, settled: true }
   const checks = candidates.slice(0, index + 1)
-  const verdict = checks[checks.length - 1]
+  const verdict = candidates[index]
   return { id, checks, verdict, settled: verdict.status !== 'unknown' }
 }
 
@@ -286,46 +299,45 @@ export const guidesFor = (input: {
   return guideOrder.map(id => run(id, builders[id]()))
 }
 
-const sentences: Record<string, (values: Record<string, string | number>) => string> = {
-  online: () => 'The player answers.',
+// Only a check that is not a pass becomes a verdict, so only those ids need
+// English wording here: the page carries every sentence, passes included, in its
+// own languages. Writing wording for a check the report can never quote would
+// be dead text that no test can honestly reach. A flow with nothing to report
+// says so in `guideSection`, without quoting a row.
+const verdictSentences: Record<string, (values: Record<string, string | number>) => string> = {
   offline: values => `The player does not answer: ${values.failures} consecutive poll failure(s).`,
-  link: values => `The radio link reads ${values.rssi} dBm, ${values.snr} dB SNR.`,
   weakLink: values => `The radio link is weak: ${values.rssi} dBm, ${values.snr} dB SNR.`,
   muted: () => 'The player is muted.',
-  unmuted: () => 'The player is not muted.',
-  volume: values => `The volume is ${values.volume}.`,
   volumeUnknown: () => 'The player did not report its volume.',
   lowVolume: values => `The volume is ${values.volume}: barely audible.`,
   noVolume: values => `The volume is ${values.volume}: nothing audible.`,
-  sleepTimer: () => 'No sleep timer is armed.',
   sleepTimerArmed: values => `A sleep timer will stop the player in ${values.minutes} min.`,
-  transport: values => `The transport reads ${values.status}.`,
   transportUnknown: () => 'The player did not report its transport state.',
   stopped: () => 'The transport is stopped: nothing is playing.',
   paused: () => 'The transport is paused.',
-  source: values => `The ${values.input} input is playing.`,
   externalSilent: values =>
     `The ${values.input} input is selected and it is not playing: no signal reaches the player.`,
-  output: values => `Output ${values.active}; available: ${values.available}.`,
   outputUnlisted: values =>
     `The active output (${values.hardware}) is not in the list the player reports.`,
   outputsUnknown: () => 'The player did not report its outputs.',
   outputUnknown: () => 'The player did not report its active output.',
   groupNoMember: () => 'This player is a group member and the group lists no member.',
   groupSavedOnly: () => 'A saved group exists but nothing runs on it.',
-  groupNone: () => 'This player is in no group.',
-  groupMaster: values => `This speaker drives a group of ${values.count} member(s).`,
-  groupMember: values => `This speaker follows a group of ${values.count} member(s).`,
-  groupCommands: values => `The group commands are supported (wmrm ${values.version}).`,
   groupCommandsMissing: () => 'The player does not report the group protocol version.',
   counters: () => 'The network counters are not read yet.',
-  wifiStable: () => 'The Wi-Fi link is stable.',
   wifiDrops: values =>
     `The Wi-Fi dropped ${values.count} time(s), the last one ${values.minutes} min ago.`,
   pingFailures: values => `${values.count} ping check(s) failed.`,
   ethDrops: values => `The wired link dropped ${values.count} time(s).`,
   abnormalReboots: values => `The player rebooted abnormally ${values.count} time(s).`,
   crashCounters: values => `${values.count} crash counter(s) are non zero: the firmware restarted.`,
+}
+
+// A check added without its English wording must not throw in the report: the
+// evidence is already a sentence a reader can act on.
+const sentenceFor = (entry: GuideCheck): string => {
+  const build = verdictSentences[entry.id]
+  return build === undefined ? `${entry.id}: ${entry.evidence}` : build(entry.values)
 }
 
 // The report is English by design: one artefact, not one per language.
@@ -338,7 +350,7 @@ export const guideSection = (guides: Guide[]): string[] => {
       lines.push(`- **${title}**: all ${guide.checks.length} check(s) passed.`)
       continue
     }
-    const sentence = sentences[verdict.id](verdict.values)
+    const sentence = sentenceFor(verdict)
     const state = verdict.status === 'unknown' ? 'not read' : verdict.status
     lines.push(`- **${title}**: ${state} at \`${verdict.id}\`: ${sentence} (${verdict.evidence})`)
   }

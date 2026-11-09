@@ -46,7 +46,7 @@ export const discoverSsdp = (timeoutMs = 3000): Promise<string[]> =>
     }
     const finish = (): void => {
       close()
-      void Promise.allSettled([...pending]).then(() => resolve([...found]))
+      void Promise.allSettled(pending).then(() => resolve([...found]))
     }
     socket.on('error', () => resolve([]))
     socket.on('message', (buffer, remote) => {

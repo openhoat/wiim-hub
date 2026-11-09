@@ -35,35 +35,44 @@ const buildQuery = (name: string): Buffer => {
   return Buffer.concat([header, question])
 }
 
+const isPointer = (length: number): boolean => (length & 0xc0) === 0xc0
+
+const pointerTarget = (buffer: Buffer, cursor: number, length: number): number =>
+  ((length & 0x3f) << 8) | buffer[cursor + 1]
+
+// `next` is where the record continues, so it is frozen as soon as a pointer
+// was followed: the jump lands elsewhere in the message, not in this record.
+const advance = (jumped: boolean, next: number, candidate: number): number =>
+  jumped ? next : candidate
+
 // DNS names are length-prefixed and may be compressed with a pointer to an
 // earlier occurrence, so a reader must be able to follow a pointer without
 // losing track of where the current record continues.
 const readName = (buffer: Buffer, offset: number): { name: string; next: number } => {
-  let name = ''
+  const labels: string[] = []
   let next = offset
   let jumped = false
   let cursor = offset
-  let guard = 0
-  while (cursor < buffer.length && guard < 64) {
-    guard += 1
+  // A pointer chain that loops is malformed, and 64 labels is far more than a
+  // name: the guard bounds the read instead of trusting the message.
+  for (let guard = 0; cursor < buffer.length && guard < 64; guard += 1) {
     const length = buffer[cursor]
-    if ((length & 0xc0) === 0xc0) {
+    if (isPointer(length)) {
       if (cursor + 1 >= buffer.length) break
-      if (!jumped) next = cursor + 2
-      cursor = ((length & 0x3f) << 8) | buffer[cursor + 1]
+      next = advance(jumped, next, cursor + 2)
+      cursor = pointerTarget(buffer, cursor, length)
       jumped = true
       continue
     }
     if (length === 0) {
-      if (!jumped) next = cursor + 1
+      next = advance(jumped, next, cursor + 1)
       break
     }
-    const label = buffer.toString('utf8', cursor + 1, cursor + 1 + length)
-    name = name ? `${name}.${label}` : label
-    if (!jumped) next = cursor + 1 + length
+    labels.push(buffer.toString('utf8', cursor + 1, cursor + 1 + length))
+    next = advance(jumped, next, cursor + 1 + length)
     cursor += 1 + length
   }
-  return { name: name.toLowerCase(), next }
+  return { name: labels.join('.').toLowerCase(), next }
 }
 
 const parseAnswer = (buffer: Buffer, target: string): string | null => {
