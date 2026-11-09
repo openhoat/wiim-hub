@@ -10,6 +10,15 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- The device sheet no longer reloads itself while it is open. Its reader depended on the device
+  object, which the poll rebuilds every three seconds, so the effect replayed and the field was
+  rewritten with the value held by the speaker: a name took longer to type than one poll, so the
+  save button could never be reached. The sheet reads once when it opens, and once after each write.
+  A card is also keyed by address instead of name, so a speaker renaming itself does not remount the
+  card and close the sheet under the hand.
+
 ## [0.9.5] - 2026-11-09
 
 ### Added

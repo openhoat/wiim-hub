@@ -150,7 +150,10 @@ const Hub = () => {
                 )}
               >
                 {devices.map(device => (
-                  <div key={device.name + device.ip} className="space-y-4">
+                  // Keyed by address, not by name: a speaker that renames
+                  // itself, or one renamed from its sheet, would otherwise
+                  // remount the card and close the sheet under the hand.
+                  <div key={device.ip} className="space-y-4">
                     <NowPlayingCard device={device} now={clock} />
                     <SoundCard device={device} />
                   </div>
@@ -159,7 +162,7 @@ const Hub = () => {
             ) : (
               <div className="space-y-4">
                 {devices.map(device => (
-                  <DiagnosticCard key={device.name + device.ip} device={device} now={clock} />
+                  <DiagnosticCard key={device.ip} device={device} now={clock} />
                 ))}
               </div>
             ))}

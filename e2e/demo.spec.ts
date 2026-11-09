@@ -92,6 +92,42 @@ test('opens the sound card on the curve, the presets and the stream quality', as
   await expect(page.getByText('96 kHz · 24 bit · 2304 kb/s')).toBeVisible()
 })
 
+test('keeps the name being typed across a poll, then renames the speaker', async ({ page }) => {
+  await openHub(page)
+
+  // The sheet reads the speaker when it opens, and only then. A read driven by
+  // the poll would rewrite the field every three seconds, which is less than the
+  // time it takes to type a name, so the save button could never be reached.
+  const card = page.getByRole('button', { name: 'Device settings' }).first()
+  await card.click()
+  const sheet = page.getByRole('dialog')
+  const name = sheet.getByRole('textbox', { name: 'Name' })
+  await expect(name).toHaveValue('Living Room')
+
+  await name.fill('Kitchen')
+  await page.waitForTimeout(4000)
+  await expect(name).toHaveValue('Kitchen')
+
+  // Written on the speaker, read back from it, and the card follows the poll.
+  // The sheet is modal, so the card stays out of the accessibility tree until
+  // it closes: the heading is only readable from there.
+  await sheet.getByRole('button', { name: 'Rename' }).click()
+  await expect(name).toHaveValue('Kitchen')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('heading', { name: 'Kitchen' })).toBeVisible()
+
+  // The demo holds one fleet in memory: put the name back, or every test after
+  // this one would meet a speaker it was not written against.
+  await page.getByRole('button', { name: 'Device settings' }).first().click()
+  const reopened = page.getByRole('textbox', { name: 'Name' })
+  await expect(reopened).toHaveValue('Kitchen')
+  await reopened.fill('Living Room')
+  await page.getByRole('dialog').getByRole('button', { name: 'Rename' }).click()
+  await expect(reopened).toHaveValue('Living Room')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
+})
+
 test('exports the sample history from the diagnostic view', async ({ page }) => {
   await openHub(page)
 

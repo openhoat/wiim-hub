@@ -1,5 +1,5 @@
 import { Settings2 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -116,11 +116,21 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // The device object is rebuilt by every poll, so the reader must not depend on
+  // it: a `useCallback(…, [device])` changes identity every three seconds, the
+  // effect below replays, and the sheet rewrites every row under the hand using
+  // it. Typing a name took more than one poll, so the field could never reach
+  // the save button. The ref carries the current device, read at call time.
+  const deviceRef = useRef(device)
+  useEffect(() => {
+    deviceRef.current = device
+  }, [device])
+
   const load = useCallback(async (): Promise<void> => {
     setLoading(true)
     setError(null)
     try {
-      const value = await fetchSettings(device)
+      const value = await fetchSettings(deviceRef.current)
       setSettings(value)
       setName(value.name)
     } catch (cause) {
@@ -128,8 +138,11 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
     } finally {
       setLoading(false)
     }
-  }, [device])
+  }, [])
 
+  // One read when the sheet opens, and one after each write: the speaker holds
+  // the values, so a read while the sheet is open would only undo what is being
+  // typed there.
   useEffect(() => {
     if (open) void load()
   }, [open, load])
