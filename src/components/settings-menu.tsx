@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useSettings, type Lang, type Theme } from '@/lib/settings'
+import { type Lang, type Theme, useSettings } from '@/lib/settings'
 
 const languages: { value: Lang; labelKey: string }[] = [
   { value: 'auto', labelKey: 'auto' },
@@ -34,8 +34,8 @@ export const SettingsMenu = () => {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{t('language')}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={lang} onValueChange={(value) => setLang(value as Lang)}>
-          {languages.map((item) => (
+        <DropdownMenuRadioGroup value={lang} onValueChange={value => setLang(value as Lang)}>
+          {languages.map(item => (
             <DropdownMenuRadioItem key={item.value} value={item.value}>
               {t(item.labelKey)}
             </DropdownMenuRadioItem>
@@ -43,8 +43,8 @@ export const SettingsMenu = () => {
         </DropdownMenuRadioGroup>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>{t('theme')}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={theme} onValueChange={(value) => setTheme(value as Theme)}>
-          {themes.map((item) => {
+        <DropdownMenuRadioGroup value={theme} onValueChange={value => setTheme(value as Theme)}>
+          {themes.map(item => {
             const Icon = item.icon
             return (
               <DropdownMenuRadioItem key={item.value} value={item.value}>

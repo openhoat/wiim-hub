@@ -22,7 +22,10 @@ export const useHub = (): Hub => {
   const [loading, setLoading] = useState(true)
   const [discovering, setDiscovering] = useState(false)
   const timer = useRef<number | undefined>(undefined)
-  const next = useRef<() => void>(() => {})
+  // Filled by the polling effect, so the timer never calls a stale closure.
+  const next = useRef<() => void>(() => {
+    /* replaced once the poller mounts */
+  })
   const busy = useRef(false)
 
   const schedule = useCallback((delay: number) => {

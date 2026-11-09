@@ -10,7 +10,9 @@ export const formatDuration = (ms: number): string => {
 }
 
 export const formatClock = (at: number, locale: string): string =>
-  new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(at)
+  new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(
+    at
+  )
 
 // A device reports its position at poll time: extrapolating while it plays
 // keeps the bar moving instead of stepping every few seconds.
@@ -21,14 +23,23 @@ export const positionOf = (
     status: string
     updatedAt: number | null
   },
-  now: number = Date.now(),
+  now: number = Date.now()
 ): number | null => {
   if (device.curposMs === null || device.totalMs === null) return null
-  const elapsed = device.status === 'play' && device.updatedAt !== null ? Math.max(0, now - device.updatedAt) : 0
+  const elapsed =
+    device.status === 'play' && device.updatedAt !== null ? Math.max(0, now - device.updatedAt) : 0
   return Math.min(device.totalMs, device.curposMs + elapsed)
 }
 
-export const csvOf = (samples: { t: number; rssi: number | null; volume: number | null; status: string; online: boolean }[]): string => {
+export const csvOf = (
+  samples: {
+    t: number
+    rssi: number | null
+    volume: number | null
+    status: string
+    online: boolean
+  }[]
+): string => {
   const rows = [['time', 'rssi_dbm', 'volume', 'state', 'online']]
   for (const sample of samples) {
     rows.push([
@@ -39,7 +50,7 @@ export const csvOf = (samples: { t: number; rssi: number | null; volume: number 
       sample.online ? '1' : '0',
     ])
   }
-  return rows.map((row) => row.join(',')).join('\n')
+  return rows.map(row => row.join(',')).join('\n')
 }
 
 export const download = (filename: string, content: string, type: string): void => {

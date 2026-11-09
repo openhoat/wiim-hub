@@ -1,6 +1,6 @@
 import { useId } from 'react'
-import type { Sample } from '@/lib/types'
 import { cn } from '@/lib/cn'
+import type { Sample } from '@/lib/types'
 
 const width = 240
 const height = 64
@@ -39,9 +39,14 @@ const segmentsOf = (samples: Sample[]): Point[][] => {
 }
 
 const pathOf = (points: Point[]): string =>
-  points.map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`).join(' ')
+  points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x.toFixed(1)} ${point.y.toFixed(1)}`)
+    .join(' ')
 
-export const Sparkline = ({ samples, className }: Readonly<{ samples: Sample[]; className?: string }>) => {
+export const Sparkline = ({
+  samples,
+  className,
+}: Readonly<{ samples: Sample[]; className?: string }>) => {
   const gradientId = useId()
   const segments = segmentsOf(samples)
   const last = segments.at(-1)?.at(-1)
@@ -69,9 +74,12 @@ export const Sparkline = ({ samples, className }: Readonly<{ samples: Sample[]; 
         strokeDasharray="3 3"
         vectorEffect="non-scaling-stroke"
       />
-      {segments.map((segment, index) => (
-        <g key={index}>
-          <path d={`${pathOf(segment)} L${segment.at(-1)?.x ?? 0} ${height} L${segment[0].x} ${height} Z`} fill={`url(#${gradientId})`} />
+      {segments.map(segment => (
+        <g key={`${segment[0].x}:${segment.at(-1)?.x ?? 0}`}>
+          <path
+            d={`${pathOf(segment)} L${segment.at(-1)?.x ?? 0} ${height} L${segment[0].x} ${height} Z`}
+            fill={`url(#${gradientId})`}
+          />
           <path
             d={pathOf(segment)}
             fill="none"
@@ -83,7 +91,15 @@ export const Sparkline = ({ samples, className }: Readonly<{ samples: Sample[]; 
           />
         </g>
       ))}
-      {last !== undefined && <circle cx={last.x} cy={last.y} r="2.5" fill="currentColor" vectorEffect="non-scaling-stroke" />}
+      {last !== undefined && (
+        <circle
+          cx={last.x}
+          cy={last.y}
+          r="2.5"
+          fill="currentColor"
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
     </svg>
   )
 }

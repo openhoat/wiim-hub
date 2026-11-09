@@ -90,7 +90,7 @@ const parseAnswer = (buffer: Buffer, target: string): string | null => {
 }
 
 const queryOnce = (target: string, port: number, timeoutMs: number): Promise<string | null> =>
-  new Promise((resolve) => {
+  new Promise(resolve => {
     const socket = createSocket({ type: 'udp4', reuseAddr: true })
     const timers: NodeJS.Timeout[] = []
     let settled = false
@@ -107,7 +107,7 @@ const queryOnce = (target: string, port: number, timeoutMs: number): Promise<str
     }
     timers.push(setTimeout(() => finish(null), timeoutMs))
     socket.on('error', () => finish(null))
-    socket.on('message', (message) => {
+    socket.on('message', message => {
       const ip = parseAnswer(message, target)
       if (ip !== null) finish(ip)
     })
@@ -119,7 +119,7 @@ const queryOnce = (target: string, port: number, timeoutMs: number): Promise<str
       }
       const query = buildQuery(target)
       const send = (): void => {
-        socket.send(query, mdnsPort, mdnsAddress, (error) => {
+        socket.send(query, mdnsPort, mdnsAddress, error => {
           if (error) finish(null)
         })
       }
@@ -133,7 +133,10 @@ const queryOnce = (target: string, port: number, timeoutMs: number): Promise<str
 // Ask on the mDNS port first (multicast answers land there); when another
 // resolver already holds it, fall back to an ephemeral port, which only sees
 // unicast answers.
-export const resolveMdns = async (name: string, timeoutMs = defaultTimeoutMs): Promise<string | null> => {
+export const resolveMdns = async (
+  name: string,
+  timeoutMs = defaultTimeoutMs
+): Promise<string | null> => {
   const target = name.replace(/\.$/, '').toLowerCase()
   const shared = await queryOnce(target, mdnsPort, timeoutMs)
   if (shared !== null) return shared

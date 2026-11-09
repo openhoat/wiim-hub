@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test'
+import { expect, type Page, test } from '@playwright/test'
 
 // Every test starts from the demo's English dark default, whatever the
 // browser would have picked: the assertions below read the page, not the
@@ -33,7 +33,9 @@ test('renders one reachable speaker and one offline speaker', async ({ page }) =
   await expect(art.first()).toHaveAttribute('src', /uri=demo%3A%2F%2Fcover%2F/)
 })
 
-test('shows the group a speaker drives, and hides the one an offline speaker remembers', async ({ page }) => {
+test('shows the group a speaker drives, and hides the one an offline speaker remembers', async ({
+  page,
+}) => {
   await openHub(page)
 
   const chips = page.getByRole('button', { name: /speaker\(s\)/ })
@@ -58,8 +60,13 @@ test('opens the sound card on the curve, the presets and the stream quality', as
 
   // Ten bands, the fifth selected by default, and the curve is custom because
   // a demo band was moved by hand.
-  await expect(page.getByRole('button', { name: /^-?\d+ (Hz|kHz) [+-]?\d+\.\d dB$/ })).toHaveCount(10)
-  await expect(page.getByRole('button', { name: '500 Hz -1.5 dB' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: /^-?\d+ (Hz|kHz) [+-]?\d+\.\d dB$/ })).toHaveCount(
+    10
+  )
+  await expect(page.getByRole('button', { name: '500 Hz -1.5 dB' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  )
   await expect(page.getByRole('button', { name: 'Custom' })).toBeVisible()
   await expect(page.getByText('This player reports room correction.')).toBeVisible()
 
@@ -81,7 +88,9 @@ test('exports the sample history from the diagnostic view', async ({ page }) => 
   await page.getByRole('button', { name: 'Export' }).first().click()
   await page.getByRole('menuitem', { name: 'As CSV' }).click()
   const file = await download
-  expect(file.suggestedFilename()).toMatch(/^wiim-hub-Living Room-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.csv$/)
+  expect(file.suggestedFilename()).toMatch(
+    /^wiim-hub-Living Room-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.csv$/
+  )
 })
 
 test('keeps a volume written from the page across a poll', async ({ page }) => {
@@ -100,7 +109,7 @@ test('keeps a volume written from the page across a poll', async ({ page }) => {
   const response = await page.request.get('/api/state')
   expect(response.ok()).toBe(true)
   const state: { devices: { name: string; volume: number | null }[] } = await response.json()
-  expect(state.devices.find((device) => device.name === 'Living Room')?.volume).toBe(45)
+  expect(state.devices.find(device => device.name === 'Living Room')?.volume).toBe(45)
 })
 
 test('remembers the view, the language and the theme', async ({ page }) => {
@@ -110,7 +119,10 @@ test('remembers the view, the language and the theme', async ({ page }) => {
   await expect(page.getByText('Fields').first()).toBeVisible()
 
   await page.reload()
-  await expect(page.getByRole('button', { name: 'Diagnostic' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Diagnostic' })).toHaveAttribute(
+    'aria-pressed',
+    'true'
+  )
   await expect(page.getByText('Fields').first()).toBeVisible()
 
   await page.getByRole('button', { name: 'Settings' }).click()

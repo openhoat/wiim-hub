@@ -26,14 +26,25 @@
   ],
   "license": "MIT",
   "scripts": {
-    "build": "vite build",
+    "build": "wireit",
     "demo": "node server/demo.ts",
+    "prepare": "husky",
+    "qa": "wireit",
+    "qa:biome": "wireit",
+    "qa:biome:fix": "biome check --write --unsafe .",
+    "qa:fix": "npm run qa:biome:fix && npm run qa:markdown:fix && npm run qa:prettier:fix",
+    "qa:markdown": "wireit",
+    "qa:markdown:fix": "markdownlint-cli2 --fix",
+    "qa:prettier": "wireit",
+    "qa:prettier:fix": "prettier --write \"**/*.md\"",
     "start": "node --env-file-if-exists=.env server/server.ts",
     "start:dev": "vite",
     "start:server": "node --env-file-if-exists=.env --watch server/server.ts",
+    "test": "wireit",
+    "test:coverage": "wireit",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit",
-    "validate": "npm run typecheck && npm run build"
+    "typecheck": "wireit",
+    "validate": "wireit"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
@@ -49,14 +60,104 @@
     "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.6",
+    "@commitlint/cli": "21.2.4",
+    "@commitlint/config-conventional": "21.2.4",
     "@playwright/test": "1.65.0",
     "@tailwindcss/vite": "^4.3.5",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.2.1",
+    "@vitest/coverage-v8": "5.1.0",
+    "husky": "9.1.7",
+    "markdownlint-cli2": "0.24.0",
+    "prettier": "3.9.10",
+    "sonarqube-scanner": "5.0.2",
     "tailwindcss": "^4.3.5",
     "typescript": "^5.9.3",
-    "vite": "^8.3.6"
+    "vite": "^8.3.6",
+    "vitest": "5.1.0",
+    "wireit": "0.15.0"
+  },
+  "wireit": {
+    "build": {
+      "command": "vite build",
+      "files": [
+        "src/**/*.{ts,tsx,css,json}",
+        "index.html",
+        "public/**/*",
+        "vite.config.ts",
+        "tsconfig.json"
+      ],
+      "output": [
+        "dist/**"
+      ]
+    },
+    "qa": {
+      "dependencies": [
+        "qa:biome",
+        "qa:markdown",
+        "qa:prettier"
+      ]
+    },
+    "qa:biome": {
+      "command": "biome check .",
+      "files": [
+        "src/**/*.{ts,tsx,css,json}",
+        "server/**/*.ts",
+        "e2e/**/*.ts",
+        "scripts/**/*",
+        "*.ts",
+        "*.mjs",
+        "biome.json",
+        "package.json"
+      ],
+      "output": []
+    },
+    "qa:markdown": {
+      "command": "markdownlint-cli2",
+      "files": [
+        "**/*.md",
+        "!node_modules",
+        "!dist",
+        "!coverage",
+        "!test-results",
+        "!playwright-report",
+        ".markdownlint-cli2.yaml"
+      ],
+      "output": []
+    },
+    "qa:prettier": {
+      "command": "prettier --check \"**/*.md\"",
+      "files": [
+        "**/*.md",
+        "!node_modules",
+        "!dist",
+        "!coverage",
+        "!test-results",
+        "!playwright-report",
+        ".prettierignore"
+      ],
+      "output": []
+    },
+    "typecheck": {
+      "command": "tsc --noEmit",
+      "files": [
+        "src/**/*.{ts,tsx}",
+        "server/**/*.ts",
+        "e2e/**/*.ts",
+        "*.ts",
+        "tsconfig.json"
+      ],
+      "output": []
+    },
+    "validate": {
+      "dependencies": [
+        "build",
+        "qa",
+        "typecheck"
+      ]
+    }
   }
 }

@@ -1,18 +1,28 @@
 import { Settings2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
+import type { Action } from '@/lib/api'
 import { fetchSettings } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { useSettings } from '@/lib/settings'
 import type { DeviceSettings } from '@/lib/types'
-import type { Action } from '@/lib/api'
 import type { Controls } from '@/lib/use-controls'
 
 // A setting the device stores itself. Every row reads its value from the
 // speaker, writes once on an explicit gesture, then re-reads: the hub keeps no
 // copy, so two clients cannot drift apart.
-const Row = ({ label, hint, children }: Readonly<{ label: string; hint?: string; children: React.ReactNode }>) => (
+const Row = ({
+  label,
+  hint,
+  children,
+}: Readonly<{ label: string; hint?: string; children: React.ReactNode }>) => (
   <div className="flex items-center justify-between gap-3 py-2.5">
     <div className="min-w-0">
       <p className="text-xs font-medium">{label}</p>
@@ -29,7 +39,13 @@ const Toggle = ({
 }: Readonly<{ on: boolean; disabled: boolean; onChange: (value: boolean) => void }>) => {
   const { t } = useSettings()
   return (
-    <Button size="sm" variant={on ? 'default' : 'outline'} disabled={disabled} aria-pressed={on} onClick={() => onChange(!on)}>
+    <Button
+      size="sm"
+      variant={on ? 'default' : 'outline'}
+      disabled={disabled}
+      aria-pressed={on}
+      onClick={() => onChange(!on)}
+    >
       {on ? t('device.on') : t('device.off')}
     </Button>
   )
@@ -68,7 +84,7 @@ const Level = ({
         value={shown}
         disabled={disabled}
         aria-label={ariaLabel}
-        onChange={(event) => setDraft(Number(event.currentTarget.value))}
+        onChange={event => setDraft(Number(event.currentTarget.value))}
         onPointerUp={() => {
           if (draft === null) return
           onCommit(draft)
@@ -83,7 +99,9 @@ const Level = ({
         className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-accent disabled:cursor-not-allowed disabled:opacity-50"
       />
       {format !== undefined && (
-        <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">{format(shown)}</span>
+        <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+          {format(shown)}
+        </span>
       )}
     </div>
   )
@@ -135,15 +153,24 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={t('device.title')} disabled={!device.online}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={t('device.title')}
+          disabled={!device.online}
+        >
           <Settings2 className="size-4" />
         </Button>
       </DialogTrigger>
       <DialogContent closeLabel={t('device.close')}>
         <DialogTitle className="text-sm font-medium">{t('device.title')}</DialogTitle>
-        <DialogDescription className="mt-1 text-[11px] text-muted-foreground">{t('device.subtitle')}</DialogDescription>
+        <DialogDescription className="mt-1 text-[11px] text-muted-foreground">
+          {t('device.subtitle')}
+        </DialogDescription>
 
-        {loading && settings === null && <p className="py-6 text-[11px] text-muted-foreground">{t('device.loading')}</p>}
+        {loading && settings === null && (
+          <p className="py-6 text-[11px] text-muted-foreground">{t('device.loading')}</p>
+        )}
 
         {!loading && settings === null && (
           <div className="flex items-center gap-2 py-6">
@@ -163,7 +190,7 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
                   disabled={disabled}
                   maxLength={32}
                   aria-label={t('device.name')}
-                  onChange={(event) => setName(event.currentTarget.value)}
+                  onChange={event => setName(event.currentTarget.value)}
                   className="h-8 w-40 rounded-lg border border-border bg-transparent px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
                 />
                 <Button
@@ -178,7 +205,11 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
 
             {settings.ledOn !== null && (
               <Row label={t('device.led')} hint={t('device.ledHint')}>
-                <Toggle on={settings.ledOn} disabled={disabled} onChange={(on) => void save({ action: 'led', on })} />
+                <Toggle
+                  on={settings.ledOn}
+                  disabled={disabled}
+                  onChange={on => void save({ action: 'led', on })}
+                />
               </Row>
             )}
 
@@ -187,14 +218,18 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
                 <Toggle
                   on={settings.buttonsOn}
                   disabled={disabled}
-                  onChange={(on) => void save({ action: 'buttons', on })}
+                  onChange={on => void save({ action: 'buttons', on })}
                 />
               </Row>
             )}
 
             {settings.fade !== null && (
               <Row label={t('device.fade')} hint={t('device.fadeHint')}>
-                <Toggle on={settings.fade} disabled={disabled} onChange={(on) => void save({ action: 'fade', on })} />
+                <Toggle
+                  on={settings.fade}
+                  disabled={disabled}
+                  onChange={on => void save({ action: 'fade', on })}
+                />
               </Row>
             )}
 
@@ -208,7 +243,7 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
                   step={0.5}
                   disabled={disabled}
                   ariaLabel={`${t('device.balance')} ${balance}`}
-                  onCommit={(value) => void save({ action: 'balance', value })}
+                  onCommit={value => void save({ action: 'balance', value })}
                 />
                 <span className="text-[11px] text-muted-foreground">R</span>
               </div>
@@ -222,8 +257,8 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
                 step={1}
                 disabled={disabled}
                 ariaLabel={t('device.maxVolume')}
-                format={(value) => String(Math.round(value))}
-                onCommit={(value) => void save({ action: 'maxVolume', level: Math.round(value) })}
+                format={value => String(Math.round(value))}
+                onCommit={value => void save({ action: 'maxVolume', level: Math.round(value) })}
               />
             </Row>
           </div>

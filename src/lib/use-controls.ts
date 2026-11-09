@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { sendCommand, type Action } from './api'
+import { type Action, sendCommand } from './api'
 import type { Device } from './types'
 
 // The hub polls every few seconds, so a control that waits for the next poll
@@ -9,7 +9,14 @@ import type { Device } from './types'
 type Override = Partial<
   Pick<
     Device,
-    'volume' | 'mute' | 'status' | 'curposMs' | 'totalMs' | 'input' | 'sleepSeconds' | 'outputHardware'
+    | 'volume'
+    | 'mute'
+    | 'status'
+    | 'curposMs'
+    | 'totalMs'
+    | 'input'
+    | 'sleepSeconds'
+    | 'outputHardware'
   >
 > & { eq?: Partial<Device['eq']> }
 
@@ -52,8 +59,8 @@ const optimisticFor = (device: Device, action: Action): Override => {
     case 'eqBand': {
       // A hand-moved band drops the factory name on the device: paint that too,
       // so the curve stops claiming to be `Rock` the instant it stops being it.
-      const bands = device.eq.bands.map((band) =>
-        band.name === action.band ? { ...band, value: action.value } : band,
+      const bands = device.eq.bands.map(band =>
+        band.name === action.band ? { ...band, value: action.value } : band
       )
       return { eq: { bands, name: '' } }
     }
@@ -107,7 +114,7 @@ export const useControls = (device: Device): Controls => {
     async (action: Action): Promise<boolean> => {
       setError(null)
       setOverride({ value: optimisticFor(device, action), at: Date.now() })
-      setPending((count) => count + 1)
+      setPending(count => count + 1)
       try {
         const result = await sendCommand(device, action)
         if (!result.ok) {
@@ -124,10 +131,10 @@ export const useControls = (device: Device): Controls => {
         }
         return false
       } finally {
-        if (mounted.current) setPending((count) => Math.max(0, count - 1))
+        if (mounted.current) setPending(count => Math.max(0, count - 1))
       }
     },
-    [device],
+    [device]
   )
 
   const clearError = useCallback(() => setError(null), [])
@@ -139,7 +146,11 @@ export const useControls = (device: Device): Controls => {
     // `eq` is an object of its own: merging it like a scalar field would drop
     // the curve as soon as a single flag was painted.
     const { eq: eqPatch, ...rest } = painted
-    shown = { ...device, ...rest, eq: eqPatch === undefined ? device.eq : { ...device.eq, ...eqPatch } }
+    shown = {
+      ...device,
+      ...rest,
+      eq: eqPatch === undefined ? device.eq : { ...device.eq, ...eqPatch },
+    }
   }
   return {
     device: shown,

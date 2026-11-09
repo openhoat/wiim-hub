@@ -13,7 +13,7 @@ import {
 import { cn } from '@/lib/cn'
 import { useSettings } from '@/lib/settings'
 import type { Device, EqBand } from '@/lib/types'
-import { useControls, type Controls } from '@/lib/use-controls'
+import { type Controls, useControls } from '@/lib/use-controls'
 
 // The device names its bands `band31hz`..`band16khz`: the number and the unit
 // are the only readable part, and the scale is a decade apart, so format it
@@ -56,12 +56,18 @@ const BandBar = ({
       className={cn(
         'relative h-20 w-full overflow-hidden rounded-md transition-colors',
         selected ? 'bg-accent/15 ring-1 ring-accent/50' : 'bg-muted/40 hover:bg-muted/70',
-        disabled && 'cursor-not-allowed opacity-50',
+        disabled && 'cursor-not-allowed opacity-50'
       )}
     >
-      <span className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-border" aria-hidden="true" />
       <span
-        className={cn('absolute inset-x-1 rounded-sm', band.value >= 0 ? 'bottom-1/2 bg-accent' : 'top-1/2 bg-accent/60')}
+        className="pointer-events-none absolute inset-x-0 top-1/2 h-px bg-border"
+        aria-hidden="true"
+      />
+      <span
+        className={cn(
+          'absolute inset-x-1 rounded-sm',
+          band.value >= 0 ? 'bottom-1/2 bg-accent' : 'top-1/2 bg-accent/60'
+        )}
         style={{ height: `${Math.max(ratio * 50, 1.5)}%` }}
       />
     </button>
@@ -86,10 +92,14 @@ const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
       setBand(null)
       return
     }
-    setBand((current) => (current !== null && eq.bands.some((entry) => entry.name === current) ? current : (eq.bands[4]?.name ?? eq.bands[0].name)))
+    setBand(current =>
+      current !== null && eq.bands.some(entry => entry.name === current)
+        ? current
+        : (eq.bands[4]?.name ?? eq.bands[0].name)
+    )
   }, [eq.bands])
 
-  const selected = eq.bands.find((entry) => entry.name === band) ?? null
+  const selected = eq.bands.find(entry => entry.name === band) ?? null
   const value = draft ?? selected?.value ?? 0
 
   const commit = (): void => {
@@ -116,7 +126,12 @@ const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" disabled={!online || eq.presets.length === 0} className="max-w-48 gap-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!online || eq.presets.length === 0}
+              className="max-w-48 gap-1.5"
+            >
               <SlidersHorizontal className="size-3.5 shrink-0" />
               <span className="truncate">{eq.name === '' ? t('sound.custom') : eq.name}</span>
             </Button>
@@ -125,9 +140,9 @@ const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
             <DropdownMenuLabel>{t('sound.presets')}</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={eq.name}
-              onValueChange={(name) => void controls.run({ action: 'eqPreset', name })}
+              onValueChange={name => void controls.run({ action: 'eqPreset', name })}
             >
-              {eq.presets.map((name) => (
+              {eq.presets.map(name => (
                 <DropdownMenuRadioItem key={name} value={name}>
                   {name}
                 </DropdownMenuRadioItem>
@@ -138,7 +153,7 @@ const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
       </div>
 
       <div className="grid grid-cols-10 gap-1">
-        {eq.bands.map((entry) => (
+        {eq.bands.map(entry => (
           <div key={entry.name} className="flex min-w-0 flex-col items-center gap-1">
             <BandBar
               band={entry}
@@ -149,14 +164,18 @@ const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
                 setDraft(null)
               }}
             />
-            <span className="text-[10px] tabular-nums text-muted-foreground/80">{bandShort(entry.name)}</span>
+            <span className="text-[10px] tabular-nums text-muted-foreground/80">
+              {bandShort(entry.name)}
+            </span>
           </div>
         ))}
       </div>
 
       {selected !== null && (
         <div className="flex items-center gap-2">
-          <span className="w-16 shrink-0 text-[11px] tabular-nums text-muted-foreground">{bandLabel(selected.name)}</span>
+          <span className="w-16 shrink-0 text-[11px] tabular-nums text-muted-foreground">
+            {bandLabel(selected.name)}
+          </span>
           <input
             type="range"
             min={-12}
@@ -165,13 +184,15 @@ const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
             value={value}
             disabled={!online || controls.pending}
             aria-label={`${bandLabel(selected.name)} ${t('sound.gain')}`}
-            onChange={(event) => setDraft(Number(event.currentTarget.value))}
+            onChange={event => setDraft(Number(event.currentTarget.value))}
             onPointerUp={commit}
             onKeyUp={commit}
             onBlur={() => setDraft(null)}
             className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-accent disabled:cursor-not-allowed disabled:opacity-50"
           />
-          <span className="w-16 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">{gainLabel(value)}</span>
+          <span className="w-16 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+            {gainLabel(value)}
+          </span>
         </div>
       )}
 
@@ -190,7 +211,10 @@ const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
 const QualityChip = ({ device }: Readonly<{ device: Device }>) => {
   const { t } = useSettings()
   const parts = [
-    rangeLabel(device.quality.sampleRate === null ? null : Math.round(device.quality.sampleRate / 100) / 10, 'kHz'),
+    rangeLabel(
+      device.quality.sampleRate === null ? null : Math.round(device.quality.sampleRate / 100) / 10,
+      'kHz'
+    ),
     rangeLabel(device.quality.bitDepth, 'bit'),
     rangeLabel(device.quality.bitRate, 'kb/s'),
   ].filter((part): part is string => part !== null)
@@ -224,12 +248,15 @@ export const SoundCard = ({ device }: Readonly<{ device: Device }>) => {
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={`${t('sound.title')}, ${open ? t('sound.hide') : t('sound.show')}`}
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen(value => !value)}
         className="flex w-full items-center justify-between gap-3 text-left"
       >
         <span className="flex min-w-0 items-center gap-2">
           <ChevronRight
-            className={cn('size-4 shrink-0 text-muted-foreground transition-transform', open && 'rotate-90')}
+            className={cn(
+              'size-4 shrink-0 text-muted-foreground transition-transform',
+              open && 'rotate-90'
+            )}
           />
           <h2 className="text-sm font-medium">{t('sound.title')}</h2>
         </span>

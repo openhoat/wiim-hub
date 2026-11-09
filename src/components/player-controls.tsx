@@ -11,6 +11,7 @@ import {
   VolumeX,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { PlayUrlDialog } from '@/components/play-url-dialog'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -21,7 +22,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { presetArtUrl } from '@/lib/api'
-import { PlayUrlDialog } from '@/components/play-url-dialog'
 import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
 import { useSettings } from '@/lib/settings'
@@ -29,7 +29,8 @@ import type { Controls } from '@/lib/use-controls'
 
 // The volume ceiling the device reports, with a sane fallback so a missing
 // field never produces a slider that cannot reach 100.
-const ceilingOf = (maxVolume: number | null): number => (maxVolume !== null && maxVolume > 0 ? maxVolume : 100)
+const ceilingOf = (maxVolume: number | null): number =>
+  maxVolume !== null && maxVolume > 0 ? maxVolume : 100
 
 // Above this level a single stray drag becomes a physical event on a 100 W
 // amp: the write is worth one confirmation.
@@ -86,7 +87,7 @@ const VolumeControl = ({ controls }: Readonly<{ controls: Controls }>) => {
           value={Math.min(level, ceiling)}
           disabled={!device.online}
           aria-label={t('controls.volume')}
-          onChange={(event) => setLevel(Number(event.currentTarget.value))}
+          onChange={event => setLevel(Number(event.currentTarget.value))}
           onPointerUp={() => commit(level)}
           onKeyUp={() => commit(level)}
           onBlur={() => setLevel(device.volume ?? 0)}
@@ -139,7 +140,10 @@ const SeekBar = ({ controls, now }: Readonly<{ controls: Controls; now: number }
       {live ? (
         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
           <div
-            className={cn('h-full rounded-full bg-accent/60', device.status === 'play' && 'animate-pulse')}
+            className={cn(
+              'h-full rounded-full bg-accent/60',
+              device.status === 'play' && 'animate-pulse'
+            )}
             style={{ width: device.status === 'play' ? '100%' : '0%' }}
           />
         </div>
@@ -152,14 +156,14 @@ const SeekBar = ({ controls, now }: Readonly<{ controls: Controls; now: number }
           value={Math.round(position / 1000)}
           disabled={!device.online}
           aria-label={t('controls.seek')}
-          onChange={(event) => setDragging(Number(event.currentTarget.value) * 1000)}
+          onChange={event => setDragging(Number(event.currentTarget.value) * 1000)}
           onPointerUp={release}
           onKeyUp={release}
           onBlur={() => setDragging(null)}
           className="h-1.5 w-full cursor-pointer appearance-none rounded-full accent-accent disabled:cursor-not-allowed disabled:opacity-50"
           style={{
             background: `linear-gradient(to right, var(--accent) ${Math.round(ratio * 100)}%, var(--muted) ${Math.round(
-              ratio * 100,
+              ratio * 100
             )}%)`,
           }}
         />
@@ -172,7 +176,10 @@ const SeekBar = ({ controls, now }: Readonly<{ controls: Controls; now: number }
   )
 }
 
-export const PlayerControls = ({ controls, now }: Readonly<{ controls: Controls; now: number }>) => {
+export const PlayerControls = ({
+  controls,
+  now,
+}: Readonly<{ controls: Controls; now: number }>) => {
   const { t } = useSettings()
   const device = controls.device
   const online = device.online
@@ -182,7 +189,8 @@ export const PlayerControls = ({ controls, now }: Readonly<{ controls: Controls;
   const sleepMinutes = Math.ceil(sleepSeconds / 60)
   const sourceLabel = (input: string): string => device.inputLabels[input] ?? input
   const outputName =
-    device.outputs.find((output) => output.hardware === device.outputHardware)?.name ?? t('controls.outputs')
+    device.outputs.find(output => output.hardware === device.outputHardware)?.name ??
+    t('controls.outputs')
 
   return (
     <div className="mt-5 space-y-3">
@@ -233,7 +241,7 @@ export const PlayerControls = ({ controls, now }: Readonly<{ controls: Controls;
       {device.inputs.length > 0 && (
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="text-[11px] text-muted-foreground">{t('controls.sources')}</span>
-          {device.inputs.map((input) => (
+          {device.inputs.map(input => (
             <Button
               key={input}
               size="sm"
@@ -252,18 +260,24 @@ export const PlayerControls = ({ controls, now }: Readonly<{ controls: Controls;
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" disabled={!online} className="gap-1.5">
               <Timer className="size-3.5" />
-              {sleepSeconds > 0 ? t('controls.sleepMinutes', { n: sleepMinutes }) : t('controls.sleep')}
+              {sleepSeconds > 0
+                ? t('controls.sleepMinutes', { n: sleepMinutes })
+                : t('controls.sleep')}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuLabel>{t('controls.sleep')}</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={sleepSeconds > 0 ? String(sleepMinutes) : '0'}
-              onValueChange={(value) => void controls.run({ action: 'sleep', seconds: Number(value) * 60 })}
+              onValueChange={value =>
+                void controls.run({ action: 'sleep', seconds: Number(value) * 60 })
+              }
             >
-              {sleepOptions.map((minutes) => (
+              {sleepOptions.map(minutes => (
                 <DropdownMenuRadioItem key={minutes} value={String(minutes)}>
-                  {minutes === 0 ? t('controls.sleepOff') : t('controls.sleepMinutes', { n: minutes })}
+                  {minutes === 0
+                    ? t('controls.sleepOff')
+                    : t('controls.sleepMinutes', { n: minutes })}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>
@@ -282,9 +296,11 @@ export const PlayerControls = ({ controls, now }: Readonly<{ controls: Controls;
               <DropdownMenuLabel>{t('controls.outputs')}</DropdownMenuLabel>
               <DropdownMenuRadioGroup
                 value={device.outputHardware === null ? '' : String(device.outputHardware)}
-                onValueChange={(value) => void controls.run({ action: 'output', hardware: Number(value) })}
+                onValueChange={value =>
+                  void controls.run({ action: 'output', hardware: Number(value) })
+                }
               >
-                {device.outputs.map((output) => (
+                {device.outputs.map(output => (
                   <DropdownMenuRadioItem key={output.hardware} value={String(output.hardware)}>
                     {output.name}
                   </DropdownMenuRadioItem>
@@ -304,7 +320,7 @@ export const PlayerControls = ({ controls, now }: Readonly<{ controls: Controls;
             {t('controls.presets')}
           </span>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
-            {device.presets.map((preset) => {
+            {device.presets.map(preset => {
               const art = presetArtUrl(device, preset.artwork)
               return (
                 <button

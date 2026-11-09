@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import en from '@/locales/en.json'
 import fr from '@/locales/fr.json'
 
@@ -52,7 +60,11 @@ const lookup = (dictionary: Dictionary, path: string): string | undefined => {
 
 // A missing translation falls back to English, then prints its own key: the
 // gap shows up in the page instead of breaking the render.
-const translate = (dictionary: Dictionary, key: string, vars: Record<string, string | number>): string => {
+const translate = (
+  dictionary: Dictionary,
+  key: string,
+  vars: Record<string, string | number>
+): string => {
   const template = lookup(dictionary, key) ?? lookup(en, key) ?? key
   return template.replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? ''))
 }
@@ -86,7 +98,10 @@ export const SettingsProvider = ({ children }: Readonly<{ children: ReactNode }>
   const resolvedLang = lang === 'auto' ? pickLang() : lang
   const dictionary = dictionaries[resolvedLang]
 
-  const t = useCallback<Translate>((key, vars = {}) => translate(dictionary, key, vars), [dictionary])
+  const t = useCallback<Translate>(
+    (key, vars = {}) => translate(dictionary, key, vars),
+    [dictionary]
+  )
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next)
@@ -130,7 +145,7 @@ export const SettingsProvider = ({ children }: Readonly<{ children: ReactNode }>
       setTheme,
       t,
     }),
-    [lang, theme, resolvedLang, dark, setLang, setTheme, t],
+    [lang, theme, resolvedLang, dark, setLang, setTheme, t]
   )
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>

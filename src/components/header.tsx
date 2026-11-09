@@ -1,6 +1,6 @@
 import { AudioLines, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { SettingsMenu } from '@/components/settings-menu'
+import { Button } from '@/components/ui/button'
 import { ViewSwitch } from '@/components/view-switch'
 import { useSettings } from '@/lib/settings'
 import type { View } from '@/lib/types'
@@ -14,7 +14,14 @@ type HeaderProps = {
   total: number
 }
 
-export const Header = ({ view, onChangeView, onDiscover, discovering, online, total }: Readonly<HeaderProps>) => {
+export const Header = ({
+  view,
+  onChangeView,
+  onDiscover,
+  discovering,
+  online,
+  total,
+}: Readonly<HeaderProps>) => {
   const { t } = useSettings()
   return (
     <header className="sticky top-0 z-20 border-b border-border/60 bg-background/80 backdrop-blur-md">
@@ -24,7 +31,9 @@ export const Header = ({ view, onChangeView, onDiscover, discovering, online, to
             <AudioLines className="size-4" strokeWidth={2.2} />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm leading-tight font-semibold tracking-tight">{t('title')}</p>
+            <p className="truncate text-sm leading-tight font-semibold tracking-tight">
+              {t('title')}
+            </p>
             <p className="hidden truncate text-[11px] text-muted-foreground sm:block">
               {total === 0 ? t('empty') : t('deviceSummary', { online, total })}
             </p>

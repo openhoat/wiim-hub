@@ -25,8 +25,8 @@ Now playing, with the control panel, one speaker online and one offline:
 
 The sound card, with the per-source equalizer, and the diagnostic view:
 
-| | |
-| --- | --- |
+|                                    |                                               |
+| ---------------------------------- | --------------------------------------------- |
 | ![Sound card](docs/img/sound.jpeg) | ![Diagnostic view](docs/img/diagnostics.jpeg) |
 
 The same pages on a phone:
@@ -71,8 +71,8 @@ views diverge, and the device side is the one the official app consumes.
   resolver first, then a dependency-free multicast query) keeps a DHCP lease change invisible, and
   the last known address is retained when a re-resolution fails.
 - SSDP discovery as a best-effort complement to an explicit device list.
-- **Two views on the same data**: a *now playing* view for everyday use (art, track, progress,
-  playback state, volume, multiroom chip, offline badge) and a *diagnostic* view for support (raw
+- **Two views on the same data**: a _now playing_ view for everyday use (art, track, progress,
+  playback state, volume, multiroom chip, offline badge) and a _diagnostic_ view for support (raw
   fields, RSSI sparkline, event log, sample table, CSV export). The selected view is remembered
   per browser.
 - Now playing: track, artist, album, album art (relayed by the hub, see below), playback progress
@@ -204,12 +204,12 @@ disturbed. `npm run typecheck` also covers the suite and the demo, and
 The server reads `.env` from the working directory when it exists (`start` and `start:server`);
 inside Docker the variables come from the compose file instead.
 
-| Variable       | Default | Meaning                                                  |
-| -------------- | ------- | -------------------------------------------------------- |
-| `PORT`         | `8090`  | HTTP port of the hub                                     |
-| `POLL_MS`      | `3000`  | Polling period, floor 1000 ms                            |
+| Variable       | Default | Meaning                                                                              |
+| -------------- | ------- | ------------------------------------------------------------------------------------ |
+| `PORT`         | `8090`  | HTTP port of the hub                                                                 |
+| `POLL_MS`      | `3000`  | Polling period, floor 1000 ms                                                        |
 | `DEVICE_HOSTS` | empty   | Comma separated device addresses or names, authoritative list; one entry per speaker |
-| `DISCOVERY`    | `1`     | SSDP discovery, best effort, set `0` to disable          |
+| `DISCOVERY`    | `1`     | SSDP discovery, best effort, set `0` to disable                                      |
 
 ## Endpoints
 

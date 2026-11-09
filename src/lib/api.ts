@@ -1,6 +1,6 @@
 import type { Device, DeviceSettings, HubState } from './types'
 
-const readJson = async <T,>(path: string, init?: RequestInit): Promise<T> => {
+const readJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(path, { cache: 'no-store', ...init })
   if (!response.ok) {
     // The server answers with a machine message: surface it instead of the
@@ -9,7 +9,12 @@ const readJson = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     let detail = `answered ${response.status}`
     try {
       const body: unknown = await response.json()
-      if (typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string') {
+      if (
+        typeof body === 'object' &&
+        body !== null &&
+        'error' in body &&
+        typeof body.error === 'string'
+      ) {
         detail = body.error
       }
     } catch {

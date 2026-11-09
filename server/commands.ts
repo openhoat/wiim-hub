@@ -78,7 +78,8 @@ export const parseAction = (body: unknown): Parsed => {
   if (name in fixed) return { action: { action: name as keyof typeof fixed } }
   if (name === 'seek') {
     const seconds = integer(body.seconds)
-    if (seconds === null || seconds < 0 || seconds > 86_400) return { error: 'invalid seek position' }
+    if (seconds === null || seconds < 0 || seconds > 86_400)
+      return { error: 'invalid seek position' }
     return { action: { action: 'seek', seconds } }
   }
   if (name === 'volume') {
@@ -120,11 +121,16 @@ export const parseAction = (body: unknown): Parsed => {
     return { action: { action: 'eqPreset', name: body.name } }
   }
   if (name === 'eqBand') {
-    if (typeof body.band !== 'string' || !eqBandNames.includes(body.band as (typeof eqBandNames)[number])) {
+    if (
+      typeof body.band !== 'string' ||
+      !eqBandNames.includes(body.band as (typeof eqBandNames)[number])
+    ) {
       return { error: 'invalid eq band' }
     }
-    if (typeof body.value !== 'number' || !Number.isFinite(body.value)) return { error: 'invalid eq gain' }
-    if (Math.abs(body.value) > eqGainLimit) return { error: `eq gain outside -${eqGainLimit}..${eqGainLimit} dB` }
+    if (typeof body.value !== 'number' || !Number.isFinite(body.value))
+      return { error: 'invalid eq gain' }
+    if (Math.abs(body.value) > eqGainLimit)
+      return { error: `eq gain outside -${eqGainLimit}..${eqGainLimit} dB` }
     return { action: { action: 'eqBand', band: body.band, value: body.value } }
   }
   if (name === 'rename') {
@@ -141,7 +147,8 @@ export const parseAction = (body: unknown): Parsed => {
     return { action: { action: name, on: body.on } }
   }
   if (name === 'balance') {
-    if (typeof body.value !== 'number' || !Number.isFinite(body.value)) return { error: 'invalid balance' }
+    if (typeof body.value !== 'number' || !Number.isFinite(body.value))
+      return { error: 'invalid balance' }
     // Measured: +/-1 is accepted, +/-2 is Failed. Clamp is a refusal, not a fix.
     if (Math.abs(body.value) > 1) return { error: 'balance outside -1..1' }
     return { action: { action: 'balance', value: body.value } }
@@ -195,14 +202,15 @@ export const commandFor = (action: Action, device: DeviceState): Command | { err
     case 'mute':
       return { command: `setPlayerCmd:mute:${action.muted ? 1 : 0}`, family: null }
     case 'source':
-      if (!device.inputs.includes(action.input)) return { error: `input not available: ${action.input}` }
+      if (!device.inputs.includes(action.input))
+        return { error: `input not available: ${action.input}` }
       return { command: `setPlayerCmd:switchmode:${action.input}`, family: null }
     case 'preset':
       return { command: `MCUKeyShortClick:${action.slot}`, family: null }
     case 'sleep':
       return { command: `setShutdown:${action.seconds}`, family: null }
     case 'output':
-      if (!device.outputs.some((output) => output.hardware === action.hardware)) {
+      if (!device.outputs.some(output => output.hardware === action.hardware)) {
         return { error: `output not available: ${action.hardware}` }
       }
       return { command: `setAudioOutputHardwareMode:${action.hardware}`, family: null }
@@ -211,7 +219,8 @@ export const commandFor = (action: Action, device: DeviceState): Command | { err
     case 'eqPreset':
       // The list comes from the device itself, so a name outside it either
       // does not exist on this firmware or was not meant as a preset.
-      if (!device.eq.presets.includes(action.name)) return { error: `unknown eq preset: ${action.name}` }
+      if (!device.eq.presets.includes(action.name))
+        return { error: `unknown eq preset: ${action.name}` }
       return { command: `EQLoad:${action.name}`, family: null }
     case 'eqBand': {
       // The curve is stored per source: writing without the source the device
@@ -234,7 +243,10 @@ export const commandFor = (action: Action, device: DeviceState): Command | { err
     case 'balance':
       // The device takes a decimal: round to the tenth, which is finer than the
       // half step the UI offers and still inside the measured range.
-      return { command: `setChannelBalance:${Math.round(action.value * 10) / 10}`, family: 'balance' }
+      return {
+        command: `setChannelBalance:${Math.round(action.value * 10) / 10}`,
+        family: 'balance',
+      }
     case 'maxVolume':
       return { command: `setMaxVolume:${action.level}`, family: null }
     case 'fade':

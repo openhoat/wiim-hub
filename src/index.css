@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import '@fontsource-variable/inter';
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
 
 /* The dark theme is a class on <html>, set by the settings provider, so the
    switch never waits for a system media query round trip. */
@@ -47,7 +47,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 @layer base {
@@ -57,19 +57,23 @@
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
-    font-feature-settings: 'cv11', 'ss01';
+    font-feature-settings: "cv11", "ss01";
   }
 
   /* A single warm halo at the top of the page: it keeps a dark screen from
      reading as a flat black rectangle without tinting the cards. */
   body::before {
-    content: '';
+    content: "";
     position: fixed;
     inset: 0 0 auto 0;
     height: 22rem;
     pointer-events: none;
     z-index: -1;
-    background: radial-gradient(60% 100% at 50% 0%, color-mix(in oklch, var(--accent) 9%, transparent), transparent 70%);
+    background: radial-gradient(
+      60% 100% at 50% 0%,
+      color-mix(in oklch, var(--accent) 9%, transparent),
+      transparent 70%
+    );
   }
 
   :focus-visible {

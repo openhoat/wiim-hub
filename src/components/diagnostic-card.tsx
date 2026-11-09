@@ -1,6 +1,9 @@
 import { ChevronDown, Copy, Download, SignalHigh, SignalLow, SignalZero } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
+import { EventTimeline } from '@/components/event-timeline'
+import { SampleTable } from '@/components/sample-table'
+import { Sparkline } from '@/components/sparkline'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -10,9 +13,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { EventTimeline } from '@/components/event-timeline'
-import { SampleTable } from '@/components/sample-table'
-import { Sparkline } from '@/components/sparkline'
 import { cn } from '@/lib/cn'
 import { csvOf, download, fileStamp } from '@/lib/format'
 import { agoLabel, statusLabel } from '@/lib/labels'
@@ -60,7 +60,9 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
           <div className="flex items-center gap-2">
             <h2 className="truncate text-sm font-medium">{device.name}</h2>
             <Badge variant={device.online ? 'accent' : 'warning'}>
-              <span className={cn('size-1.5 rounded-full', device.online ? 'bg-accent' : 'bg-warning')} />
+              <span
+                className={cn('size-1.5 rounded-full', device.online ? 'bg-accent' : 'bg-warning')}
+              />
               {device.online ? t('online') : t('offline')}
             </Badge>
           </div>
@@ -82,7 +84,9 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
 
       <div className="mt-4 grid gap-5 md:grid-cols-2">
         <section>
-          <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{t('sections.fields')}</h3>
+          <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            {t('sections.fields')}
+          </h3>
           <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
             <div className="col-span-2">
               <dt className="text-[11px] text-muted-foreground">{t('labels.address')}</dt>
@@ -107,7 +111,10 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
             <Field label={t('labels.bssid')} value={device.bssid || '—'} />
             <Field label={t('labels.group')} value={device.group.name || '—'} />
             <Field label={t('labels.source')} value={device.source || '—'} />
-            <Field label={t('labels.volume')} value={device.volume === null ? '—' : String(device.volume)} />
+            <Field
+              label={t('labels.volume')}
+              value={device.volume === null ? '—' : String(device.volume)}
+            />
             <Field label={t('labels.lastSeen')} value={agoLabel(t, device.lastSeen, now)} />
             <Field label={t('labels.failures')} value={String(device.errors)} />
           </dl>
@@ -115,14 +122,27 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
 
         <section className="min-w-0">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{t('sections.signal')}</h3>
+            <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+              {t('sections.signal')}
+            </h3>
             <span className="inline-flex items-center gap-1 text-xs tabular-nums">
-              <SignalIcon className={cn('size-3.5', rssi !== null && rssi <= -70 ? 'text-warning' : 'text-muted-foreground')} />
+              <SignalIcon
+                className={cn(
+                  'size-3.5',
+                  rssi !== null && rssi <= -70 ? 'text-warning' : 'text-muted-foreground'
+                )}
+              />
               {rssi === null ? t('rssiUnknown') : t('rssi', { value: rssi })}
             </span>
           </div>
           <div className="mt-1 rounded-lg border border-border/60 bg-muted/20 px-2 pt-2">
-            {live.length > 0 ? <Sparkline samples={live} /> : <div className="grid h-16 place-items-center text-xs text-muted-foreground">{t('noSamples')}</div>}
+            {live.length > 0 ? (
+              <Sparkline samples={live} />
+            ) : (
+              <div className="grid h-16 place-items-center text-xs text-muted-foreground">
+                {t('noSamples')}
+              </div>
+            )}
           </div>
           <p className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
             <span>{t('rssiChart')}</span>
@@ -136,12 +156,19 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
       </div>
 
       <section className="mt-5">
-        <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">{t('sections.timeline')}</h3>
+        <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          {t('sections.timeline')}
+        </h3>
         <EventTimeline events={device.events} />
       </section>
 
       <div className="mt-4 border-t border-border/60 pt-3">
-        <Button variant="ghost" size="sm" onClick={() => setDetails((value) => !value)} aria-expanded={details}>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setDetails(value => !value)}
+          aria-expanded={details}
+        >
           <ChevronDown className={cn('size-3.5 transition-transform', details && 'rotate-180')} />
           {details ? t('hideDetails') : t('details')}
         </Button>

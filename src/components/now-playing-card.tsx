@@ -7,13 +7,13 @@ import { Card } from '@/components/ui/card'
 import { artUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { agoLabel, statusLabel } from '@/lib/labels'
-import { useControls } from '@/lib/use-controls'
 import { useSettings } from '@/lib/settings'
 import type { Device, GroupState } from '@/lib/types'
+import { useControls } from '@/lib/use-controls'
 
 const Equalizer = () => (
   <span className="flex h-3 items-end gap-[2px]" aria-hidden="true">
-    {[0, 0.25, 0.5].map((delay) => (
+    {[0, 0.25, 0.5].map(delay => (
       <span
         key={delay}
         className="eq-bar w-[2px] rounded-full bg-current"
@@ -62,8 +62,11 @@ const GroupPanel = ({ group, id }: Readonly<{ group: GroupState; id: string }>) 
       <p className="text-[11px] text-muted-foreground">{note}</p>
       {group.members.length > 0 && (
         <ul className="mt-2 space-y-1">
-          {group.members.map((member) => (
-            <li key={member.uuid || member.name} className="flex items-center justify-between gap-3 text-xs">
+          {group.members.map(member => (
+            <li
+              key={member.uuid || member.name}
+              className="flex items-center justify-between gap-3 text-xs"
+            >
               <span className="truncate">{member.name}</span>
               <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
                 {member.ip || t('group.unknown')}
@@ -102,7 +105,12 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
             {playing ? (
               <Equalizer />
             ) : (
-              <span className={cn('size-1.5 rounded-full', device.online ? 'bg-muted-foreground' : 'bg-warning')} />
+              <span
+                className={cn(
+                  'size-1.5 rounded-full',
+                  device.online ? 'bg-muted-foreground' : 'bg-warning'
+                )}
+              />
             )}
             {device.online ? statusLabel(t, live.status) : t('offline')}
           </Badge>
@@ -128,7 +136,12 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <p className={cn('truncate text-2xl leading-tight font-semibold tracking-tight sm:text-3xl', device.title === '' && 'text-muted-foreground')}>
+          <p
+            className={cn(
+              'truncate text-2xl leading-tight font-semibold tracking-tight sm:text-3xl',
+              device.title === '' && 'text-muted-foreground'
+            )}
+          >
             {device.title || t('noPlayback')}
           </p>
           <p className="mt-1 truncate text-sm text-muted-foreground">{device.artist || ' '}</p>
@@ -145,7 +158,7 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
                 <GroupChip
                   group={group}
                   open={groupOpen}
-                  onToggle={() => setGroupOpen((open) => !open)}
+                  onToggle={() => setGroupOpen(open => !open)}
                   panelId={groupPanelId}
                 />
               )}
@@ -159,7 +172,9 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
       <PlayerControls controls={controls} now={now} />
 
       {!device.online && (
-        <p className="mt-2 text-[11px] text-muted-foreground">{agoLabel(t, device.lastSeen, now)}</p>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {agoLabel(t, device.lastSeen, now)}
+        </p>
       )}
     </Card>
   )

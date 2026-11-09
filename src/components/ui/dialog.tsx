@@ -20,7 +20,7 @@ export const DialogContent = ({
     <DialogPrimitive.Content
       className={cn(
         'fixed bottom-0 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 rounded-t-2xl border border-border bg-card p-5 shadow-2xl shadow-black/20 outline-none sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 sm:rounded-2xl',
-        className,
+        className
       )}
       {...props}
     >

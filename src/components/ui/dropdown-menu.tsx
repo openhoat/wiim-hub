@@ -16,7 +16,7 @@ export const DropdownMenuContent = ({
       sideOffset={sideOffset}
       className={cn(
         'z-50 min-w-48 overflow-hidden rounded-xl border border-border bg-card p-1 text-sm shadow-xl shadow-black/10',
-        className,
+        className
       )}
       {...props}
     />
@@ -28,7 +28,10 @@ export const DropdownMenuLabel = ({
   ...props
 }: ComponentProps<typeof DropdownMenuPrimitive.Label>) => (
   <DropdownMenuPrimitive.Label
-    className={cn('px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase', className)}
+    className={cn(
+      'px-2 pt-2 pb-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase',
+      className
+    )}
     {...props}
   />
 )
@@ -41,7 +44,7 @@ export const DropdownMenuItem = ({
     className={cn(
       'flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 outline-none select-none',
       'data-[highlighted]:bg-muted data-[highlighted]:text-foreground',
-      className,
+      className
     )}
     {...props}
   />
@@ -65,7 +68,7 @@ export const DropdownMenuRadioItem = ({
     className={cn(
       'flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2 py-1.5 outline-none select-none',
       'data-[highlighted]:bg-muted data-[state=checked]:text-foreground data-[state=unchecked]:text-muted-foreground',
-      className,
+      className
     )}
     {...props}
   >

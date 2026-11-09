@@ -1,0 +1,37 @@
+# markdownlint-cli2 configuration
+# See: https://github.com/DavidAnson/markdownlint
+
+config:
+  # Default state for all rules
+  default: true
+
+  # MD013/line-length - prose wraps where it reads best, not at a column
+  MD013: false
+
+  # MD024/no-duplicate-heading - allow duplicate headings in different sections
+  MD024:
+    siblings_only: true
+
+  # MD033/no-inline-html - badges and screenshots need inline HTML
+  MD033: false
+
+  # MD041/first-line-heading/first-line-h1 - a file may open on a badge block
+  MD041: false
+
+  # MD046/code-block-style - allow indented code blocks
+  MD046: false
+
+  # MD060/table-column-style - allow flexible table formatting
+  MD060: false
+
+globs:
+  - "**/*.md"
+
+ignores:
+  - "node_modules"
+  - ".git"
+  - ".idea"
+  - "dist"
+  - "coverage"
+  - "test-results"
+  - "playwright-report"

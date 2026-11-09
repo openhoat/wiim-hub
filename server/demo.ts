@@ -15,11 +15,11 @@
 // identifiers are invented, and the covers are generated: nothing here is a
 // copy of a real fleet.
 
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { readFile } from 'node:fs/promises'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
-import { commandFor, parseAction, type Action } from './commands.ts'
-import { MAX_SAMPLES, type DeviceSettings, type DeviceState, type Sample } from './device.ts'
+import { type Action, commandFor, parseAction } from './commands.ts'
+import { type DeviceSettings, type DeviceState, MAX_SAMPLES, type Sample } from './device.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
 const tickMs = 3000
@@ -109,7 +109,18 @@ const emptyState = (ip: string): DeviceState => ({
 
 // The ten bands, in the order the device reports them: a demo curve that
 // respects the same names keeps the sound card honest.
-const eqBands = ['band31hz', 'band63hz', 'band125hz', 'band250hz', 'band500hz', 'band1khz', 'band2khz', 'band4khz', 'band8khz', 'band16khz']
+const eqBands = [
+  'band31hz',
+  'band63hz',
+  'band125hz',
+  'band250hz',
+  'band500hz',
+  'band1khz',
+  'band2khz',
+  'band4khz',
+  'band8khz',
+  'band16khz',
+]
 const eqValues = [5, 3.5, 1, -0.5, -1.5, -1, 0, 1.5, 3, 2]
 
 // The factory curves the WiiM app lists, `Game` included: the demo offers the
@@ -242,7 +253,13 @@ const livingRoom = (): DeviceState => {
     mute: false,
     sleepSeconds: null,
     inputs: ['wifi', 'bluetooth', 'line-in', 'optical', 'udisk'],
-    inputLabels: { wifi: 'Wi-Fi', bluetooth: 'Bluetooth', 'line-in': 'Line in', optical: 'Optical', udisk: 'USB' },
+    inputLabels: {
+      wifi: 'Wi-Fi',
+      bluetooth: 'Bluetooth',
+      'line-in': 'Line in',
+      optical: 'Optical',
+      udisk: 'USB',
+    },
     outputs: [
       { hardware: 1, name: 'Optical' },
       { hardware: 2, name: 'Line out' },
@@ -311,7 +328,7 @@ const bedroom = (): DeviceState => {
       enabled: false,
       name: 'Flat',
       source: 'wifi',
-      bands: eqBands.map((name) => ({ name, value: 0 })),
+      bands: eqBands.map(name => ({ name, value: 0 })),
       presets: eqPresets,
       roomFit: false,
     },
@@ -336,9 +353,19 @@ const states = new Map<string, DeviceState>([
 const settings = new Map<string, DeviceSettings>([
   [
     '192.0.2.21',
-    { name: 'Living Room', ledOn: true, buttonsOn: true, balance: -0.2, maxVolume: 100, fade: true },
+    {
+      name: 'Living Room',
+      ledOn: true,
+      buttonsOn: true,
+      balance: -0.2,
+      maxVolume: 100,
+      fade: true,
+    },
   ],
-  ['192.0.2.22', { name: 'Bedroom', ledOn: true, buttonsOn: false, balance: 0, maxVolume: 90, fade: false }],
+  [
+    '192.0.2.22',
+    { name: 'Bedroom', ledOn: true, buttonsOn: false, balance: 0, maxVolume: 90, fade: false },
+  ],
 ])
 
 const trackIndex = new Map<string, number>([['192.0.2.21', 0]])
@@ -403,7 +430,7 @@ const mutate = (state: DeviceState, action: Action): void => {
       state.source = action.input
       break
     case 'preset': {
-      const preset = state.presets.find((entry) => entry.number === action.slot)
+      const preset = state.presets.find(entry => entry.number === action.slot)
       if (preset !== undefined) {
         state.title = preset.name
         state.artist = 'Radio'
@@ -431,7 +458,7 @@ const mutate = (state: DeviceState, action: Action): void => {
     case 'eqBand': {
       // The firmware drops the factory name as soon as one band moves: the
       // curve is custom from then on.
-      const band = state.eq.bands.find((entry) => entry.name === action.band)
+      const band = state.eq.bands.find(entry => entry.name === action.band)
       if (band !== undefined) band.value = Math.round(action.value * 10) / 10
       state.eq.name = ''
       break
@@ -473,7 +500,10 @@ const mutate = (state: DeviceState, action: Action): void => {
 }
 
 const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  })
   res.end(JSON.stringify(body))
 }
 
@@ -512,7 +542,7 @@ const serveFile = async (pathname: string, res: ServerResponse): Promise<boolean
 }
 
 const readBody = (req: IncomingMessage, limit = 2048): Promise<string | null> =>
-  new Promise((resolve) => {
+  new Promise(resolve => {
     let size = 0
     const chunks: Buffer[] = []
     req.on('data', (chunk: Buffer) => {
@@ -544,7 +574,8 @@ const artFor = (url: URL, res: ServerResponse): void => {
   const uri = url.searchParams.get('uri') ?? ''
   const state = host === '' ? null : findState(host)
   const known =
-    state !== null && (state.albumArt === uri || state.presets.some((preset) => preset.artwork === uri))
+    state !== null &&
+    (state.albumArt === uri || state.presets.some(preset => preset.artwork === uri))
   if (state === null || uri === '' || !known) {
     sendJson(res, 400, { error: 'unknown artwork' })
     return
@@ -594,7 +625,10 @@ const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse)
     return
   }
   mutate(state, parsed.action)
-  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+  res.writeHead(200, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  })
   res.end(JSON.stringify({ ok: true, unsupported: false, command: command.command, body: 'OK' }))
 }
 
@@ -610,7 +644,7 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       (left, right) =>
         Number(right.online) - Number(left.online) ||
         left.name.localeCompare(right.name) ||
-        left.ip.localeCompare(right.ip),
+        left.ip.localeCompare(right.ip)
     )
     sendJson(res, 200, { ts: Date.now(), pollMs: tickMs, devices })
     return
@@ -666,7 +700,9 @@ createServer((req, res) => {
     res.end('internal error')
   })
 }).listen(port, () => {
-  console.log(`wiim-hub demo listening on :${port} (${states.size} simulated speakers, no device needed)`)
+  console.log(
+    `wiim-hub demo listening on :${port} (${states.size} simulated speakers, no device needed)`
+  )
 })
 
 // A live hub reads its device every few seconds: the demo advances the track
@@ -677,7 +713,12 @@ setInterval(() => {
   const now = Date.now()
   for (const state of states.values()) {
     if (!state.online) continue
-    if (state.status === 'play' && state.curposMs !== null && state.totalMs !== null && state.totalMs > 0) {
+    if (
+      state.status === 'play' &&
+      state.curposMs !== null &&
+      state.totalMs !== null &&
+      state.totalMs > 0
+    ) {
       state.curposMs = Math.min(state.totalMs, state.curposMs + tickMs)
       if (state.curposMs >= state.totalMs) state.status = 'stop'
     }

@@ -7,7 +7,8 @@ const parseHeaders = (response: string): Map<string, string> => {
   const headers = new Map<string, string>()
   for (const line of response.split('\r\n').slice(1)) {
     const index = line.indexOf(':')
-    if (index > 0) headers.set(line.slice(0, index).trim().toLowerCase(), line.slice(index + 1).trim())
+    if (index > 0)
+      headers.set(line.slice(0, index).trim().toLowerCase(), line.slice(index + 1).trim())
   }
   return headers
 }
@@ -15,8 +16,8 @@ const parseHeaders = (response: string): Map<string, string> => {
 const looksLikeWiim = (body: string): boolean => /wiim|linkplay/i.test(body)
 
 const fetchDescription = (location: string): Promise<string | null> =>
-  new Promise((resolve) => {
-    const req = httpRequest(location, { timeout: descriptionTimeoutMs }, (res) => {
+  new Promise(resolve => {
+    const req = httpRequest(location, { timeout: descriptionTimeoutMs }, res => {
       const chunks: Buffer[] = []
       res.on('data', (chunk: Buffer) => chunks.push(chunk))
       res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
@@ -32,7 +33,7 @@ const fetchDescription = (location: string): Promise<string | null> =>
 // Best effort: SSDP multicast does not cross every container network, so the
 // device list stays explicit (DEVICE_HOSTS) and discovery only enriches it.
 export const discoverSsdp = (timeoutMs = 3000): Promise<string[]> =>
-  new Promise((resolve) => {
+  new Promise(resolve => {
     const found = new Set<string>()
     const pending = new Set<Promise<void>>()
     const socket = createSocket({ type: 'udp4', reuseAddr: true })
@@ -52,7 +53,7 @@ export const discoverSsdp = (timeoutMs = 3000): Promise<string[]> =>
       const headers = parseHeaders(buffer.toString('utf8'))
       const location = headers.get('location')
       if (!location) return
-      const task = fetchDescription(location).then((body) => {
+      const task = fetchDescription(location).then(body => {
         if (body && looksLikeWiim(body) && !found.has(remote.address)) found.add(remote.address)
       })
       pending.add(task)
@@ -68,9 +69,9 @@ export const discoverSsdp = (timeoutMs = 3000): Promise<string[]> =>
           'ST: urn:schemas-upnp-org:device:MediaRenderer:1',
           '',
           '',
-        ].join('\r\n'),
+        ].join('\r\n')
       )
-      socket.send(message, 1900, '239.255.255.250', (error) => {
+      socket.send(message, 1900, '239.255.255.250', error => {
         if (error) resolve([])
       })
       setTimeout(finish, timeoutMs)

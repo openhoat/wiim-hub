@@ -1,5 +1,5 @@
-import type { DeviceEvent } from './types'
 import type { Translate } from './settings'
+import type { DeviceEvent } from './types'
 
 // Device states are short tokens. A translated token wins; an unknown one is
 // printed as is rather than shown as a missing key.
@@ -24,12 +24,10 @@ export const eventText = (t: Translate, event: DeviceEvent): string => {
   return ''
 }
 
-export const agoLabel = (
-  t: Translate,
-  at: number | null,
-  now: number,
-): string => {
+export const agoLabel = (t: Translate, at: number | null, now: number): string => {
   if (at === null) return t('never')
   const seconds = Math.max(0, Math.round((now - at) / 1000))
-  return seconds < 60 ? t('secondsAgo', { n: seconds }) : t('minutesAgo', { n: Math.round(seconds / 60) })
+  return seconds < 60
+    ? t('secondsAgo', { n: seconds })
+    : t('minutesAgo', { n: Math.round(seconds / 60) })
 }

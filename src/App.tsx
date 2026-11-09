@@ -11,8 +11,8 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/toaster'
 import { cn } from '@/lib/cn'
 import { SettingsProvider, useSettings } from '@/lib/settings'
-import { useHub } from '@/lib/use-hub'
 import type { View } from '@/lib/types'
+import { useHub } from '@/lib/use-hub'
 
 const viewKey = 'wiim-hub:view'
 
@@ -34,7 +34,7 @@ const writeView = (view: View): void => {
 
 const LoadingCards = () => (
   <>
-    {[0, 1].map((index) => (
+    {[0, 1].map(index => (
       <Card key={index} className="p-4 sm:p-5">
         <div className="flex items-center justify-between">
           <Skeleton className="h-3.5 w-24" />
@@ -61,7 +61,7 @@ const Hub = () => {
   const [now, setNow] = useState(() => Date.now())
 
   const devices = hub.state?.devices ?? []
-  const offline = devices.filter((device) => !device.online).length
+  const offline = devices.filter(device => !device.online).length
   const online = devices.length - offline
 
   useEffect(() => {
@@ -90,8 +90,10 @@ const Hub = () => {
   }
 
   const announce = devices
-    .map((device) =>
-      device.online ? `${device.name}: ${device.title === '' ? t('noPlayback') : device.title}` : `${device.name}: ${t('offline')}`,
+    .map(device =>
+      device.online
+        ? `${device.name}: ${device.title === '' ? t('noPlayback') : device.title}`
+        : `${device.name}: ${t('offline')}`
     )
     .join('. ')
 
@@ -120,16 +122,20 @@ const Hub = () => {
             </div>
           )}
 
-          {!hub.loading && devices.length === 0 && <EmptyState onDiscover={() => void discover()} discovering={hub.discovering} />}
+          {!hub.loading && devices.length === 0 && (
+            <EmptyState onDiscover={() => void discover()} discovering={hub.discovering} />
+          )}
 
           {devices.length > 0 &&
             (view === 'user' ? (
               <div
                 className={cn(
-                  devices.length > 1 ? 'grid items-start gap-4 xl:grid-cols-2' : 'mx-auto max-w-3xl space-y-4',
+                  devices.length > 1
+                    ? 'grid items-start gap-4 xl:grid-cols-2'
+                    : 'mx-auto max-w-3xl space-y-4'
                 )}
               >
-                {devices.map((device) => (
+                {devices.map(device => (
                   <div key={device.name + device.ip} className="space-y-4">
                     <NowPlayingCard device={device} now={now} />
                     <SoundCard device={device} />
@@ -138,7 +144,7 @@ const Hub = () => {
               </div>
             ) : (
               <div className="space-y-4">
-                {devices.map((device) => (
+                {devices.map(device => (
                   <DiagnosticCard key={device.name + device.ip} device={device} now={now} />
                 ))}
               </div>
@@ -150,7 +156,9 @@ const Hub = () => {
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-3 text-[11px] text-muted-foreground sm:px-6">
           <span className="hidden sm:inline">{t('subtitle')}</span>
           <span className="tabular-nums">
-            {devices.length > 0 && hub.state !== null ? t('polled', { seconds: Math.round(hub.state.pollMs / 1000) }) : '—'}
+            {devices.length > 0 && hub.state !== null
+              ? t('polled', { seconds: Math.round(hub.state.pollMs / 1000) })
+              : '—'}
           </span>
         </div>
       </footer>

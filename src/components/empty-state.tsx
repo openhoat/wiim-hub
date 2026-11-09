@@ -18,7 +18,11 @@ export const EmptyState = ({
         <p className="max-w-sm text-sm text-muted-foreground">{t('emptyHint')}</p>
       </div>
       <Button variant="outline" onClick={onDiscover} disabled={discovering}>
-        {discovering ? <RefreshCw className="size-4 animate-spin" /> : <AudioLines className="size-4" />}
+        {discovering ? (
+          <RefreshCw className="size-4 animate-spin" />
+        ) : (
+          <AudioLines className="size-4" />
+        )}
         {discovering ? t('discovering') : t('discover')}
       </Button>
     </Card>

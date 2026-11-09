@@ -41,17 +41,17 @@ curl -ks -G "https://<device>:443/httpapi.asp" --data-urlencode "command=getStat
 
 ## 2. Transport facts (measured)
 
-| Property | Observation |
-| --- | --- |
-| Protocol | HTTPS on 443 with a self-signed certificate. Plain HTTP on 80 is not served by this firmware. |
-| Server | `lighttpd/1.4.79`, `HTTP/1.1 200 OK`, `Accept-Ranges: bytes`. |
-| Content type | **No `Content-Type` header at all.** The body is sometimes JSON, sometimes a bare token. |
-| CORS | None. No `Access-Control-Allow-*` headers, so a browser page cannot call the device directly: the hub proxies every request. |
-| Method | GET with a single `command=` parameter. Values that contain JSON are URL encoded. |
-| Payload shapes | JSON object, JSON array, bare `OK`, bare `Failed`, bare `unknown command`, bare number (`0`/`1`), or empty body. |
-| Root path | `GET /` hangs instead of answering. Never probe the root as a liveness check. |
-| Latency | 20 to 60 ms for control commands on the local network; mDNS name resolution is the slow part (0.5 to 6 s measured), not HTTP. |
-| Encoding trap | `getPlayerStatus` returns `Title`/`Artist`/`Album` as **hex encoded UTF-8** (`476F676F6C` = `Gogol`). Use `getMetaInfo` for display text. |
+| Property       | Observation                                                                                                                               |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| Protocol       | HTTPS on 443 with a self-signed certificate. Plain HTTP on 80 is not served by this firmware.                                             |
+| Server         | `lighttpd/1.4.79`, `HTTP/1.1 200 OK`, `Accept-Ranges: bytes`.                                                                             |
+| Content type   | **No `Content-Type` header at all.** The body is sometimes JSON, sometimes a bare token.                                                  |
+| CORS           | None. No `Access-Control-Allow-*` headers, so a browser page cannot call the device directly: the hub proxies every request.              |
+| Method         | GET with a single `command=` parameter. Values that contain JSON are URL encoded.                                                         |
+| Payload shapes | JSON object, JSON array, bare `OK`, bare `Failed`, bare `unknown command`, bare number (`0`/`1`), or empty body.                          |
+| Root path      | `GET /` hangs instead of answering. Never probe the root as a liveness check.                                                             |
+| Latency        | 20 to 60 ms for control commands on the local network; mDNS name resolution is the slow part (0.5 to 6 s measured), not HTTP.             |
+| Encoding trap  | `getPlayerStatus` returns `Title`/`Artist`/`Album` as **hex encoded UTF-8** (`476F676F6C` = `Gogol`). Use `getMetaInfo` for display text. |
 
 Consequences for the hub:
 
@@ -65,44 +65,44 @@ Consequences for the hub:
 
 ## 3. Read surface (measured on the reference player)
 
-| Command | Answer | Use |
-| --- | --- | --- |
-| `getStatusEx` | 2.8 KB JSON, 70+ fields | identity, network, capabilities, volume ceiling, group state |
-| `getPlayerStatus` | JSON | transport state, position, volume, mute, loop mode, current vendor |
-| `getPlayerStatusEx` | same body as above here | documented as richer; no difference on this firmware |
-| `getMetaInfo` | JSON `metaData` | title, artist, album, cover URL, sample rate, bit depth, bit rate, track id |
-| `getPresetInfo` | JSON `preset_num`, `preset_list[]` | saved radio presets with name, URL, source, picture |
-| `getNewAudioOutputHardwareMode` | `{"hardware":"2","source":"0","audiocast":"0"}` | active output routing |
-| `getSoundCardModeSupportList` | array of 3 outputs | the **available** outputs (Optical, Line, COAX here) |
-| `getAudioInputEnable` | 4 inputs, `enable` 0/1 | which inputs the user left enabled in the app |
-| `getAudioInputCapbility` | 4 inputs | physical inputs present on the model |
-| `getModeRename` | `Failed` when nothing renamed | user defined input labels |
-| `GetAcousticCapability` | JSON | GEQ, PEQ (LS/PK/HS/LP/HP), RoomFit, headroom, sub LPF, output delay range |
-| `EQGetList` | 24 preset names | factory EQ presets (`Game` included) |
-| `EQv2GetList:...Eq10HP` | `{"custom":[],"preset":[...]}` | graphic EQ presets, custom ones included |
-| `EQGetLV2SourceBandEx:{...Eq10HP}` | JSON with 10 bands | **readable** graphic EQ curve, per source (`source_name: wifi`) |
-| `EQGetStat` | `{"status":"Failed"}` | legacy switch, not the source of truth on this firmware |
-| `RoomCorrGet` | JSON with bands, `EQLevel: 2` | RoomFit state and profile |
-| `getNetworkHealth` | JSON counters | disconnect counts, last disconnect age, roaming, DHCP time, abnormal reboots |
-| `getHwErrorInfo` | JSON | flash bad blocks (5 of 2000 here), sound card, thermal, LED errors |
-| `getDebugInfo` | JSON, ~35 counters | `slave_latency`, UPnP action totals/losses, crash counters, `power_ticks` (uptime) |
-| `getShutdown` | seconds, `0` when off | sleep timer state |
-| `LED_SWITCH_GET` | `1` | status light on/off |
-| `Button_Enable_GET` | `1` | touch controls enabled |
-| `getDeviceNameChangeable` | `OK` | name is editable |
-| `getChannelBalance` | `0` | stereo balance |
-| `GetFadeFeature` | `{"FadeFeature":1}` | fade in/out support and state |
-| `get_remote_volume_step` | `{"status":"OK","remote_volume_step":1}` | remote volume step |
-| `getPowerModeTime` | JSON | idle, standby, sleep, power off, semi active intervals |
-| `streamServicesCapability` | 2 KB JSON | per service quality tiers (SD/HD/UHD), version, encryption |
-| `multiroom:getSlaveList` | `{"slaves":0,"wmrm_version":"4.3","surround":0}` | group membership |
-| `multiroom:getnamegrouplist` | JSON group list | **saved** group names, ids, channels, update time |
-| `getAlarmClock:<n>` | `{"enable":"0"}` | alarm slot state |
-| `getRoutineCapability` | `{"version":"1.1"}` | routines supported |
-| `getAllRoutines` | `{}` here | device side action sequences (empty: none configured) |
-| `getMvRemoteUpdateStartCheck` | `OK` | firmware update check accepted |
-| `getMvRemoteUpdateStatus` | `0` | update progress state |
-| `getInfo`, `getVolume`, `getTracks`, `getPresetList`, `getAudioOutputStatus` | `unknown command` | do not use, they exist in older LinkPlay docs |
+| Command                                                                      | Answer                                           | Use                                                                                |
+| ---------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `getStatusEx`                                                                | 2.8 KB JSON, 70+ fields                          | identity, network, capabilities, volume ceiling, group state                       |
+| `getPlayerStatus`                                                            | JSON                                             | transport state, position, volume, mute, loop mode, current vendor                 |
+| `getPlayerStatusEx`                                                          | same body as above here                          | documented as richer; no difference on this firmware                               |
+| `getMetaInfo`                                                                | JSON `metaData`                                  | title, artist, album, cover URL, sample rate, bit depth, bit rate, track id        |
+| `getPresetInfo`                                                              | JSON `preset_num`, `preset_list[]`               | saved radio presets with name, URL, source, picture                                |
+| `getNewAudioOutputHardwareMode`                                              | `{"hardware":"2","source":"0","audiocast":"0"}`  | active output routing                                                              |
+| `getSoundCardModeSupportList`                                                | array of 3 outputs                               | the **available** outputs (Optical, Line, COAX here)                               |
+| `getAudioInputEnable`                                                        | 4 inputs, `enable` 0/1                           | which inputs the user left enabled in the app                                      |
+| `getAudioInputCapbility`                                                     | 4 inputs                                         | physical inputs present on the model                                               |
+| `getModeRename`                                                              | `Failed` when nothing renamed                    | user defined input labels                                                          |
+| `GetAcousticCapability`                                                      | JSON                                             | GEQ, PEQ (LS/PK/HS/LP/HP), RoomFit, headroom, sub LPF, output delay range          |
+| `EQGetList`                                                                  | 24 preset names                                  | factory EQ presets (`Game` included)                                               |
+| `EQv2GetList:...Eq10HP`                                                      | `{"custom":[],"preset":[...]}`                   | graphic EQ presets, custom ones included                                           |
+| `EQGetLV2SourceBandEx:{...Eq10HP}`                                           | JSON with 10 bands                               | **readable** graphic EQ curve, per source (`source_name: wifi`)                    |
+| `EQGetStat`                                                                  | `{"status":"Failed"}`                            | legacy switch, not the source of truth on this firmware                            |
+| `RoomCorrGet`                                                                | JSON with bands, `EQLevel: 2`                    | RoomFit state and profile                                                          |
+| `getNetworkHealth`                                                           | JSON counters                                    | disconnect counts, last disconnect age, roaming, DHCP time, abnormal reboots       |
+| `getHwErrorInfo`                                                             | JSON                                             | flash bad blocks (5 of 2000 here), sound card, thermal, LED errors                 |
+| `getDebugInfo`                                                               | JSON, ~35 counters                               | `slave_latency`, UPnP action totals/losses, crash counters, `power_ticks` (uptime) |
+| `getShutdown`                                                                | seconds, `0` when off                            | sleep timer state                                                                  |
+| `LED_SWITCH_GET`                                                             | `1`                                              | status light on/off                                                                |
+| `Button_Enable_GET`                                                          | `1`                                              | touch controls enabled                                                             |
+| `getDeviceNameChangeable`                                                    | `OK`                                             | name is editable                                                                   |
+| `getChannelBalance`                                                          | `0`                                              | stereo balance                                                                     |
+| `GetFadeFeature`                                                             | `{"FadeFeature":1}`                              | fade in/out support and state                                                      |
+| `get_remote_volume_step`                                                     | `{"status":"OK","remote_volume_step":1}`         | remote volume step                                                                 |
+| `getPowerModeTime`                                                           | JSON                                             | idle, standby, sleep, power off, semi active intervals                             |
+| `streamServicesCapability`                                                   | 2 KB JSON                                        | per service quality tiers (SD/HD/UHD), version, encryption                         |
+| `multiroom:getSlaveList`                                                     | `{"slaves":0,"wmrm_version":"4.3","surround":0}` | group membership                                                                   |
+| `multiroom:getnamegrouplist`                                                 | JSON group list                                  | **saved** group names, ids, channels, update time                                  |
+| `getAlarmClock:<n>`                                                          | `{"enable":"0"}`                                 | alarm slot state                                                                   |
+| `getRoutineCapability`                                                       | `{"version":"1.1"}`                              | routines supported                                                                 |
+| `getAllRoutines`                                                             | `{}` here                                        | device side action sequences (empty: none configured)                              |
+| `getMvRemoteUpdateStartCheck`                                                | `OK`                                             | firmware update check accepted                                                     |
+| `getMvRemoteUpdateStatus`                                                    | `0`                                              | update progress state                                                              |
+| `getInfo`, `getVolume`, `getTracks`, `getPresetList`, `getAudioOutputStatus` | `unknown command`                                | do not use, they exist in older LinkPlay docs                                      |
 
 Fields worth knowing inside `getStatusEx`, all measured: `DeviceName`, `GroupName`, `project`
 (model), `firmware`, `Release`, `hardware`, `uuid`, `MAC`, `RSSI` (-49), `wlanSnr` (35),
@@ -166,35 +166,35 @@ Bluetooth (only meaningful with the right hardware):
 
 One write at a time, re-read after each; `curpos`/`totlen` are milliseconds here.
 
-| Write | Answer | Re-read | Conclusion |
-| --- | --- | --- | --- |
-| `setPlayerCmd:pause` | `OK` | `status=pause` | accepted, state follows |
-| `setPlayerCmd:resume` | `OK` | `status=play` | resumes a paused stream |
-| `setPlayerCmd:onepause` twice | `OK` | `pause` then `play` | real toggle, usable as one button |
-| `setPlayerCmd:next` | `OK` | `status=load`, `totlen=0` | a transition reads as unknown duration, not as live |
-| `setPlayerCmd:prev` | `OK` | new track, `status=play` | the previous track restarts |
-| `setPlayerCmd:seek:60` | `OK` | `curpos=60000` | **seconds** in, milliseconds out |
-| `setPlayerCmd:vol:30` | `OK` | `vol=30` | absolute level, within `max_volume` |
-| `setPlayerCmd:mute:1` then `:0` | `OK` | `mute=1` then `0` | boolean flag |
-| `setPlayerCmd:loopmode:4` then `:0` | `OK` | `loop=4` then `0` | accepted; the mode family is not documented per value |
-| `MCUKeyShortClick:1` | `OK` | nothing changed | answered `OK` with **no preset configured**: the answer does not prove the slot exists |
-| `setShutdown:60` then `:0` | `OK` | `getShutdown=60` then `0` | sleep timer, cancellable |
-| `EQLoad:Rock` | full JSON with `EQStat=On`, `Name=Rock`, 10 bands | curve readable by source | `EQLoad` answers with the state, not `OK` |
-| `EQOff` | `{"status":"OK"}` | `EQStat=Off`, `Name=Rock` kept | off is a switch, not a reset |
-| `setAudioOutputHardwareMode:1` | `OK` | `hardware=1` (Optical) | the mode-name table holds for the routes tested |
-| `setAudioOutputHardwareMode:2` | `OK` | `hardware=2` (Line) | restoring the previous route works |
-| `setPlayerCmd:switchmode:optical` | `OK` | `mode=43`, still playing, `vendor` empty | input switch keeps the transport running |
-| `setPlayerCmd:switchmode:wifi` | `OK` | `mode=10`, `status=stop` | switching back does **not** resume the stream |
-| `EQSetLV2SourceBand` one band | `OK` | that band changed, the others kept, `Name` **emptied** | a hand-moved band turns the curve into a custom one |
-| `EQSetBand:{"EQBand":[{"index":0,…}]}` | `OK` | band 0 read `-10.56` for a requested `6.0` | the v1 payload is not interpreted as a gain: never use it |
-| `setPlayerCmd:play:<url>` | `OK` | `mode=10`, `vendor=CustomPushUrl`, title = the address, stream numbers from the stream | the player fetches the address itself, no account |
-| `setDeviceName:Living Room Hub` | `OK` | `DeviceName=Living Room Hub` | a space survives the query encoding |
-| `LED_SWITCH_SET:0` then `:1` | `OK` | `LED_SWITCH_GET` follows | plain flag |
-| `Button_Enable_SET:0` then `:1` | `OK` | `Button_Enable_GET` follows | plain flag |
-| `setChannelBalance:1`, `:0.5` | `OK` | read back | accepted range -1..1, decimal steps |
-| `setChannelBalance:2`, `:5`, `:10` | `Failed` | unchanged | out of range is refused, not clamped |
-| `setMaxVolume:80` then `:100` | `OK` | `max_volume` follows | the ceiling is a device setting |
-| `SetFadeFeature:0` then `:1` | `OK` | `{"FadeFeature":0}` then `1` | JSON answer, not a bare token |
+| Write                                  | Answer                                            | Re-read                                                                                | Conclusion                                                                             |
+| -------------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `setPlayerCmd:pause`                   | `OK`                                              | `status=pause`                                                                         | accepted, state follows                                                                |
+| `setPlayerCmd:resume`                  | `OK`                                              | `status=play`                                                                          | resumes a paused stream                                                                |
+| `setPlayerCmd:onepause` twice          | `OK`                                              | `pause` then `play`                                                                    | real toggle, usable as one button                                                      |
+| `setPlayerCmd:next`                    | `OK`                                              | `status=load`, `totlen=0`                                                              | a transition reads as unknown duration, not as live                                    |
+| `setPlayerCmd:prev`                    | `OK`                                              | new track, `status=play`                                                               | the previous track restarts                                                            |
+| `setPlayerCmd:seek:60`                 | `OK`                                              | `curpos=60000`                                                                         | **seconds** in, milliseconds out                                                       |
+| `setPlayerCmd:vol:30`                  | `OK`                                              | `vol=30`                                                                               | absolute level, within `max_volume`                                                    |
+| `setPlayerCmd:mute:1` then `:0`        | `OK`                                              | `mute=1` then `0`                                                                      | boolean flag                                                                           |
+| `setPlayerCmd:loopmode:4` then `:0`    | `OK`                                              | `loop=4` then `0`                                                                      | accepted; the mode family is not documented per value                                  |
+| `MCUKeyShortClick:1`                   | `OK`                                              | nothing changed                                                                        | answered `OK` with **no preset configured**: the answer does not prove the slot exists |
+| `setShutdown:60` then `:0`             | `OK`                                              | `getShutdown=60` then `0`                                                              | sleep timer, cancellable                                                               |
+| `EQLoad:Rock`                          | full JSON with `EQStat=On`, `Name=Rock`, 10 bands | curve readable by source                                                               | `EQLoad` answers with the state, not `OK`                                              |
+| `EQOff`                                | `{"status":"OK"}`                                 | `EQStat=Off`, `Name=Rock` kept                                                         | off is a switch, not a reset                                                           |
+| `setAudioOutputHardwareMode:1`         | `OK`                                              | `hardware=1` (Optical)                                                                 | the mode-name table holds for the routes tested                                        |
+| `setAudioOutputHardwareMode:2`         | `OK`                                              | `hardware=2` (Line)                                                                    | restoring the previous route works                                                     |
+| `setPlayerCmd:switchmode:optical`      | `OK`                                              | `mode=43`, still playing, `vendor` empty                                               | input switch keeps the transport running                                               |
+| `setPlayerCmd:switchmode:wifi`         | `OK`                                              | `mode=10`, `status=stop`                                                               | switching back does **not** resume the stream                                          |
+| `EQSetLV2SourceBand` one band          | `OK`                                              | that band changed, the others kept, `Name` **emptied**                                 | a hand-moved band turns the curve into a custom one                                    |
+| `EQSetBand:{"EQBand":[{"index":0,…}]}` | `OK`                                              | band 0 read `-10.56` for a requested `6.0`                                             | the v1 payload is not interpreted as a gain: never use it                              |
+| `setPlayerCmd:play:<url>`              | `OK`                                              | `mode=10`, `vendor=CustomPushUrl`, title = the address, stream numbers from the stream | the player fetches the address itself, no account                                      |
+| `setDeviceName:Living Room Hub`        | `OK`                                              | `DeviceName=Living Room Hub`                                                           | a space survives the query encoding                                                    |
+| `LED_SWITCH_SET:0` then `:1`           | `OK`                                              | `LED_SWITCH_GET` follows                                                               | plain flag                                                                             |
+| `Button_Enable_SET:0` then `:1`        | `OK`                                              | `Button_Enable_GET` follows                                                            | plain flag                                                                             |
+| `setChannelBalance:1`, `:0.5`          | `OK`                                              | read back                                                                              | accepted range -1..1, decimal steps                                                    |
+| `setChannelBalance:2`, `:5`, `:10`     | `Failed`                                          | unchanged                                                                              | out of range is refused, not clamped                                                   |
+| `setMaxVolume:80` then `:100`          | `OK`                                              | `max_volume` follows                                                                   | the ceiling is a device setting                                                        |
+| `SetFadeFeature:0` then `:1`           | `OK`                                              | `{"FadeFeature":0}` then `1`                                                           | JSON answer, not a bare token                                                          |
 
 Consequences for the hub:
 
@@ -215,7 +215,6 @@ Consequences for the hub:
   bounds the value itself and re-reads after every write.
 - `setPlayerCmd:play:<url>` is the only way to start playback without an account; a stream URL is
   accepted only over http or https.
-
 
 ## 5. Requirements by area
 
@@ -342,7 +341,7 @@ Measured on the Pro (`Linkplay.4.8.833748`, `wmrm_version` 4.3, `wmrm_sub_ver` 7
   read and neither is assumed to be there.
 - `multiroom:getnamegrouplist` holds the groups the vendor app remembers, not the running one:
   `{grouplist:[{group_name:"Apartment",group_id:"6E2A9D14-…",slavelist:[{name:"Bedroom",
-  uuid:"A1B27C4DE6F0498B93D5E0C7A4F28B61"}]}],current_group_id:"6E2A9D14-…"}`. A saved member carries a
+uuid:"A1B27C4DE6F0498B93D5E0C7A4F28B61"}]}],current_group_id:"6E2A9D14-…"}`. A saved member carries a
   name and a uuid, no address, and the uuid is not derived from the MAC on this firmware, so a
   member cannot be located from the registry alone.
 - `current_group_id` is kept by a player that drives no group: it means "the app points at that
@@ -408,18 +407,18 @@ support.
 
 Signals available, all measured:
 
-| Signal | Source | Reading |
-| --- | --- | --- |
-| Link quality | `getStatusEx`: `RSSI`, `wlanSnr`, `wlanNoise`, `wlanFreq`, `wlanDataRate` | -49 dBm and 35 dB SNR is good; below -70 dBm or SNR under 20 is weak; band tells 2.4 vs 5 GHz |
-| Drop history | `getNetworkHealth`: `disconnectedCount`, `lastDisconnectedTime`, `wlanAbnormalRebootTimes`, `pingCheckFailedCount`, `wlanRoamingOn` | counters plus age, so "3 drops, last 40 min ago" is a fact |
-| Uptime | `getDebugInfo`: `power_ticks` | 60 ticks per second; long uptime rules out a reboot loop |
-| Crash counters | `getDebugInfo`: `mcu_crash`, `a01controller_crash`, `process_deadlock` | non zero means firmware instability, not the network |
-| Flash health | `getHwErrorInfo`: `badBlockNum` / `totalBlockNum` | 5 of 2000 is normal; a rising share matters |
-| Hardware faults | `getHwErrorInfo`: `ethError`, `soundCardHwError`, `temperatureSensorError` | directs to hardware, not to the hub |
-| Transport state | `getPlayerStatus`: `status` | `stop` with a source selected, `loading` for long, `pause` is normal |
-| Group state | `multiroom:getSlaveList`, `getStatusEx.group` | a device that is a slave but silent is a group problem, not a network one |
-| Update state | `getStatusEx.VersionUpdate`, `NewVer`, `getMvRemoteUpdateStatus` | `0` means no update pending or none running |
-| Sleep timer | `getShutdown` | "the speaker will power off in 12 min" explains a silence |
+| Signal          | Source                                                                                                                              | Reading                                                                                       |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Link quality    | `getStatusEx`: `RSSI`, `wlanSnr`, `wlanNoise`, `wlanFreq`, `wlanDataRate`                                                           | -49 dBm and 35 dB SNR is good; below -70 dBm or SNR under 20 is weak; band tells 2.4 vs 5 GHz |
+| Drop history    | `getNetworkHealth`: `disconnectedCount`, `lastDisconnectedTime`, `wlanAbnormalRebootTimes`, `pingCheckFailedCount`, `wlanRoamingOn` | counters plus age, so "3 drops, last 40 min ago" is a fact                                    |
+| Uptime          | `getDebugInfo`: `power_ticks`                                                                                                       | 60 ticks per second; long uptime rules out a reboot loop                                      |
+| Crash counters  | `getDebugInfo`: `mcu_crash`, `a01controller_crash`, `process_deadlock`                                                              | non zero means firmware instability, not the network                                          |
+| Flash health    | `getHwErrorInfo`: `badBlockNum` / `totalBlockNum`                                                                                   | 5 of 2000 is normal; a rising share matters                                                   |
+| Hardware faults | `getHwErrorInfo`: `ethError`, `soundCardHwError`, `temperatureSensorError`                                                          | directs to hardware, not to the hub                                                           |
+| Transport state | `getPlayerStatus`: `status`                                                                                                         | `stop` with a source selected, `loading` for long, `pause` is normal                          |
+| Group state     | `multiroom:getSlaveList`, `getStatusEx.group`                                                                                       | a device that is a slave but silent is a group problem, not a network one                     |
+| Update state    | `getStatusEx.VersionUpdate`, `NewVer`, `getMvRemoteUpdateStatus`                                                                    | `0` means no update pending or none running                                                   |
+| Sleep timer     | `getShutdown`                                                                                                                       | "the speaker will power off in 12 min" explains a silence                                     |
 
 Interpretation rules (each finding carries its evidence line, the value and its source):
 
@@ -490,14 +489,14 @@ that makes a bug report actionable without asking the user to run curl.
 
 ## 9. Roadmap mapping
 
-| Area | Card | Scope |
-| --- | --- | --- |
-| Transport, volume, sources, seek | v2 remote control | probe first, then controls, optimistic state, queue |
-| Presets | v2 remote control | grid, play by slot, relayed art |
-| Output routing, EQ read, sleep timer | v2 remote control | read first, one write each |
-| Diagnostic assistance | diagnostic assistant | findings with evidence, guided flows, report export |
-| Multiroom | v3 | group card, per member volume, join/leave |
-| UPnP events | performance | replace polling, fallback kept |
+| Area                                 | Card                 | Scope                                               |
+| ------------------------------------ | -------------------- | --------------------------------------------------- |
+| Transport, volume, sources, seek     | v2 remote control    | probe first, then controls, optimistic state, queue |
+| Presets                              | v2 remote control    | grid, play by slot, relayed art                     |
+| Output routing, EQ read, sleep timer | v2 remote control    | read first, one write each                          |
+| Diagnostic assistance                | diagnostic assistant | findings with evidence, guided flows, report export |
+| Multiroom                            | v3                   | group card, per member volume, join/leave           |
+| UPnP events                          | performance          | replace polling, fallback kept                      |
 
 ## Appendix: v2 write probe, executed
 
@@ -523,4 +522,3 @@ kept outside the repository (`/tmp/opencode/wiim-write-probe.log`), the conclusi
 Steps 1 to 12 all ran; step 8 could not confirm a stream change because the reference player has
 no preset configured (`preset_num: 0`), so the acceptance of `MCUKeyShortClick` on an empty slot is
 the only observable there.
-

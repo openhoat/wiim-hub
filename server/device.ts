@@ -1,6 +1,6 @@
+import { lookup } from 'node:dns/promises'
 import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
-import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
 import { isIpLiteral, resolveMdns } from './mdns.ts'
 
@@ -236,7 +236,11 @@ const num = (value: unknown): number | null => {
 const readRssi = (status: Record<string, unknown> | null): number | null =>
   num(status?.RSSI) ?? num(status?.rssi)
 
-const cleanModel = (value: string): string => value.replace(/_with_.*$/i, '').replace(/_/g, ' ').trim()
+const cleanModel = (value: string): string =>
+  value
+    .replace(/_with_.*$/i, '')
+    .replace(/_/g, ' ')
+    .trim()
 
 // Idle firmware reports the placeholder "Unknown" as the track title: it is a
 // device artefact, not a track, so it must not reach the card.
@@ -261,7 +265,7 @@ const maybeHex = (value: string): string => {
 }
 
 const getOnce = (ip: string, command: string, scheme: Scheme): Promise<string | null> =>
-  new Promise((resolve) => {
+  new Promise(resolve => {
     const sender = scheme === 'https' ? httpsRequest : httpRequest
     const options = {
       host: ip,
@@ -275,7 +279,7 @@ const getOnce = (ip: string, command: string, scheme: Scheme): Promise<string | 
       headers: { accept: 'application/json, text/plain, */*' },
       ...(scheme === 'https' ? { rejectUnauthorized: false } : {}),
     }
-    const req = sender(options, (res) => {
+    const req = sender(options, res => {
       const chunks: Buffer[] = []
       res.on('data', (chunk: Buffer) => chunks.push(chunk))
       res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
@@ -309,7 +313,7 @@ type Binary = { body: Buffer; type: string }
 const maxArtBytes = 6 * 1024 * 1024
 
 const privateIpv4 = (address: string): boolean => {
-  const [a, b] = address.split('.').map((part) => Number(part))
+  const [a, b] = address.split('.').map(part => Number(part))
   return (
     a === 0 ||
     a === 10 ||
@@ -333,7 +337,7 @@ const privateIpv6 = (address: string): boolean => {
   if (mapped !== null) {
     const rest = mapped[1]
     if (rest.includes('.')) return privateIpv4(rest)
-    const [high, low] = rest.split(':').map((group) => Number.parseInt(group, 16))
+    const [high, low] = rest.split(':').map(group => Number.parseInt(group, 16))
     if (Number.isFinite(high) && Number.isFinite(low)) {
       return privateIpv4([high >> 8, high & 0xff, low >> 8, low & 0xff].join('.'))
     }
@@ -344,7 +348,8 @@ const privateIpv6 = (address: string): boolean => {
 // Loopback, private, link-local, carrier NAT, multicast and reserved: none of
 // those is a cover host. The speaker itself is the one allowed private target,
 // and its address is the one the hub already polls.
-const privateAddress = (address: string): boolean => (address.includes(':') ? privateIpv6(address) : privateIpv4(address))
+const privateAddress = (address: string): boolean =>
+  address.includes(':') ? privateIpv6(address) : privateIpv4(address)
 
 // Resolve once and connect to the address that was checked: a name that answers
 // a public address during the guard and a private one at connect time is the
@@ -353,7 +358,7 @@ const resolveAddresses = async (hostname: string): Promise<string[] | null> => {
   if (isIP(hostname) !== 0) return [hostname]
   try {
     const found = await lookup(hostname, { all: true, verbatim: true })
-    return found.length === 0 ? null : found.map((entry) => entry.address)
+    return found.length === 0 ? null : found.map(entry => entry.address)
   } catch {
     return null
   }
@@ -366,10 +371,18 @@ const sniffArtType = (body: Buffer): string | null => {
   if (body.length < 12) return null
   if (body[0] === 0xff && body[1] === 0xd8 && body[2] === 0xff) return 'image/jpeg'
   if (body.subarray(0, 4).toString('latin1') === 'GIF8') return 'image/gif'
-  if (body.subarray(0, 4).toString('latin1') === 'RIFF' && body.subarray(8, 12).toString('latin1') === 'WEBP') {
+  if (
+    body.subarray(0, 4).toString('latin1') === 'RIFF' &&
+    body.subarray(8, 12).toString('latin1') === 'WEBP'
+  ) {
     return 'image/webp'
   }
-  if (body[0] === 0x89 && body.subarray(1, 4).toString('latin1') === 'PNG' && body[4] === 0x0d && body[5] === 0x0a) {
+  if (
+    body[0] === 0x89 &&
+    body.subarray(1, 4).toString('latin1') === 'PNG' &&
+    body[4] === 0x0d &&
+    body[5] === 0x0a
+  ) {
     return 'image/png'
   }
   return null
@@ -381,9 +394,9 @@ const getBinary = (
   ip: string,
   path: string,
   scheme: Scheme,
-  { port, insecure = false, serverName }: BinaryOptions = {},
+  { port, insecure = false, serverName }: BinaryOptions = {}
 ): Promise<Binary | null> =>
-  new Promise((resolve) => {
+  new Promise(resolve => {
     const sender = scheme === 'https' ? httpsRequest : httpRequest
     const options = {
       host: ip,
@@ -393,11 +406,12 @@ const getBinary = (
       timeout: 5000,
       // The connection goes to the address that was checked; the name the host
       // expects still decides the Host header and the certificate.
-      headers: serverName === undefined ? { accept: 'image/*' } : { accept: 'image/*', host: serverName },
+      headers:
+        serverName === undefined ? { accept: 'image/*' } : { accept: 'image/*', host: serverName },
       ...(serverName === undefined ? {} : { servername: serverName }),
       ...(scheme === 'https' && insecure ? { rejectUnauthorized: false } : {}),
     }
-    const req = sender(options, (res) => {
+    const req = sender(options, res => {
       if (res.statusCode !== 200) {
         res.resume()
         resolve(null)
@@ -457,15 +471,21 @@ export const fetchAlbumArt = async (host: string, uri: string): Promise<Binary |
     return null
   }
   const onDevice = target === deviceIp || addresses.includes(deviceIp)
-  if (!onDevice && addresses.some((entry) => privateAddress(entry))) {
+  if (!onDevice && addresses.some(entry => privateAddress(entry))) {
     console.warn(`wiim-hub: art refused, ${target} is not a public address`)
     return null
   }
-  const address = onDevice ? deviceIp : (addresses.find((entry) => entry.includes('.')) ?? addresses[0])
+  const address = onDevice
+    ? deviceIp
+    : (addresses.find(entry => entry.includes('.')) ?? addresses[0])
   // An address literal is its own Host header: naming it as a TLS server would
   // only trip the RFC 6066 warning.
   const serverName = onDevice || isIP(target) !== 0 ? undefined : target
-  const options: BinaryOptions = { port, insecure: onDevice, ...(serverName === undefined ? {} : { serverName }) }
+  const options: BinaryOptions = {
+    port,
+    insecure: onDevice,
+    ...(serverName === undefined ? {} : { serverName }),
+  }
   const first = await getBinary(address, path, scheme, options)
   if (first !== null) return first
   return getBinary(address, path, scheme === 'https' ? 'http' : 'https', options)
@@ -507,7 +527,12 @@ const hardwareByOutputMode: Record<string, number> = {
   AUDIO_OUTPUT_USB_MODE: 8,
 }
 
-type Capability = { at: number; inputs: string[]; inputLabels: Record<string, string>; outputs: OutputOption[] }
+type Capability = {
+  at: number
+  inputs: string[]
+  inputLabels: Record<string, string>
+  outputs: OutputOption[]
+}
 
 const capabilityTtlMs = 300_000
 const capabilityCache = new Map<string, Capability>()
@@ -556,7 +581,7 @@ const readOutputs = (raw: string | null): OutputOption[] => {
     const hardware = hardwareByOutputMode[text(entry.mode)]
     const name = text(entry.soundCard.devName)
     if (hardware === undefined || name === '') continue
-    if (outputs.some((output) => output.hardware === hardware)) continue
+    if (outputs.some(output => output.hardware === hardware)) continue
     outputs.push({ hardware, name })
   }
   return outputs
@@ -602,7 +627,11 @@ const presetsFor = async (ip: string): Promise<Preset[]> => {
     if (!isRecord(entry)) continue
     const number = num(entry.number)
     if (number === null || number <= 0) continue
-    value.push({ number, name: text(entry.name) || String(number), artwork: artUri(text(entry.picurl)) })
+    value.push({
+      number,
+      name: text(entry.name) || String(number),
+      artwork: artUri(text(entry.picurl)),
+    })
   }
   value.sort((left, right) => left.number - right.number)
   presetCache.set(ip, { at: Date.now(), value })
@@ -634,7 +663,9 @@ const acousticFor = async (ip: string): Promise<Acoustic> => {
   // A player without EQ answers `unknown command`: keep what was known rather
   // than turning the panel off on one bad request.
   const presets =
-    list === null ? (cached?.presets ?? []) : list.filter((name): name is string => typeof name === 'string' && name !== '')
+    list === null
+      ? (cached?.presets ?? [])
+      : list.filter((name): name is string => typeof name === 'string' && name !== '')
   const roomFit = isRecord(capability?.RC) ? true : (cached?.roomFit ?? false)
   const value: Acoustic = { at: Date.now(), presets, roomFit }
   acousticCache.set(ip, value)
@@ -650,7 +681,8 @@ const readEq = (raw: string | null, acoustic: Acoustic): Equalizer => {
     for (const entry of entries) {
       const name = text(entry.param_name)
       if (name === '') continue
-      const value = typeof entry.value === 'number' ? entry.value : Number.parseFloat(text(entry.value))
+      const value =
+        typeof entry.value === 'number' ? entry.value : Number.parseFloat(text(entry.value))
       if (!Number.isFinite(value)) continue
       bands.push({ name, value })
     }
@@ -784,12 +816,17 @@ const groupsFor = async (ip: string): Promise<Registry> => {
 // list makes it a master, a group id in its status makes it a follower, and a
 // saved group with nothing running stays a saved group rather than a fake
 // offline member.
-export const parseGroup = (raw: Record<string, unknown> | null, statusGroup: string, registry: Registry): GroupState => {
+export const parseGroup = (
+  raw: Record<string, unknown> | null,
+  statusGroup: string,
+  registry: Registry
+): GroupState => {
   const reported = readMembers(raw?.Slave_list ?? raw?.slavelist ?? raw?.slave_list)
   const count = num(raw?.Slaves) ?? num(raw?.slaves) ?? reported.length
   const follows = statusGroup !== '' && statusGroup !== '0'
-  const role: GroupState['role'] = count > 0 || reported.length > 0 ? 'master' : follows ? 'member' : 'none'
-  const saved = registry.groups.find((entry) => entry.id === registry.current) ?? null
+  const role: GroupState['role'] =
+    count > 0 || reported.length > 0 ? 'master' : follows ? 'member' : 'none'
+  const saved = registry.groups.find(entry => entry.id === registry.current) ?? null
   return {
     role,
     name: saved?.name ?? '',
@@ -818,15 +855,21 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
   const online = status !== null
   if (!online) forgetTarget(host)
   const groupId = text(status?.group)
-  const registry = online ? await groupsFor(ip) : (groupCache.get(ip) ?? { at: 0, groups: [], current: '' })
+  const registry = online
+    ? await groupsFor(ip)
+    : (groupCache.get(ip) ?? { at: 0, groups: [], current: '' })
   // The slave list is the only call that tells membership, so it costs one more
   // request when the player is grouped or when the registry points at a saved
   // group; a player with no group at all never pays for it.
   const grouped = (groupId !== '' && groupId !== '0') || registry.current !== ''
   const slavesRaw = grouped ? parseJson(await fetchCommand(ip, 'multiroom:getSlaveList')) : null
-  const capability = online ? await capabilityFor(ip) : (capabilityCache.get(ip) ?? emptyCapability())
+  const capability = online
+    ? await capabilityFor(ip)
+    : (capabilityCache.get(ip) ?? emptyCapability())
   const presets = online ? await presetsFor(ip) : (presetCache.get(ip)?.value ?? [])
-  const acoustic = online ? await acousticFor(ip) : (acousticCache.get(ip) ?? { at: 0, presets: [], roomFit: false })
+  const acoustic = online
+    ? await acousticFor(ip)
+    : (acousticCache.get(ip) ?? { at: 0, presets: [], roomFit: false })
   return {
     ip,
     online,

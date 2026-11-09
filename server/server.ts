@@ -1,6 +1,7 @@
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { readFile } from 'node:fs/promises'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
+import { commandFor, commandOutcome, parseAction } from './commands.ts'
 import {
   type DeviceEvent,
   type DevicePatch,
@@ -13,7 +14,6 @@ import {
   readSettings,
   resolveTarget,
 } from './device.ts'
-import { commandFor, commandOutcome, parseAction } from './commands.ts'
 import { discoverSsdp } from './discovery.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
@@ -25,8 +25,8 @@ const distDir = resolve(import.meta.dirname, '..', 'dist')
 const hosts = new Set(
   (process.env.DEVICE_HOSTS ?? '')
     .split(',')
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0),
+    .map(entry => entry.trim())
+    .filter(entry => entry.length > 0)
 )
 const states = new Map<string, DeviceState>()
 
@@ -71,7 +71,12 @@ const emptyState = (host: string): DeviceState => ({
   events: [],
 })
 
-const pushEvent = (state: DeviceState, kind: DeviceEvent['kind'], from: string, to: string): void => {
+const pushEvent = (
+  state: DeviceState,
+  kind: DeviceEvent['kind'],
+  from: string,
+  to: string
+): void => {
   state.events.unshift({ t: Date.now(), kind, from, to })
   state.events.length = Math.min(state.events.length, MAX_EVENTS)
 }
@@ -105,8 +110,15 @@ const applyPatch = (state: DeviceState, patch: DevicePatch): void => {
   }
   // Samples carry the patch values, not the retained state: an outage must
   // read as a gap in the series, not as a flat line at the last known RSSI.
-  state.samples.push({ t: now, rssi: patch.rssi, volume: patch.volume, status: patch.status, online: patch.online })
-  if (state.samples.length > MAX_SAMPLES) state.samples.splice(0, state.samples.length - MAX_SAMPLES)
+  state.samples.push({
+    t: now,
+    rssi: patch.rssi,
+    volume: patch.volume,
+    status: patch.status,
+    online: patch.online,
+  })
+  if (state.samples.length > MAX_SAMPLES)
+    state.samples.splice(0, state.samples.length - MAX_SAMPLES)
 }
 
 let polling = false
@@ -115,12 +127,12 @@ const pollAll = async (): Promise<void> => {
   polling = true
   try {
     await Promise.allSettled(
-      [...hosts].map(async (host) => {
+      [...hosts].map(async host => {
         const state = states.get(host) ?? emptyState(host)
         states.set(host, state)
         const patch = await pollDevice(host)
         applyPatch(state, patch)
-      }),
+      })
     )
   } finally {
     polling = false
@@ -158,9 +170,9 @@ const drain = async (key: string): Promise<void> => {
 }
 
 const enqueue = (key: string, command: string, family: string | null): Promise<Outcome> =>
-  new Promise((resolve) => {
+  new Promise(resolve => {
     const queue = queues.get(key) ?? []
-    const pending = family === null ? undefined : queue.find((job) => job.family === family)
+    const pending = family === null ? undefined : queue.find(job => job.family === family)
     if (pending !== undefined) {
       pending.command = command
       pending.resolvers.push(resolve)
@@ -191,7 +203,7 @@ const refreshHosts = async (): Promise<number> => {
     // One speaker can be configured under its mDNS name and answered by SSDP
     // under its address: the same machine must not get two cards, and the two
     // spellings must not run two writers against it.
-    const known = [...hosts].some((host) => host === ip || resolveTarget(host) === ip)
+    const known = [...hosts].some(host => host === ip || resolveTarget(host) === ip)
     if (known) continue
     hosts.add(ip)
     added += 1
@@ -200,7 +212,10 @@ const refreshHosts = async (): Promise<number> => {
 }
 
 const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+  res.writeHead(status, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+  })
   res.end(JSON.stringify(body))
 }
 
@@ -210,9 +225,10 @@ const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
 const artFor = async (url: URL, res: ServerResponse): Promise<void> => {
   const host = url.searchParams.get('host') ?? ''
   const uri = url.searchParams.get('uri') ?? ''
-  const device = states.get(host) ?? [...states.values()].find((state) => state.ip === host)
+  const device = states.get(host) ?? [...states.values()].find(state => state.ip === host)
   const known =
-    device !== undefined && (device.albumArt === uri || device.presets.some((preset) => preset.artwork === uri))
+    device !== undefined &&
+    (device.albumArt === uri || device.presets.some(preset => preset.artwork === uri))
   if (host === '' || uri === '' || device === undefined || !known) {
     console.warn(`wiim-hub: art refused, uri not reported by ${host === '' ? 'any host' : host}`)
     sendJson(res, 400, { error: 'unknown artwork' })
@@ -226,12 +242,15 @@ const artFor = async (url: URL, res: ServerResponse): Promise<void> => {
   }
   // The query carries the track, so a cover is immutable for its URL: the
   // browser stops asking on every poll while a track plays.
-  res.writeHead(200, { 'content-type': art.type, 'cache-control': 'private, max-age=86400, immutable' })
+  res.writeHead(200, {
+    'content-type': art.type,
+    'cache-control': 'private, max-age=86400, immutable',
+  })
   res.end(art.body)
 }
 
 const readBody = (req: IncomingMessage, limit = 2048): Promise<string | null> =>
-  new Promise((resolve) => {
+  new Promise(resolve => {
     let size = 0
     const chunks: Buffer[] = []
     req.on('data', (chunk: Buffer) => {
@@ -354,7 +373,7 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
       (left, right) =>
         Number(right.online) - Number(left.online) ||
         left.name.localeCompare(right.name) ||
-        left.ip.localeCompare(right.ip),
+        left.ip.localeCompare(right.ip)
     )
     sendJson(res, 200, { ts: Date.now(), pollMs, devices })
     return
