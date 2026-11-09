@@ -99,6 +99,13 @@ views diverge, and the device side is the one the official app consumes.
   read when the sheet opens and written on an explicit gesture. The hub keeps no copy.
 - **One writer per device**: volume and seek writes are coalesced to their last value, everything
   else is queued in order. The device is a small embedded server, not a database.
+- **Diagnostic findings, with their evidence**: the diagnostic view turns the device's own counters
+  into a short list of facts (weak link, Wi-Fi or wired drops, ping failures, abnormal reboots,
+  crash counters, lost UPnP actions, flash wear, hardware faults, a degraded push channel, a
+  running sleep timer), each with the number that supports it and the command it came from. A
+  clean device says "no anomaly detected" and lists what was read, so a clean answer shows its
+  basis. `GET /api/report?host=` renders the same findings as an English Markdown report, ready to
+  paste into a support thread, and the page copies or downloads it.
 - RSSI history (400 samples, about 20 minutes at 3 s) with a sparkline, an event log (reachability,
   playback state, track changes), a weak-signal and offline indicator, and a count badge in the
   tab title.
@@ -229,6 +236,7 @@ inside Docker the variables come from the compose file instead.
 | `UPNP_PORT`     | `8091`  | Port of the event callback listener, separate from `PORT`                                        |
 | `DEVICE_HOSTS`  | empty   | Comma separated device addresses or names, authoritative list; one entry per speaker             |
 | `DISCOVERY`     | `1`     | SSDP discovery, best effort, set `0` to disable                                                  |
+| `HUB_VERSION`   | `dev`   | Version string written in the diagnostic report; the image carries no `package.json` at runtime  |
 
 UPnP events are off unless `UPNP_CALLBACK` names an address the speakers can reach: the player
 pushes its notifications to that URL, so a hub on a different network (a bridged container, a
@@ -240,7 +248,9 @@ poll when a renewal fails or when two polls contradict the channel.
 ## Endpoints
 
 - `GET /health`: liveness, for container healthchecks
-- `GET /api/state`: devices, samples and events
+- `GET /api/state`: devices, samples, events and the findings of the moment
+- `GET /api/report?host=<address>`: the diagnostic report as Markdown (English), with the raw
+  answers it was built from, plus the same findings as JSON
 - `GET /api/settings?host=<address>`: name, LED, touch controls, balance, maximum volume and fade,
   read live when the settings sheet opens
 - `POST /api/command?host=<address>`: one intent (`{"action":"volume","level":30}`), validated

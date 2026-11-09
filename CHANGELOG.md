@@ -10,6 +10,21 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- Diagnostic findings: the diagnostic view now reads the device's own counters (`getNetworkHealth`,
+  `getDebugInfo`, `getHwErrorInfo`, refreshed every 60 s in three parallel commands) and turns them
+  into a short list of facts, each with the number that supports it and the command it came from.
+  Twelve rules: offline, weak link, Wi-Fi and wired drops, ping failures, abnormal reboots, crash
+  counters, lost UPnP actions, flash wear, hardware faults, a degraded push channel, a running
+  sleep timer. A clean device says "no anomaly detected" and lists what was read.
+  `parseDiagnostics` is a pure seam, tested against the payloads the reference player really sends
+  (the counters arrive as numbers where `getStatusEx` answers strings).
+- `GET /api/report?host=` renders the same findings as an English Markdown report with the raw
+  answers appended; the page copies or downloads it, and the two actions are covered by the demo
+  and its end-to-end test.
+- `HUB_VERSION` names the version in the report: the runtime image carries no `package.json`.
+
 ### Fixed
 
 - A callback port already in use is reported instead of leaving the hub silently on the fast poll

@@ -181,5 +181,42 @@
     "address": "Adresse du flux",
     "play": "Lire",
     "close": "Fermer"
+  },
+  "findings": {
+    "title": "Constats",
+    "none": "Aucune anomalie détectée",
+    "pending": "Les compteurs réseau sont lus dans la première minute.",
+    "readAt": "Compteurs lus {when}.",
+    "severity": {
+      "alert": "alerte",
+      "warn": "attention",
+      "info": "info"
+    },
+    "offline": "L'enceinte ne répond pas : {failures} échec(s) de poll consécutif(s).",
+    "weakLink": "La liaison radio est faible : {rssi} dBm, {snr} dB de SNR, {rate} Mb/s en {band} GHz.",
+    "wifiDrops": "Le Wi-Fi a décroché {count} fois, la dernière il y a {minutes} min.",
+    "ethDrops": "La liaison filaire a décroché {count} fois.",
+    "pingFailures": "{count} test(s) ping ont échoué.",
+    "abnormalReboots": "L'enceinte a redémarré anormalement {count} fois.",
+    "crashCounters": "{count} compteur(s) de plantage non nuls : le firmware a redémarré.",
+    "flashWear": "La flash montre {bad} blocs défectueux sur {total} ({ratio}).",
+    "hardwareFault": "Une sonde matérielle signale un défaut : {fields}.",
+    "upnpActionsLost": "{lost} action(s) UPnP perdue(s) sur {total}.",
+    "eventingDegraded": "Le canal push a été contredit par {misses} poll(s) : le hub repolle au rythme rapide.",
+    "sleepTimer": "Une minuterie éteindra l'enceinte dans {minutes} min.",
+    "checked": {
+      "rssi": "RSSI {value} dBm",
+      "snr": "SNR {value} dB",
+      "drops": "{value} décrochage(s) Wi-Fi",
+      "crashes": "{value} plantage(s)",
+      "flash": "flash {bad}/{total} blocs défectueux",
+      "upnp": "{value} action(s) UPnP perdue(s)"
+    }
+  },
+  "report": {
+    "copy": "Copier le rapport",
+    "download": "Télécharger le rapport",
+    "copied": "Rapport copié",
+    "failed": "Impossible de lire le rapport."
   }
 }

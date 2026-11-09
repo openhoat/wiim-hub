@@ -9,17 +9,20 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 ## In Progress
 
-Nothing in progress: 0.6.0 shipped UPnP events (#5 closed, see git history), deployed with the
-callback port reachable from the LAN. #4 keeps its write half blocked on a second reachable unit.
+### #2 [UX] Add the diagnostic assistant with findings and report export (P1) — started 2026-11-09
+
+Findings and the report shipped (`server/findings.ts`, `GET /api/report`); the guided flows below
+are what remains on the card.
+
+- [x] Derive findings from the link, health, hardware and playback signals, each with its evidence
+- [x] Export one JSON report plus a Markdown summary, and copy it from the UI (the report is served
+      by `/api/report` and carries the raw answers; the capability inventory is still missing)
+- [x] Say "no anomaly detected" when nothing is wrong, with the values that support it
+- [ ] Add the deterministic guided flows: no sound, drops, wrong output, cannot join a group
+
+Card #4 keeps its write half blocked on a second reachable unit.
 
 ## Backlog
-
-### #2 [UX] Add the diagnostic assistant with findings and report export (P1)
-
-- [ ] Derive findings from the link, health, hardware and playback signals, each with its evidence
-- [ ] Add the deterministic guided flows: no sound, drops, wrong output, cannot join a group
-- [ ] Export one JSON report plus a Markdown summary, and copy it from the UI
-- [ ] Say "no anomaly detected" when nothing is wrong, with the values that support it
 
 ### #4 [UX] Add a multiroom group view with per member control (P2)
 

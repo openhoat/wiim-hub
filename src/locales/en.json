@@ -181,5 +181,42 @@
     "address": "Stream address",
     "play": "Play",
     "close": "Close"
+  },
+  "findings": {
+    "title": "Findings",
+    "none": "No anomaly detected",
+    "pending": "Network counters are read within the first minute.",
+    "readAt": "Counters read {when}.",
+    "severity": {
+      "alert": "alert",
+      "warn": "warning",
+      "info": "info"
+    },
+    "offline": "The player does not answer: {failures} consecutive poll failure(s).",
+    "weakLink": "The radio link is weak: {rssi} dBm, {snr} dB SNR, {rate} Mb/s on {band} GHz.",
+    "wifiDrops": "The Wi-Fi dropped {count} time(s), the last one {minutes} min ago.",
+    "ethDrops": "The wired link dropped {count} time(s).",
+    "pingFailures": "{count} ping check(s) failed.",
+    "abnormalReboots": "The player rebooted abnormally {count} time(s).",
+    "crashCounters": "{count} crash counter(s) are non zero: the firmware restarted.",
+    "flashWear": "The flash shows {bad} bad blocks of {total} ({ratio}).",
+    "hardwareFault": "A hardware probe reports a fault: {fields}.",
+    "upnpActionsLost": "{lost} UPnP action(s) were lost out of {total}.",
+    "eventingDegraded": "The push channel was contradicted by {misses} poll(s): the hub is polling at the fast rate.",
+    "sleepTimer": "A sleep timer will power the player off in {minutes} min.",
+    "checked": {
+      "rssi": "RSSI {value} dBm",
+      "snr": "SNR {value} dB",
+      "drops": "{value} Wi-Fi drop(s)",
+      "crashes": "{value} crash(es)",
+      "flash": "flash {bad}/{total} bad blocks",
+      "upnp": "{value} UPnP action(s) lost"
+    }
+  },
+  "report": {
+    "copy": "Copy the report",
+    "download": "Download the report",
+    "copied": "Report copied",
+    "failed": "Could not read the report."
   }
 }

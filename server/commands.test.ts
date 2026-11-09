@@ -40,6 +40,8 @@ const device = (overrides: Partial<DeviceState> = {}): DeviceState => ({
   lastSeen: 1,
   errors: 0,
   upnp: { state: 'off', lastEventAt: null, events: 0, misses: 0 },
+  link: { snr: null, noise: null, freqMhz: null, rateMbps: null },
+  diagnostics: null,
   samples: [],
   events: [],
   ...overrides,

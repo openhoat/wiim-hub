@@ -72,6 +72,53 @@ export type Equalizer = {
 // really lossless".
 export type Quality = { sampleRate: number | null; bitDepth: number | null; bitRate: number | null }
 
+// The radio, as `getStatusEx` reports it on the reference player: RSSI -53 dBm,
+// noise -91, SNR 35, 5260 MHz, 433 Mb/s. They ride the poll because the command
+// that carries them is already in the cycle, and they are what turns "the Wi-Fi
+// looks fine" into a number.
+export type LinkMetrics = {
+  snr: number | null
+  noise: number | null
+  freqMhz: number | null
+  rateMbps: number | null
+}
+
+// The three probes behind the diagnostic findings, measured on the reference
+// player on 09/11/2026. They change slowly, so they are refreshed on their own
+// cadence instead of riding every poll.
+export type Diagnostics = {
+  at: number
+  health: {
+    disconnected: number | null
+    ethDisconnected: number | null
+    pingFailures: number | null
+    abnormalReboots: number | null
+    roaming: boolean
+    band: number | null
+    lastMessage: string
+    lastMinutes: number | null
+  } | null
+  debug: {
+    uptimeTicks: number | null
+    crashes: {
+      controller: number | null
+      asrTts: number | null
+      mcu: number | null
+      deadlock: number | null
+    }
+    upnpActionsLost: number | null
+    upnpActionsTotal: number | null
+  } | null
+  hardware: {
+    ethError: boolean
+    mfiError: boolean
+    flashSpaceError: boolean
+    soundCardError: boolean
+    badBlocks: number | null
+    totalBlocks: number | null
+  } | null
+}
+
 export type DeviceState = {
   ip: string
   name: string
@@ -111,6 +158,8 @@ export type DeviceState = {
   // device pushes volume, mute and transport changes, `degraded` means a poll
   // contradicted it and the hub is back on the fast poll.
   upnp: EventStatus
+  link: LinkMetrics
+  diagnostics: Diagnostics | null
   samples: Sample[]
   events: DeviceEvent[]
 }
@@ -147,6 +196,7 @@ export type DevicePatch = {
   presets: Preset[]
   eq: Equalizer
   quality: Quality
+  link: LinkMetrics
 }
 
 export const MAX_SAMPLES = 400
@@ -231,7 +281,13 @@ const parseJson = (raw: string | null): Record<string, unknown> | null => {
 
 const text = (value: unknown): string => (typeof value === 'string' ? value : '')
 
+// `getStatusEx` answers strings ("-53"), while the diagnostic counters of
+// `getNetworkHealth` and `getHwErrorInfo` come back as numbers (2, 5, 2000):
+// reading only strings left every one of those counters null, and a rule that
+// reads a null counter stays silent. The verbose field names are part of the
+// firmware, not a quirk of one build.
 const num = (value: unknown): number | null => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null
   const parsed = Number.parseInt(text(value), 10)
   return Number.isFinite(parsed) ? parsed : null
 }
@@ -920,5 +976,86 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
     presets,
     eq: readEq(eqRaw, acoustic),
     quality: readQuality(metaData),
+    link: {
+      snr: num(status?.wlanSnr),
+      noise: num(status?.wlanNoise),
+      freqMhz: num(status?.wlanFreq),
+      rateMbps: num(status?.wlanDataRate),
+    },
   }
+}
+
+// The probes are three separate commands and each answer is optional: a build
+// that lacks one of them still yields the other two, so a finding is only ever
+// dropped when its own source is silent.
+// A pure seam: the three answers in, one `Diagnostics` out. `readDiagnostics`
+// only adds the transport, which is what makes the payload shapes testable
+// without a speaker.
+export const parseDiagnostics = (
+  raw: { health: string | null; debug: string | null; hardware: string | null },
+  now = Date.now()
+): Diagnostics | null => {
+  const health = parseJson(raw.health)
+  const debug = parseJson(raw.debug)
+  const hardware = parseJson(raw.hardware)
+  if (health === null && debug === null && hardware === null) return null
+  const soundCard = isRecord(hardware?.soundCardHwError) ? hardware.soundCardHwError : null
+  const lost = [0, 1, 2, 3].map(index => num(debug?.[`upnp_action_lost${index}`]))
+  const total = [0, 1, 2, 3].map(index => num(debug?.[`upnp_action_total${index}`]))
+  const sum = (values: Array<number | null>): number | null => {
+    const known = values.filter((value): value is number => value !== null)
+    return known.length === 0 ? null : known.reduce((acc, value) => acc + value, 0)
+  }
+  return {
+    at: now,
+    health:
+      health === null
+        ? null
+        : {
+            disconnected: num(health.disconnectedCount),
+            ethDisconnected: num(health.ethDisconnectedCount),
+            pingFailures: num(health.pingCheckFailedCount),
+            abnormalReboots: num(health.wlanAbnormalRebootTimes),
+            roaming: num(health.wlanRoamingOn) === 1,
+            band: num(health.wlanBand),
+            lastMessage: text(health.lastDisconnectedMsg).trim(),
+            lastMinutes: num(health.lastDisconnectedTime),
+          },
+    debug:
+      debug === null
+        ? null
+        : {
+            uptimeTicks: num(debug.power_ticks),
+            crashes: {
+              controller: num(debug.a01controller_crash),
+              asrTts: num(debug.asr_tts_crash),
+              mcu: num(debug.mcu_crash),
+              deadlock: num(debug.process_deadlock),
+            },
+            upnpActionsLost: sum(lost),
+            upnpActionsTotal: sum(total),
+          },
+    hardware:
+      hardware === null
+        ? null
+        : {
+            ethError: num(hardware.ethError) === 1,
+            mfiError: num(hardware.mfiChipError) === 1,
+            flashSpaceError: num(hardware.flashSpaceError) === 1,
+            soundCardError:
+              soundCard === null ? false : Object.values(soundCard).some(value => num(value) === 1),
+            badBlocks: num(hardware.badBlockNum),
+            totalBlocks: num(hardware.totalBlockNum),
+          },
+  }
+}
+
+export const readDiagnostics = async (host: string): Promise<Diagnostics | null> => {
+  const ip = resolveTarget(host)
+  const [health, debug, hardware] = await Promise.all([
+    fetchCommand(ip, 'getNetworkHealth'),
+    fetchCommand(ip, 'getDebugInfo'),
+    fetchCommand(ip, 'getHwErrorInfo'),
+  ])
+  return parseDiagnostics({ health, debug, hardware })
 }

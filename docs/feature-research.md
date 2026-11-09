@@ -65,44 +65,44 @@ Consequences for the hub:
 
 ## 3. Read surface (measured on the reference player)
 
-| Command                                                                      | Answer                                           | Use                                                                                |
-| ---------------------------------------------------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| `getStatusEx`                                                                | 2.8 KB JSON, 70+ fields                          | identity, network, capabilities, volume ceiling, group state                       |
-| `getPlayerStatus`                                                            | JSON                                             | transport state, position, volume, mute, loop mode, current vendor                 |
-| `getPlayerStatusEx`                                                          | same body as above here                          | documented as richer; no difference on this firmware                               |
-| `getMetaInfo`                                                                | JSON `metaData`                                  | title, artist, album, cover URL, sample rate, bit depth, bit rate, track id        |
-| `getPresetInfo`                                                              | JSON `preset_num`, `preset_list[]`               | saved radio presets with name, URL, source, picture                                |
-| `getNewAudioOutputHardwareMode`                                              | `{"hardware":"2","source":"0","audiocast":"0"}`  | active output routing                                                              |
-| `getSoundCardModeSupportList`                                                | array of 3 outputs                               | the **available** outputs (Optical, Line, COAX here)                               |
-| `getAudioInputEnable`                                                        | 4 inputs, `enable` 0/1                           | which inputs the user left enabled in the app                                      |
-| `getAudioInputCapbility`                                                     | 4 inputs                                         | physical inputs present on the model                                               |
-| `getModeRename`                                                              | `Failed` when nothing renamed                    | user defined input labels                                                          |
-| `GetAcousticCapability`                                                      | JSON                                             | GEQ, PEQ (LS/PK/HS/LP/HP), RoomFit, headroom, sub LPF, output delay range          |
-| `EQGetList`                                                                  | 24 preset names                                  | factory EQ presets (`Game` included)                                               |
-| `EQv2GetList:...Eq10HP`                                                      | `{"custom":[],"preset":[...]}`                   | graphic EQ presets, custom ones included                                           |
-| `EQGetLV2SourceBandEx:{...Eq10HP}`                                           | JSON with 10 bands                               | **readable** graphic EQ curve, per source (`source_name: wifi`)                    |
-| `EQGetStat`                                                                  | `{"status":"Failed"}`                            | legacy switch, not the source of truth on this firmware                            |
-| `RoomCorrGet`                                                                | JSON with bands, `EQLevel: 2`                    | RoomFit state and profile                                                          |
-| `getNetworkHealth`                                                           | JSON counters                                    | disconnect counts, last disconnect age, roaming, DHCP time, abnormal reboots       |
-| `getHwErrorInfo`                                                             | JSON                                             | flash bad blocks (5 of 2000 here), sound card, thermal, LED errors                 |
-| `getDebugInfo`                                                               | JSON, ~35 counters                               | `slave_latency`, UPnP action totals/losses, crash counters, `power_ticks` (uptime) |
-| `getShutdown`                                                                | seconds, `0` when off                            | sleep timer state                                                                  |
-| `LED_SWITCH_GET`                                                             | `1`                                              | status light on/off                                                                |
-| `Button_Enable_GET`                                                          | `1`                                              | touch controls enabled                                                             |
-| `getDeviceNameChangeable`                                                    | `OK`                                             | name is editable                                                                   |
-| `getChannelBalance`                                                          | `0`                                              | stereo balance                                                                     |
-| `GetFadeFeature`                                                             | `{"FadeFeature":1}`                              | fade in/out support and state                                                      |
-| `get_remote_volume_step`                                                     | `{"status":"OK","remote_volume_step":1}`         | remote volume step                                                                 |
-| `getPowerModeTime`                                                           | JSON                                             | idle, standby, sleep, power off, semi active intervals                             |
-| `streamServicesCapability`                                                   | 2 KB JSON                                        | per service quality tiers (SD/HD/UHD), version, encryption                         |
-| `multiroom:getSlaveList`                                                     | `{"slaves":0,"wmrm_version":"4.3","surround":0}` | group membership                                                                   |
-| `multiroom:getnamegrouplist`                                                 | JSON group list                                  | **saved** group names, ids, channels, update time                                  |
-| `getAlarmClock:<n>`                                                          | `{"enable":"0"}`                                 | alarm slot state                                                                   |
-| `getRoutineCapability`                                                       | `{"version":"1.1"}`                              | routines supported                                                                 |
-| `getAllRoutines`                                                             | `{}` here                                        | device side action sequences (empty: none configured)                              |
-| `getMvRemoteUpdateStartCheck`                                                | `OK`                                             | firmware update check accepted                                                     |
-| `getMvRemoteUpdateStatus`                                                    | `0`                                              | update progress state                                                              |
-| `getInfo`, `getVolume`, `getTracks`, `getPresetList`, `getAudioOutputStatus` | `unknown command`                                | do not use, they exist in older LinkPlay docs                                      |
+| Command                                                                      | Answer                                           | Use                                                                                                                                                 |
+| ---------------------------------------------------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getStatusEx`                                                                | 2.8 KB JSON, 70+ fields                          | identity, network, capabilities, volume ceiling, group state                                                                                        |
+| `getPlayerStatus`                                                            | JSON                                             | transport state, position, volume, mute, loop mode, current vendor                                                                                  |
+| `getPlayerStatusEx`                                                          | same body as above here                          | documented as richer; no difference on this firmware                                                                                                |
+| `getMetaInfo`                                                                | JSON `metaData`                                  | title, artist, album, cover URL, sample rate, bit depth, bit rate, track id                                                                         |
+| `getPresetInfo`                                                              | JSON `preset_num`, `preset_list[]`               | saved radio presets with name, URL, source, picture                                                                                                 |
+| `getNewAudioOutputHardwareMode`                                              | `{"hardware":"2","source":"0","audiocast":"0"}`  | active output routing                                                                                                                               |
+| `getSoundCardModeSupportList`                                                | array of 3 outputs                               | the **available** outputs (Optical, Line, COAX here)                                                                                                |
+| `getAudioInputEnable`                                                        | 4 inputs, `enable` 0/1                           | which inputs the user left enabled in the app                                                                                                       |
+| `getAudioInputCapbility`                                                     | 4 inputs                                         | physical inputs present on the model                                                                                                                |
+| `getModeRename`                                                              | `Failed` when nothing renamed                    | user defined input labels                                                                                                                           |
+| `GetAcousticCapability`                                                      | JSON                                             | GEQ, PEQ (LS/PK/HS/LP/HP), RoomFit, headroom, sub LPF, output delay range                                                                           |
+| `EQGetList`                                                                  | 24 preset names                                  | factory EQ presets (`Game` included)                                                                                                                |
+| `EQv2GetList:...Eq10HP`                                                      | `{"custom":[],"preset":[...]}`                   | graphic EQ presets, custom ones included                                                                                                            |
+| `EQGetLV2SourceBandEx:{...Eq10HP}`                                           | JSON with 10 bands                               | **readable** graphic EQ curve, per source (`source_name: wifi`)                                                                                     |
+| `EQGetStat`                                                                  | `{"status":"Failed"}`                            | legacy switch, not the source of truth on this firmware                                                                                             |
+| `RoomCorrGet`                                                                | JSON with bands, `EQLevel: 2`                    | RoomFit state and profile                                                                                                                           |
+| `getNetworkHealth`                                                           | JSON counters                                    | disconnect counts, last disconnect age and raw message, roaming, DHCP time, abnormal reboots                                                        |
+| `getHwErrorInfo`                                                             | JSON                                             | flash bad blocks (5 of 2000 here), `ethError`, `mfiChipError`, `flashSpaceError`, `soundCardHwError`; **no** `temperatureSensorError` on this model |
+| `getDebugInfo`                                                               | JSON, ~35 counters                               | `slave_latency`, UPnP action totals/losses, crash counters, `power_ticks` (uptime)                                                                  |
+| `getShutdown`                                                                | seconds, `0` when off                            | sleep timer state                                                                                                                                   |
+| `LED_SWITCH_GET`                                                             | `1`                                              | status light on/off                                                                                                                                 |
+| `Button_Enable_GET`                                                          | `1`                                              | touch controls enabled                                                                                                                              |
+| `getDeviceNameChangeable`                                                    | `OK`                                             | name is editable                                                                                                                                    |
+| `getChannelBalance`                                                          | `0`                                              | stereo balance                                                                                                                                      |
+| `GetFadeFeature`                                                             | `{"FadeFeature":1}`                              | fade in/out support and state                                                                                                                       |
+| `get_remote_volume_step`                                                     | `{"status":"OK","remote_volume_step":1}`         | remote volume step                                                                                                                                  |
+| `getPowerModeTime`                                                           | JSON                                             | idle, standby, sleep, power off, semi active intervals                                                                                              |
+| `streamServicesCapability`                                                   | 2 KB JSON                                        | per service quality tiers (SD/HD/UHD), version, encryption                                                                                          |
+| `multiroom:getSlaveList`                                                     | `{"slaves":0,"wmrm_version":"4.3","surround":0}` | group membership                                                                                                                                    |
+| `multiroom:getnamegrouplist`                                                 | JSON group list                                  | **saved** group names, ids, channels, update time                                                                                                   |
+| `getAlarmClock:<n>`                                                          | `{"enable":"0"}`                                 | alarm slot state                                                                                                                                    |
+| `getRoutineCapability`                                                       | `{"version":"1.1"}`                              | routines supported                                                                                                                                  |
+| `getAllRoutines`                                                             | `{}` here                                        | device side action sequences (empty: none configured)                                                                                               |
+| `getMvRemoteUpdateStartCheck`                                                | `OK`                                             | firmware update check accepted                                                                                                                      |
+| `getMvRemoteUpdateStatus`                                                    | `0`                                              | update progress state                                                                                                                               |
+| `getInfo`, `getVolume`, `getTracks`, `getPresetList`, `getAudioOutputStatus` | `unknown command`                                | do not use, they exist in older LinkPlay docs                                                                                                       |
 
 Fields worth knowing inside `getStatusEx`, all measured: `DeviceName`, `GroupName`, `project`
 (model), `firmware`, `Release`, `hardware`, `uuid`, `MAC`, `RSSI` (-49), `wlanSnr` (35),
@@ -447,38 +447,70 @@ The hub already shows health. Diagnostic **assistance** means: turn counters int
 of findings with evidence, and stop there. No invented root cause, no advice the device cannot
 support.
 
-Signals available, all measured:
+Signals available, all measured on the reference player on 09/11/2026:
 
-| Signal          | Source                                                                                                                              | Reading                                                                                       |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Link quality    | `getStatusEx`: `RSSI`, `wlanSnr`, `wlanNoise`, `wlanFreq`, `wlanDataRate`                                                           | -49 dBm and 35 dB SNR is good; below -70 dBm or SNR under 20 is weak; band tells 2.4 vs 5 GHz |
-| Drop history    | `getNetworkHealth`: `disconnectedCount`, `lastDisconnectedTime`, `wlanAbnormalRebootTimes`, `pingCheckFailedCount`, `wlanRoamingOn` | counters plus age, so "3 drops, last 40 min ago" is a fact                                    |
-| Uptime          | `getDebugInfo`: `power_ticks`                                                                                                       | 60 ticks per second; long uptime rules out a reboot loop                                      |
-| Crash counters  | `getDebugInfo`: `mcu_crash`, `a01controller_crash`, `process_deadlock`                                                              | non zero means firmware instability, not the network                                          |
-| Flash health    | `getHwErrorInfo`: `badBlockNum` / `totalBlockNum`                                                                                   | 5 of 2000 is normal; a rising share matters                                                   |
-| Hardware faults | `getHwErrorInfo`: `ethError`, `soundCardHwError`, `temperatureSensorError`                                                          | directs to hardware, not to the hub                                                           |
-| Transport state | `getPlayerStatus`: `status`                                                                                                         | `stop` with a source selected, `loading` for long, `pause` is normal                          |
-| Group state     | `multiroom:getSlaveList`, `getStatusEx.group`                                                                                       | a device that is a slave but silent is a group problem, not a network one                     |
-| Update state    | `getStatusEx.VersionUpdate`, `NewVer`, `getMvRemoteUpdateStatus`                                                                    | `0` means no update pending or none running                                                   |
-| Sleep timer     | `getShutdown`                                                                                                                       | "the speaker will power off in 12 min" explains a silence                                     |
+| Signal          | Source                                                                                                                                                                             | Reading                                                                                                                                                           |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Link quality    | `getStatusEx`: `RSSI`, `wlanSnr`, `wlanNoise`, `wlanFreq`, `wlanDataRate`                                                                                                          | -53 dBm, 35 dB SNR, -91 dBm noise, 433 Mb/s at 5260 MHz; weak below -70 dBm or SNR under 20, band tells 2.4 vs 5 GHz                                              |
+| Drop history    | `getNetworkHealth`: `disconnectedCount`, `lastDisconnectedTime`, `lastDisconnectedMsg`, `ethDisconnectedCount`, `pingCheckFailedCount`, `wlanAbnormalRebootTimes`, `wlanRoamingOn` | 2 Wi-Fi drops (last 14 min ago, `lastDisconnectedMsg` carries the raw wpa_supplicant line with its `reason=3`), 1 wired drop, no ping failure, no abnormal reboot |
+| Uptime          | `getDebugInfo`: `power_ticks`                                                                                                                                                      | 60 ticks per second; 57219086 ticks is 11 days, so a reboot loop would be visible                                                                                 |
+| Crash counters  | `getDebugInfo`: `a01controller_crash`, `asr_tts_crash`, `mcu_crash`, `process_deadlock`                                                                                            | non zero means firmware instability, not the network                                                                                                              |
+| UPnP actions    | `getDebugInfo`: `upnp_action_total0..3`, `upnp_action_lost0..3`                                                                                                                    | 456 seen here, none lost; a loss is the device dropping a control, not the hub                                                                                    |
+| Flash health    | `getHwErrorInfo`: `badBlockNum` / `totalBlockNum`                                                                                                                                  | 5 of 2000 is the factory state (0.25 %); a rising share matters                                                                                                   |
+| Hardware faults | `getHwErrorInfo`: `ethError`, `mfiChipError`, `flashSpaceError`, `soundCardHwError`                                                                                                | directs to hardware, not to the hub                                                                                                                               |
+| Transport state | `getPlayerStatus`: `status`                                                                                                                                                        | `stop` with a source selected, `loading` for long, `pause` is normal                                                                                              |
+| Group state     | `multiroom:getSlaveList`, `getStatusEx.group`                                                                                                                                      | a device that is a slave but silent is a group problem, not a network one                                                                                         |
+| Update state    | `getStatusEx.VersionUpdate`, `NewVer`, `getMvRemoteUpdateStatus`                                                                                                                   | `0` means no update pending or none running                                                                                                                       |
+| Sleep timer     | `getShutdown`                                                                                                                                                                      | "the speaker will power off in 12 min" explains a silence                                                                                                         |
 
-Interpretation rules (each finding carries its evidence line, the value and its source):
+**Correction to the earlier spec**: this model answers **no `temperatureSensorError`**. It does
+answer `mfiChipError`, `flashSpaceError` and a nested `soundCardHwError` object (`pcm5121` on the
+reference unit). A rule that reads a field the device does not send is a rule that never fires, so
+the hardware rule reads the fields the device actually answers, and a missing probe stays silent
+instead of reading as zero.
 
-1. **Offline**: transport error for more than 3 polls. Then try mDNS re-resolution, then the
-   last known IP, then declare offline. Report which attempt failed, because "the name does not
-   resolve" and "the address refuses connections" are different problems.
-2. **Unstable link**: `disconnectedCount` grew since the last snapshot, or RSSI under -70 dBm,
-   or SNR under 20. Evidence: the counters and their timestamps.
-3. **Reboot loop**: `power_ticks` lower than the previous reading, or a crash counter
-   incremented.
-4. **Silent device**: transport says `play` but the source is a digital input with no signal
-   (`status` idle, `mode` optical/line-in), or the volume is 0, or muted, or a sleep timer is
-   armed. These four are ordinary causes and must be checked before the network.
-5. **Group mismatch**: this device reports `group: 0` while a master lists it, or the reverse.
+**Typing trap, found on the real device**: `getStatusEx` answers strings (`"RSSI":"-53"`) while
+`getNetworkHealth` and `getHwErrorInfo` answer **JSON numbers** (`"disconnectedCount":2`,
+`"badBlockNum":5`). A parser that only accepts strings reads every counter as `null`, and a rule
+that reads a null counter stays silent: the first version of the findings showed nothing on a
+device with 2 Wi-Fi drops and 5 bad blocks. `server/diagnostics.test.ts` now pins both shapes.
+
+Shipped in 0.7.0 (`server/findings.ts`, pure module, one rule per signal):
+
+| Finding            | Trigger                                           | Severity | Evidence                            |
+| ------------------ | ------------------------------------------------- | -------- | ----------------------------------- |
+| `offline`          | the last poll failed; the other rules are skipped | alert    | failure count, last successful poll |
+| `weakLink`         | `RSSI <= -70` or `wlanSnr < 20`                   | warn     | RSSI, SNR, noise, band, rate        |
+| `wifiDrops`        | `disconnectedCount > 0`                           | warn     | count, age, raw disconnect message  |
+| `ethDrops`         | `ethDisconnectedCount > 0`                        | info     | count                               |
+| `pingFailures`     | `pingCheckFailedCount > 0`                        | warn     | count                               |
+| `abnormalReboots`  | `wlanAbnormalRebootTimes > 0`                     | alert    | count                               |
+| `crashCounters`    | the four crash counters sum above zero            | alert    | the four values                     |
+| `upnpActionsLost`  | `upnp_action_lost*` sum above zero                | info     | lost of total                       |
+| `flashWear`        | `badBlockNum / totalBlockNum >= 2 %`              | warn     | bad blocks, total, ratio            |
+| `hardwareFault`    | one of the four hardware error fields is set      | alert    | the field names                     |
+| `eventingDegraded` | the UPnP subscription was contradicted by a poll  | info     | miss count                          |
+| `sleepTimer`       | `sleepSeconds > 0`                                | info     | minutes                             |
+
+The counters are read on their own 60 s cadence, in three parallel commands, and findings are
+recomputed on every `/api/state`: a counter that recovered stops showing, nothing is stored as a
+conclusion. `GET /api/report?host=` writes the same findings in English, with the raw answers
+appended, for a support thread.
+
+Interpretation rules still open (they need the transport or the group view, not the counters):
+
+1. **Reboot loop**: `power_ticks` lower than the previous reading, not only a non-zero crash
+   counter.
+2. **Silent device**: transport says `play` but the source is a digital input with no signal
+   (`status` idle, `mode` optical/line-in), or the volume is 0, or muted. The sleep timer half of
+   this rule ships; the mute and volume cases do not.
+3. **Group mismatch**: this device reports `group: 0` while a master lists it, or the reverse.
    Explain that the state is eventually consistent and show both sides.
-6. **Firmware**: an update is available (`VersionUpdate` non zero) or an update is in progress.
-7. **No finding**: say so explicitly. "No anomaly detected, 14 h uptime, -49 dBm" is a valid and
-   useful answer.
+4. **Firmware**: an update is available (`VersionUpdate` non zero) or an update is in progress.
+
+**No finding is a finding.** The panel says "No anomaly detected" and lists what it read (RSSI,
+SNR, drop count, crash count, UPnP losses, flash blocks), so a clean answer shows its basis
+instead of looking like an empty section.
 
 Guided flows (deterministic, no LLM needed):
 
@@ -489,12 +521,15 @@ Guided flows (deterministic, no LLM needed):
 - "Cannot join group": show both devices' `wmrm_version`, group state and RSSI (a slave on 2.4
   GHz far from the master is a classic cause).
 
-Report export: one JSON file per device with `device` (identity, model, firmware, uptime),
-`network` (link metrics, health counters), `hardware` (error info), `playback` (status, meta,
-output, group), `capabilities` (every probed command with `supported`, raw body, and the time of
-probing), and `hub` (version, poll interval, resolution path). Plus a human readable Markdown
-summary. This is the artefact a user pastes into a support thread, and it is also the artefact
-that makes a bug report actionable without asking the user to run curl.
+Report export: `GET /api/report?host=` answers `{ts, host, findings, markdown}` and the page
+offers both copy and download. The Markdown carries the identity, firmware, link metrics,
+network name, playback, group, the findings with their evidence lines, then the raw answers
+(`diagnostics`, `link`, the last samples) in a JSON block. It is the artefact a user pastes into
+a support thread, and it is English by design: one artefact, not one per language.
+
+Still missing from the report: the capability inventory (every probed command with `supported`,
+raw body and probe time) and the resolution path (which address answered). Both are what
+`#8` fixture work would make cheap to add.
 
 ## 7. Interaction rules (apply to every feature)
 

@@ -13,10 +13,12 @@ import {
   MAX_EVENTS,
   MAX_SAMPLES,
   pollDevice,
+  readDiagnostics,
   readSettings,
   resolveTarget,
 } from './device.ts'
 import { discoverSsdp } from './discovery.ts'
+import { buildReport, findingsFor } from './findings.ts'
 import { createWriteQueue } from './queue.ts'
 import { createEventHub, type EventPatch } from './upnp.ts'
 
@@ -32,6 +34,12 @@ const callbackBase = (process.env.UPNP_CALLBACK ?? '').trim()
 const upnpPort = Number.parseInt(process.env.UPNP_PORT ?? '8091', 10)
 const eventsEnabled = callbackBase !== ''
 const upnpRetryMs = 60_000
+// The diagnostic counters move over hours, so they are read on their own slow
+// cadence instead of on every poll.
+const diagnosticsMs = 60_000
+// The image carries no package.json at runtime: the version comes from the
+// environment, and the compose file knows it.
+const hubVersion = (process.env.HUB_VERSION ?? 'dev').trim()
 const discoveryEnabled = (process.env.DISCOVERY ?? '1') !== '0'
 const discoveryIntervalMs = 300_000
 const distDir = resolve(import.meta.dirname, '..', 'dist')
@@ -82,6 +90,8 @@ const emptyState = (host: string): DeviceState => ({
   lastSeen: null,
   errors: 0,
   upnp: { state: 'off', lastEventAt: null, events: 0, misses: 0 },
+  link: { snr: null, noise: null, freqMhz: null, rateMbps: null },
+  diagnostics: null,
   samples: [],
   events: [],
 })
@@ -199,6 +209,21 @@ const contradicts = (state: DeviceState, patch: DevicePatch): boolean => {
   )
 }
 
+// One probe set in flight per device at most: the counters are cheap but three
+// commands per tick would still be wasted when a device answers slowly.
+const probing = new Set<string>()
+const refreshDiagnostics = (state: DeviceState): void => {
+  if (!state.online || probing.has(state.ip)) return
+  const at = state.diagnostics?.at ?? 0
+  if (Date.now() - at < diagnosticsMs) return
+  probing.add(state.ip)
+  void readDiagnostics(state.ip)
+    .then(diagnostics => {
+      if (diagnostics !== null) state.diagnostics = diagnostics
+    })
+    .finally(() => probing.delete(state.ip))
+}
+
 let polling = false
 const pollAll = async (): Promise<void> => {
   if (polling) return
@@ -217,6 +242,7 @@ const pollAll = async (): Promise<void> => {
         }
         state.upnp = hub.status(state.ip)
         ensureSubscription(state)
+        refreshDiagnostics(state)
       })
     )
   } finally {
@@ -417,13 +443,43 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
     // A stable order across polls and machines: a card must not jump when a
     // second speaker answers or renames itself, and a reachable speaker comes
     // before a silent one.
-    const devices = [...states.values()].sort(
-      (left, right) =>
-        Number(right.online) - Number(left.online) ||
-        left.name.localeCompare(right.name) ||
-        left.ip.localeCompare(right.ip)
-    )
+    const devices = [...states.values()]
+      .sort(
+        (left, right) =>
+          Number(right.online) - Number(left.online) ||
+          left.name.localeCompare(right.name) ||
+          left.ip.localeCompare(right.ip)
+      )
+      // Findings are derived, never stored: they are a reading of the state at
+      // the moment it is served, so a counter that recovered stops showing.
+      .map(state => ({
+        ...state,
+        findings: findingsFor({ state, diagnostics: state.diagnostics }),
+      }))
     sendJson(res, 200, { ts: Date.now(), pollMs, devices })
+    return
+  }
+  if (url.pathname === '/api/report') {
+    // The report is what a user pastes into a support thread: the findings, the
+    // evidence behind each of them, and the raw answers they came from.
+    const entry = findEntry(url.searchParams.get('host') ?? '')
+    if (entry === null) {
+      sendJson(res, 404, { error: 'unknown device' })
+      return
+    }
+    const findings = findingsFor({ state: entry.state, diagnostics: entry.state.diagnostics })
+    const report = buildReport({
+      state: entry.state,
+      diagnostics: entry.state.diagnostics,
+      findings,
+      hub: { version: hubVersion, pollMs, slowPollMs, eventsEnabled },
+    })
+    sendJson(res, 200, {
+      ts: report.generatedAt,
+      host: entry.key,
+      findings,
+      markdown: report.markdown,
+    })
     return
   }
   if (url.pathname === '/api/art') {

@@ -20,6 +20,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, resolve, sep } from 'node:path'
 import { type Action, commandFor, parseAction } from './commands.ts'
 import { type DeviceSettings, type DeviceState, MAX_SAMPLES, type Sample } from './device.ts'
+import { buildReport, findingsFor } from './findings.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
 const tickMs = 3000
@@ -99,6 +100,8 @@ const emptyState = (ip: string): DeviceState => ({
   presets: [],
   eq: { enabled: false, name: '', source: '', bands: [], presets: [], roomFit: false },
   quality: { sampleRate: null, bitDepth: null, bitRate: null },
+  link: { snr: null, noise: null, freqMhz: null, rateMbps: null },
+  diagnostics: null,
   updatedAt: null,
   online: false,
   lastSeen: null,
@@ -280,6 +283,34 @@ const livingRoom = (): DeviceState => {
       roomFit: true,
     },
     quality: track.quality,
+    link: { snr: 35, noise: -91, freqMhz: 5260, rateMbps: 433 },
+    diagnostics: {
+      at: now - 20_000,
+      health: {
+        disconnected: 0,
+        ethDisconnected: 0,
+        pingFailures: 0,
+        abnormalReboots: 0,
+        roaming: false,
+        band: 1,
+        lastMessage: '',
+        lastMinutes: null,
+      },
+      debug: {
+        uptimeTicks: 20_563_200,
+        crashes: { controller: 0, asrTts: 0, mcu: 0, deadlock: 0 },
+        upnpActionsLost: 0,
+        upnpActionsTotal: 913,
+      },
+      hardware: {
+        ethError: false,
+        mfiError: false,
+        flashSpaceError: false,
+        soundCardError: false,
+        badBlocks: 5,
+        totalBlocks: 2000,
+      },
+    },
     updatedAt: now,
     online: true,
     lastSeen: now,
@@ -641,13 +672,41 @@ const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> 
   }
   if (url.pathname === '/api/state') {
     // Same ordering as the hub: reachable first, then by name.
-    const devices = [...states.values()].sort(
-      (left, right) =>
-        Number(right.online) - Number(left.online) ||
-        left.name.localeCompare(right.name) ||
-        left.ip.localeCompare(right.ip)
-    )
+    const devices = [...states.values()]
+      .sort(
+        (left, right) =>
+          Number(right.online) - Number(left.online) ||
+          left.name.localeCompare(right.name) ||
+          left.ip.localeCompare(right.ip)
+      )
+      .map(state => ({
+        ...state,
+        findings: findingsFor({ state, diagnostics: state.diagnostics }),
+      }))
     sendJson(res, 200, { ts: Date.now(), pollMs: tickMs, devices })
+    return
+  }
+  if (url.pathname === '/api/report') {
+    // The demo serves the same report so the copy and download buttons can be
+    // exercised, and asserted, without a speaker.
+    const state = findState(url.searchParams.get('host') ?? '')
+    if (state === null) {
+      sendJson(res, 404, { error: 'unknown device' })
+      return
+    }
+    const findings = findingsFor({ state, diagnostics: state.diagnostics })
+    const report = buildReport({
+      state,
+      diagnostics: state.diagnostics,
+      findings,
+      hub: { version: 'demo', pollMs: tickMs, slowPollMs: tickMs, eventsEnabled: false },
+    })
+    sendJson(res, 200, {
+      ts: report.generatedAt,
+      host: state.ip,
+      findings,
+      markdown: report.markdown,
+    })
     return
   }
   if (url.pathname === '/api/art') {

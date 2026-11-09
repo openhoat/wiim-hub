@@ -2,6 +2,7 @@ import { ChevronDown, Copy, Download, SignalHigh, SignalLow, SignalZero } from '
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { EventTimeline } from '@/components/event-timeline'
+import { FindingsPanel } from '@/components/findings-panel'
 import { SampleTable } from '@/components/sample-table'
 import { Sparkline } from '@/components/sparkline'
 import { Badge } from '@/components/ui/badge'
@@ -162,6 +163,10 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
           </p>
         </section>
       </div>
+
+      <section className="mt-5">
+        <FindingsPanel device={device} now={now} />
+      </section>
 
       <section className="mt-5">
         <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">

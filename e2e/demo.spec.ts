@@ -93,6 +93,37 @@ test('exports the sample history from the diagnostic view', async ({ page }) => 
   )
 })
 
+test('states the findings, and says explicitly when there is nothing to report', async ({
+  page,
+}) => {
+  await openHub(page)
+  await page.getByRole('button', { name: 'Diagnostic' }).click()
+
+  // The playing speaker reads clean, and the panel shows the counters it read:
+  // "no anomaly" is a measurement, not a shrug.
+  await expect(page.getByTestId('findings-empty')).toHaveText('No anomaly detected')
+  await expect(page.getByText(/RSSI -5\d dBm · SNR 35 dB · 0 Wi-Fi drop/)).toBeVisible()
+
+  // The silent speaker gets one alert, whose evidence names the failed polls.
+  const offline = page.getByText(/does not answer: 3 consecutive poll failure/).first()
+  await expect(offline).toBeVisible()
+  await expect(page.getByText('alert', { exact: true })).toBeVisible()
+  await offline.click()
+  await expect(page.getByText(/last poll failed, 3 failure/)).toBeVisible()
+
+  // The report is English, findings included, and it downloads as Markdown.
+  const response = await page.request.get('/api/report?host=192.0.2.22')
+  expect(response.ok()).toBe(true)
+  const report: { markdown: string } = await response.json()
+  expect(report.markdown).toContain('## Findings')
+  expect(report.markdown).toContain('The player does not answer: 3 consecutive poll failure(s).')
+
+  const download = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Download the report' }).first().click()
+  const file = await download
+  expect(file.suggestedFilename()).toMatch(/^wiim-hub-Living Room-.*\.md$/)
+})
+
 test('shows an external input as a source instead of an empty player', async ({ page }) => {
   // The demo models network playback only. The optical payload measured on the
   // reference player (mode 43, real transport state, no track, and the position

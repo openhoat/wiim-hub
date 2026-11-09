@@ -1,4 +1,4 @@
-import type { Device, DeviceSettings, HubState } from './types'
+import type { Device, DeviceSettings, Finding, HubState } from './types'
 
 const readJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(path, { cache: 'no-store', ...init })
@@ -26,6 +26,13 @@ const readJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
 }
 
 export const fetchState = (): Promise<HubState> => readJson<HubState>('/api/state')
+
+// The report is built by the server, in English, so the page and the support
+// thread show the same sentences and the same evidence.
+export type Report = { ts: number; host: string; findings: Finding[]; markdown: string }
+
+export const fetchReport = (device: Device): Promise<Report> =>
+  readJson<Report>(`/api/report?host=${encodeURIComponent(device.ip)}`)
 
 export const runDiscovery = (): Promise<{ added: number }> =>
   readJson<{ added: number }>('/api/discover', { method: 'POST' })
