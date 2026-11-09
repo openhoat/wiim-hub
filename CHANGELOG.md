@@ -12,8 +12,9 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ### Added
 
-- The screenshots are on the documentation site, not only in the README: the landing page shows the
-  now-playing view, the sound card, the diagnostic view and the same page on a phone, the
+- The screenshots are on the documentation site, not only in the README. The home page opens on
+  the interface itself: the now playing view sits right under the hero, full width, before any
+  prose. Below it, the sound card, the diagnostic view and the same page on a phone; the
   how-it-works page shows the diagnostic view beside the findings it produces, and the demo page
   shows what the demo serves. The README keeps the captures it needs to make the point in ten
   seconds, and links to the site for the rest.

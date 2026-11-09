@@ -22,3 +22,43 @@
   width: 160px;
   height: 160px;
 }
+
+/* The screenshot that opens the home page. It sits in the `home-hero-after`
+   slot, outside the hero's own container, so it repeats the hero's padding and
+   max width to line up with the text above. */
+.home-shot {
+  margin: 0 auto 4rem;
+  padding: 0 24px;
+  max-width: 1200px;
+}
+
+.home-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.home-shot figcaption {
+  margin-top: 0.75rem;
+  color: var(--vp-c-text-2);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .home-shot {
+    padding: 0 48px;
+    max-width: 1248px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .home-shot {
+    padding: 0 64px;
+    max-width: 1280px;
+  }
+}
