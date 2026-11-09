@@ -1,5 +1,9 @@
 # WiiM Hub
 
+[![CI](https://github.com/openhoat/wiim-hub/actions/workflows/ci.yml/badge.svg)](https://github.com/openhoat/wiim-hub/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D22.18-informational.svg)](package.json)
+
 Hub for WiiM devices (and other LinkPlay-based players) on a local network: what each device is
 playing, what it reports about itself, and the controls you need when the vendor app is not at
 hand. Devices are polled every few seconds and served as a small web page.
@@ -10,6 +14,24 @@ state and write queue, so a mixed fleet (Pro, Mini, Amp, Ultra, and OEM LinkPlay
 normal case, not a special one. Multiroom is read only for now: the hub shows the group a speaker
 belongs to, and its controls arrive once a second unit can be measured.
 
+## Screenshots
+
+Now playing, with the control panel, one speaker online and one offline:
+
+![Now playing](docs/img/now-playing.jpeg)
+
+The sound card, with the per-source equalizer, and the diagnostic view:
+
+| | |
+| --- | --- |
+| ![Sound card](docs/img/sound.jpeg) | ![Diagnostic view](docs/img/diagnostics.jpeg) |
+
+The same pages on a phone:
+
+<p align="center"><img src="docs/img/mobile.jpeg" width="320" alt="Now playing on a phone"></p>
+
+Device addresses and Wi-Fi identifiers are redacted in these captures.
+
 ## Why a second view
 
 The router sees an association; the device reports what it thinks it is: its own signal reading,
@@ -19,10 +41,10 @@ views diverge, and the device side is the one the official app consumes.
 ## Features
 
 - Several devices side by side, polled in parallel, in the order of their names. A device seen
-  twice (configured as `salon.local`, discovered as `192.168.1.150`) is kept once.
+  twice (configured as `kitchen.local`, discovered as `192.168.1.10`) is kept once.
 - Per-device transport: https/443 first, http/80 fallback remembered, so a mixed firmware fleet
   costs at most one extra request per device.
-- Devices configured by address or by name (`salon.local`): the built-in mDNS resolver (system
+- Devices configured by address or by name (`kitchen.local`): the built-in mDNS resolver (system
   resolver first, then a dependency-free multicast query) keeps a DHCP lease change invisible, and
   the last known address is retained when a re-resolution fails.
 - SSDP discovery as a best-effort complement to an explicit device list.
@@ -90,9 +112,17 @@ community, not by the vendor, so the client is defensive by design.
 
 ## Run with Docker
 
+The published image is `ghcr.io/openhoat/wiim-hub` (`linux/amd64`):
+
+```sh
+docker run --rm -p 8090:8090 -e DEVICE_HOSTS=192.168.1.10,living-room.local,kitchen ghcr.io/openhoat/wiim-hub:latest
+```
+
+To build it yourself instead:
+
 ```sh
 docker build -t wiim-hub .
-docker run --rm -p 8090:8090 -e DEVICE_HOSTS=192.168.1.10,salon.local,kitchen wiim-hub
+docker run --rm -p 8090:8090 -e DEVICE_HOSTS=192.168.1.10,living-room.local,kitchen wiim-hub
 ```
 
 Or use [`examples/compose.yml`](examples/compose.yml):
@@ -190,15 +220,16 @@ view built around the album art, and a diagnostic view built around the numbers.
 
 ## Image publication
 
-`scripts/build.sh` builds `linux/amd64` and pushes the version tag and `latest`:
+[`.github/workflows/docker.yml`](.github/workflows/docker.yml) builds and pushes on every `v*` tag
+and on manual dispatch, to `ghcr.io/<owner>/<repo>`, with version, major.minor and short sha tags,
+`linux/amd64` only.
+
+The same thing locally, through `scripts/build.sh`:
 
 ```sh
-./scripts/build.sh            # version from package.json
-REGISTRY=ghcr.io/you ./scripts/build.sh 1.0.0
+./scripts/build.sh                                  # version from package.json
+REGISTRY=registry.example IMAGE=my-hub ./scripts/build.sh 1.0.0
 ```
-
-The GitHub workflow publishes on `v*` tags and manual dispatch, to both `ghcr.io` and the
-configured private registry.
 
 ## Security
 
@@ -209,6 +240,7 @@ device, so exposing it without an authentication layer is not supported.
 
 ## Roadmap
 
+- [`CHANGELOG.md`](CHANGELOG.md): what changed in each version.
 - [`KANBAN.md`](KANBAN.md): the board, with priorities and the current item.
 - [`docs/feature-research.md`](docs/feature-research.md): what the LinkPlay API exposes, what was
   measured on a real player, and the behaviour requirements for the control, diagnostic and

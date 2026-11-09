@@ -16,6 +16,9 @@ Three tiers, always labelled in this document:
 - **Inferred**: derived from several sources, or from the shape of the firmware responses. Treat
   as a hypothesis and probe before relying on it.
 
+Device, group and member names, addresses and uuids are anonymised in the quotations below: the
+shapes and the wording are those the firmware returned, the identifiers are not.
+
 Sources:
 
 1. Official PDF, `HTTP API for WiiM Products` (wiimhome.com), version 1.2, the reference for
@@ -185,7 +188,7 @@ One write at a time, re-read after each; `curpos`/`totlen` are milliseconds here
 | `EQSetLV2SourceBand` one band | `OK` | that band changed, the others kept, `Name` **emptied** | a hand-moved band turns the curve into a custom one |
 | `EQSetBand:{"EQBand":[{"index":0,…}]}` | `OK` | band 0 read `-10.56` for a requested `6.0` | the v1 payload is not interpreted as a gain: never use it |
 | `setPlayerCmd:play:<url>` | `OK` | `mode=10`, `vendor=CustomPushUrl`, title = the address, stream numbers from the stream | the player fetches the address itself, no account |
-| `setDeviceName:Salon Hub` | `OK` | `DeviceName=Salon Hub` | a space survives the query encoding |
+| `setDeviceName:Living Room Hub` | `OK` | `DeviceName=Living Room Hub` | a space survives the query encoding |
 | `LED_SWITCH_SET:0` then `:1` | `OK` | `LED_SWITCH_GET` follows | plain flag |
 | `Button_Enable_SET:0` then `:1` | `OK` | `Button_Enable_GET` follows | plain flag |
 | `setChannelBalance:1`, `:0.5` | `OK` | read back | accepted range -1..1, decimal steps |
@@ -338,16 +341,16 @@ Measured on the Pro (`Linkplay.4.8.833748`, `wmrm_version` 4.3, `wmrm_sub_ver` 7
   `Channel`, `Version`; this firmware answers lowercase with an empty list, so both spellings are
   read and neither is assumed to be there.
 - `multiroom:getnamegrouplist` holds the groups the vendor app remembers, not the running one:
-  `{grouplist:[{group_name:"Appart",group_id:"F38EC078-…",slavelist:[{name:"Chambre",
-  uuid:"FF97001669AA1900F9F639A0"}]}],current_group_id:"F38EC078-…"}`. A saved member carries a
+  `{grouplist:[{group_name:"Apartment",group_id:"6E2A9D14-…",slavelist:[{name:"Bedroom",
+  uuid:"A1B27C4DE6F0498B93D5E0C7A4F28B61"}]}],current_group_id:"6E2A9D14-…"}`. A saved member carries a
   name and a uuid, no address, and the uuid is not derived from the MAC on this firmware, so a
   member cannot be located from the registry alone.
 - `current_group_id` is kept by a player that drives no group: it means "the app points at that
   group", not "this group is running". Only a non-zero `slaves`, or a member list, proves a group
   is live.
 - `status.group` is `'0'` on a player in no group, and `GroupName` carries the **device's own
-  name** ("Salon") rather than a group name. The group name therefore comes from the registry, and
-  a player with no registry entry shows no group at all.
+  name** ("Living Room") rather than a group name. The group name therefore comes from the
+  registry, and a player with no registry entry shows no group at all.
 
 Shipped read only in 0.4.3: `role` (`master` from a member list, `member` from a group id in the
 status, `none` otherwise), the registry entry the device points at, and its members. A saved group

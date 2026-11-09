@@ -1,0 +1,134 @@
+# Changelog
+
+All notable changes to this project are documented here.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+Releases are cut from `package.json`: the version in that file names the section below, and a
+`v*` tag on the commit that bumps it publishes the image.
+
+## [Unreleased]
+
+### Added
+
+- Continuous integration: type check and build on every push and pull request, on Node 22.18 and
+  24 (`.github/workflows/ci.yml`).
+- This changelog.
+
+### Changed
+
+- The release workflow publishes to `ghcr.io` only; the private registry it also pushed to is
+  gone, along with its secrets.
+- `scripts/build.sh` defaults to the published image namespace.
+- Device, group and member names, addresses and uuids quoted in the documentation are anonymised;
+  the payload shapes and the firmware wording are unchanged.
+
+## [0.4.3] - 2026-11-09
+
+### Added
+
+- Multiroom, read only: the role a speaker claims (`master`, `member` or `none`) from
+  `multiroom:getSlaveList`, the group name and its members from `multiroom:getnamegrouplist`, a
+  group chip on the now playing card and a member panel. A saved group that is not running says
+  so, and a member with no address reports an unknown state rather than a fake offline one.
+
+### Fixed
+
+- The card showed the device's own name as a group name: `GroupName` carries the speaker name on
+  this firmware, so the group name comes from the registry only.
+
+### Changed
+
+- `start` and `start:server` read `.env` through `--env-file-if-exists`, so the device list lives in
+  one file instead of a shell export; a variable already set in the environment still wins.
+
+## [0.4.2] - 2026-11-08
+
+### Security
+
+- The album art relay is confined to the device and to public image hosts: the target name is
+  resolved once and the connection goes to the address that was checked, a private, loopback,
+  link-local, carrier NAT or multicast address is refused except the speaker's own, the type comes
+  from the first bytes rather than from the response headers, the transfer stops at 6 MiB and 5 s,
+  and every refusal is logged with its reason.
+
+## [0.4.1] - 2026-11-08
+
+### Changed
+
+- The sound card stays folded until it is opened; the quality chip remains in the header.
+
+## [0.4.0] - 2026-11-08
+
+### Added
+
+- Graphic equalizer: the curve is read per source, edited one band at a time, with the 24 factory
+  curves, and room correction reported as a read-only capability.
+- Stream quality: sample rate, bit depth and bit rate from `getMetaInfo`, shown as one chip.
+- Device settings sheet: name, status LED, touch controls, balance, maximum volume and fade, read
+  when the sheet opens and written on an explicit gesture.
+- Stream URL: the speaker fetches the URL itself (`setPlayerCmd:play`), with the stream numbers
+  read back from the stream.
+- One card per speaker, with its own state, samples, events and write queue.
+
+## [0.3.0] - 2026-11-08
+
+### Added
+
+- Controls on the now playing card: play and pause, previous, next, stop, seek, volume and mute,
+  source switching, saved presets, sleep timer and audio output routing.
+- An intent based write surface: the browser sends an action, the server validates it against the
+  state it holds (volume ceiling, available inputs and outputs) and maps it to the device command.
+- One writer per device, with last value coalescing for volume and seek, and an immediate re-read
+  so an optimistic value is confirmed or dropped within a few hundred milliseconds.
+
+### Fixed
+
+- The image did not copy `public/`, so the favicon answered 404 since 0.2.1.
+
+## [0.2.1] - 2026-11-08
+
+### Fixed
+
+- The page ships the favicon link; `.scratch/` is ignored.
+
+## [0.2.0] - 2026-11-08
+
+### Added
+
+- Album art relayed by the hub, because an https page cannot load the speaker's plain http cover;
+  the route only accepts the cover the device reported on its last poll.
+- A multi-stage image: Vite builds the bundle, the runtime carries the server and `dist` only.
+
+### Changed
+
+- The interface is rebuilt on React 19, Vite, Tailwind CSS v4 and shadcn/ui primitives, with a warm
+  dark theme by default and one green accent.
+- Now playing view centred on the album art, diagnostic view on the numbers; the chosen view,
+  language and theme persist per browser.
+- Fixed dBm window for the RSSI sparkline, so a flat line means a steady signal, with the
+  weak-signal threshold drawn in.
+- Toast, dropdown, skeleton and empty states, an icon-only view switch on narrow screens, and an
+  `aria-live` summary of playback.
+
+## [0.1.0] - 2026-11-08
+
+### Added
+
+- Read-only hub for LinkPlay based WiiM devices: per-device polling with https/443 to http/80
+  transport fallback, name resolution by mDNS with the last known address retained, and SSDP
+  discovery as a best-effort complement to an explicit device list.
+- A now playing view and a diagnostic view over the same data, RSSI history, an event log, a
+  sample table, JSON and CSV export.
+- English and French labels, picked from the browser, with an English fallback.
+
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/openhoat/wiim-hub/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/openhoat/wiim-hub/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/openhoat/wiim-hub/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/openhoat/wiim-hub/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/openhoat/wiim-hub/compare/v0.2.1...v0.3.0
+[0.2.1]: https://github.com/openhoat/wiim-hub/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/openhoat/wiim-hub/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/openhoat/wiim-hub/releases/tag/v0.1.0

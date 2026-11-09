@@ -35,7 +35,7 @@ export type GroupMember = { name: string; ip: string; uuid: string }
 // `members` is what the device lists right now, and `saved` says a persistent
 // group exists through `current_group_id` while nothing runs. `name` comes from
 // the registry, never from `GroupName`: that field carries the device's own
-// name on this firmware ("Salon" for a speaker in no group at all).
+// name on this firmware ("Living Room" for a speaker in no group at all).
 export type GroupState = {
   role: 'none' | 'master' | 'member'
   name: string
@@ -798,7 +798,7 @@ export const parseGroup = (raw: Record<string, unknown> | null, statusGroup: str
   }
 }
 
-// `host` is either an address or a resolvable name (`salon.local`), so the
+// `host` is either an address or a resolvable name (`kitchen.local`), so the
 // caller never has to care which one the configuration carries.
 export const pollDevice = async (host: string): Promise<DevicePatch> => {
   const ip = resolveTarget(host)

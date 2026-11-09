@@ -1,7 +1,7 @@
 import { createSocket } from 'node:dgram'
 
 // Minimal mDNS A-record resolver. It exists so a device can be configured by
-// name (`salon.local`) instead of by address: a DHCP lease change then stays
+// name (`kitchen.local`) instead of by address: a DHCP lease change then stays
 // invisible, which a fixed DEVICE_HOSTS entry cannot promise. Multicast does
 // not always cross a container bridge, so the query sets the unicast-response
 // bit and the socket accepts answers on both paths.

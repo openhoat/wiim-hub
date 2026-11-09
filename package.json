@@ -4,11 +4,23 @@
   "private": true,
   "type": "module",
   "description": "Self-hosted hub for LinkPlay-based WiiM devices on the local network",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openhoat/wiim-hub.git"
+  },
+  "homepage": "https://github.com/openhoat/wiim-hub#readme",
+  "bugs": {
+    "url": "https://github.com/openhoat/wiim-hub/issues"
+  },
   "engines": {
     "node": ">=22.18"
   },
   "keywords": [
+    "docker",
+    "hass",
     "linkplay",
+    "mdns",
+    "multiroom",
     "self-hosted",
     "wiim"
   ],

@@ -1,7 +1,8 @@
 services:
 
   wiim-hub:
-    build: ..
+    # The published image; replace it with `build: ..` to run the working tree.
+    image: ghcr.io/openhoat/wiim-hub:latest
     container_name: wiim-hub
     ports:
       - "8090:8090"
