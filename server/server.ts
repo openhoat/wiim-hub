@@ -63,7 +63,6 @@ const envHosts = new Set(
 // The hosts the page saved, and the ones discovery found: only the first list
 // is written to disk, the two others have an owner already.
 const savedHosts = new Set<string>()
-const discoveredHosts = new Set<string>()
 // The polled set is the union of the three, so a card exists for a host whatever
 // brought it in, and removing one is removing it from here as well.
 const hosts = new Set(envHosts)
@@ -309,7 +308,6 @@ const refreshHosts = async (): Promise<number> => {
     // spellings must not run two writers against it.
     const known = [...hosts].some(host => host === ip || resolveTarget(host) === ip)
     if (known) continue
-    discoveredHosts.add(ip)
     hosts.add(ip)
     added += 1
   }
@@ -440,7 +438,6 @@ const renameHostRoute = async (req: IncomingMessage, res: ServerResponse): Promi
   }
   savedHosts.delete(from)
   savedHosts.add(to)
-  discoveredHosts.delete(from)
   hosts.delete(from)
   hosts.add(to)
   // The card follows the entry: a state keyed by the old spelling would keep a
@@ -471,7 +468,6 @@ const removeHostRoute = async (url: URL, res: ServerResponse): Promise<void> => 
     return
   }
   savedHosts.delete(host)
-  discoveredHosts.delete(host)
   hosts.delete(host)
   states.delete(host)
   await persistHosts()

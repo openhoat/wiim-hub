@@ -51,7 +51,9 @@ export const tierOf = (service: ServiceCapability): ServiceTier | null => {
   const levels = service.levels
   if (levels.length === 0) return null
   const named = levels.map(level => levelLabel(service.id, level))
-  return { top: named[named.length - 1], ladder: named.join(' < ') }
+  const top = named.at(-1)
+  if (top === undefined) return null
+  return { top, ladder: named.join(' < ') }
 }
 
 export const isActive = (service: ServiceCapability, playing: string): boolean =>

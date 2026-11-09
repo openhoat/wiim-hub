@@ -19,6 +19,13 @@ import {
 } from '@/lib/api'
 import { useSettings } from '@/lib/settings'
 
+// The address is the identity, the name is what the speaker calls itself: show
+// the second one alone when they agree, both when a lease moved the address.
+const entryLabel = (entry: HostEntry, offline: string): string => {
+  if (!entry.online) return offline
+  return entry.ip === entry.host ? entry.name : `${entry.name} · ${entry.ip}`
+}
+
 const sourceVariant: Record<HostSource, 'accent' | 'default' | 'warning'> = {
   env: 'accent',
   saved: 'default',
@@ -180,11 +187,7 @@ export const HostsDialog = ({ onChanged }: Readonly<{ onChanged: () => void }>) 
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-mono text-xs">{entry.host}</p>
                     <p className="truncate text-[11px] text-muted-foreground">
-                      {entry.online
-                        ? entry.ip === entry.host
-                          ? entry.name
-                          : `${entry.name} · ${entry.ip}`
-                        : t('offline')}
+                      {entryLabel(entry, t('offline'))}
                     </p>
                   </div>
                   <Badge variant={sourceVariant[entry.source]}>
