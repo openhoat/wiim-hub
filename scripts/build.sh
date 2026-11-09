@@ -6,7 +6,9 @@ set -eu
 cd "$(dirname "$0")/.."
 
 VERSION=${1:-$(node -p "require('./package.json').version")}
-REGISTRY=${REGISTRY:-registry.op3n.cloud}
+# Defaults to the namespace the release workflow publishes to; override both to
+# push a private build somewhere else.
+REGISTRY=${REGISTRY:-ghcr.io/openhoat}
 IMAGE=${IMAGE:-wiim-hub}
 
 echo "building $REGISTRY/$IMAGE:$VERSION (linux/amd64)"

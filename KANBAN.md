@@ -11,7 +11,7 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 Nothing in progress: 0.4.x shipped the equalizer, the stream quality, the device settings, the
 stream URL, the art relay constraints and the multiroom read view (#15, #17, #18, #3 closed; see git
-history), and #4 keeps its write half blocked on a second reachable unit.
+history), the CI workflow closed #9, and #4 keeps its write half blocked on a second reachable unit.
 
 ## Backlog
 
@@ -47,11 +47,6 @@ history), and #4 keeps its write half blocked on a second reachable unit.
 - [ ] Unit test the parsing of the awkward payload shapes, including `unknown command` and empty bodies
 - [ ] Test the queue, coalescing, optimistic reconciliation and the position unit heuristic
 - [ ] Add a recorded fixture per endpoint so the tests do not need a real player
-
-### #9 [DEVOPS] Add a CI workflow for the repository (P2)
-
-- [ ] Run the type check and the build on push, and publish the image on tags
-- [ ] Keep the compose example and the README instructions in sync with the published image
 
 ### #16 [UX] Explain which tier each streaming service can reach (P3)
 
