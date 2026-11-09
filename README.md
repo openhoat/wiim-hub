@@ -106,16 +106,28 @@ server sources directly (type stripping), so only the UI needs a build.
 
 ```sh
 npm ci
+cp .env.example .env                           # one file, read by the server on start
 npm run build                                  # writes dist/
-PORT=8090 DEVICE_HOSTS=192.168.1.10 npm start   # server + built UI on :8090
+npm start                                      # server + built UI on :8090
 ```
 
-For UI work, run the two processes side by side: `npm run start:server` (API on :8090, restarts on
-change) and `npm run start:dev` (Vite on :5173, proxies `/api` and `/health` to the API).
+`start` and `start:server` read `.env` through `--env-file-if-exists`, so the device list lives in
+one file instead of a shell export. A variable already set in the environment wins over the file,
+and a missing file is not an error: the defaults from the table below apply. `.env` is ignored by
+git; `.env.example` is the template.
+
+For UI work, run the two processes side by side: `npm run start:server` (API on :8090, also reads
+`.env`, restarts on change) and `npm run start:dev` (Vite on :5173, proxies `/api` and `/health` to
+the API). `start:dev` is the UI only: it never starts the API, so a stale API on :8090 keeps
+answering the Vite proxy until you restart it. When the cards do not match the file, that is the
+first thing to check.
 
 Then open <http://localhost:8090>, or <http://localhost:5173> in development.
 
 ## Configuration
+
+The server reads `.env` from the working directory when it exists (`start` and `start:server`);
+inside Docker the variables come from the compose file instead.
 
 | Variable       | Default | Meaning                                                  |
 | -------------- | ------- | -------------------------------------------------------- |

@@ -15,9 +15,9 @@
   "license": "MIT",
   "scripts": {
     "build": "vite build",
-    "start": "node server/server.ts",
+    "start": "node --env-file-if-exists=.env server/server.ts",
     "start:dev": "vite",
-    "start:server": "node --watch server/server.ts",
+    "start:server": "node --env-file-if-exists=.env --watch server/server.ts",
     "typecheck": "tsc --noEmit",
     "validate": "npm run typecheck && npm run build"
   },
