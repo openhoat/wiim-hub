@@ -25,7 +25,9 @@ the normal case.
 
 A **now playing** view for everyday use: art, track, progress, volume, presets, sleep timer, audio
 route, and a stream URL the speaker fetches itself. A **diagnostic** view for support: raw fields,
-signal history, event log, and findings that quote the number they come from.
+signal history, event log, and findings that quote the number they come from. A card folds to its
+header in the diagnostic view, and the arrows in a now playing header set an order the page keeps
+per browser, so the speaker you care about stays first.
 
 |                                    |                                               |
 | ---------------------------------- | --------------------------------------------- |

@@ -120,6 +120,10 @@
   "exportJson": "As JSON",
   "copy": "Copy the address",
   "copied": "Copied",
+  "collapse": "Collapse",
+  "expand": "Expand",
+  "moveEarlier": "Move earlier",
+  "moveLater": "Move later",
   "sections": {
     "fields": "Fields",
     "signal": "Signal",

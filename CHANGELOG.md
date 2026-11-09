@@ -10,6 +10,17 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The cards keep the order the reader gave them. The hub answers its devices in the order it happens
+  to hold them, which moves when a speaker joins or is rediscovered, so two cards swapped with no
+  visible reason. The page now pins the first order it saw, appends a speaker it has never seen, and
+  stores the whole thing in `localStorage` (`src/lib/layout.ts`). A pair of arrows in each card
+  header moves it against its neighbour, and only that gesture changes the order; the diagnostic
+  view reads the same one.
+- Each diagnostic card folds to its header, remembered per address. The header keeps the name, the
+  state and the export, the body is one click away.
+
 ### Fixed
 
 - The device sheet no longer reloads itself while it is open. Its reader depended on the device

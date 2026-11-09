@@ -128,6 +128,57 @@ test('keeps the name being typed across a poll, then renames the speaker', async
   await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
 })
 
+test('moves a card against its neighbour, and remembers the order', async ({ page }) => {
+  await openHub(page)
+
+  const cards = page.locator('[data-testid^="playing-"]')
+  await expect(cards).toHaveCount(2)
+  // The hub names the reachable speaker first; the page has no preference yet.
+  await expect(cards.nth(0)).toHaveAttribute('data-testid', 'playing-192.0.2.21')
+  await expect(cards.nth(0).getByRole('button', { name: 'Move earlier' })).toBeDisabled()
+
+  await cards.nth(0).getByRole('button', { name: 'Move later' }).click()
+  await expect(cards.nth(0)).toHaveAttribute('data-testid', 'playing-192.0.2.22')
+  await expect(cards.nth(0).getByRole('heading', { level: 2, name: 'Bedroom' })).toBeVisible()
+  await expect(cards.nth(1).getByRole('button', { name: 'Move later' })).toBeDisabled()
+
+  // The order belongs to the reader: the page reloads, the hub keeps answering
+  // in its own order, and the cards stay where they were put.
+  await page.reload()
+  await expect(cards.nth(0)).toHaveAttribute('data-testid', 'playing-192.0.2.22')
+})
+
+test('folds a diagnostic card, and keeps it folded across a poll and a reload', async ({
+  page,
+}) => {
+  await openHub(page)
+
+  await page.getByRole('button', { name: 'Diagnostic' }).click()
+  const card = page.getByTestId('device-192.0.2.21')
+  const other = page.getByTestId('device-192.0.2.22')
+  await expect(card.getByRole('heading', { name: 'Fields' })).toBeVisible()
+
+  await card.getByRole('button', { name: 'Collapse' }).click()
+  await expect(card.getByRole('button', { name: 'Expand' })).toHaveAttribute(
+    'aria-expanded',
+    'false'
+  )
+  // The header stays readable, the body is one click away.
+  await expect(card.getByRole('heading', { level: 2, name: 'Living Room' })).toBeVisible()
+  await expect(card.getByRole('heading', { name: 'Fields' })).toBeHidden()
+  // The other card keeps its own choice.
+  await expect(other.getByRole('heading', { name: 'Fields' })).toBeVisible()
+
+  // A poll rebuilds every card, and must not unfold the one the reader folded.
+  await page.waitForTimeout(4000)
+  await expect(card.getByRole('heading', { name: 'Fields' })).toBeHidden()
+
+  await page.reload()
+  await expect(card.getByRole('heading', { name: 'Fields' })).toBeHidden()
+  await card.getByRole('button', { name: 'Expand' }).click()
+  await expect(card.getByRole('heading', { name: 'Fields' })).toBeVisible()
+})
+
 test('exports the sample history from the diagnostic view', async ({ page }) => {
   await openHub(page)
 

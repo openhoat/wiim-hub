@@ -36,9 +36,20 @@ const SignalIconOf = (rssi: number | null): typeof SignalHigh => {
   return rssi <= -70 ? SignalLow : SignalHigh
 }
 
-export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: number }>) => {
+export const DiagnosticCard = ({
+  device,
+  now,
+  collapsed,
+  onToggleCollapsed,
+}: Readonly<{
+  device: Device
+  now: number
+  collapsed: boolean
+  onToggleCollapsed: () => void
+}>) => {
   const { t } = useSettings()
   const [details, setDetails] = useState(false)
+  const bodyId = `device-body-${device.ip}`
   const live = useMemo(() => device.samples.slice(-120), [device.samples])
   const rssi = device.rssi
   const SignalIcon = SignalIconOf(rssi)
@@ -83,128 +94,147 @@ export const DiagnosticCard = ({ device, now }: Readonly<{ device: Device; now: 
           </div>
           <p className="truncate text-[11px] text-muted-foreground">{device.model || device.ip}</p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm">
-              <Download className="size-3.5" />
-              {t('export')}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => exportAs('csv')}>{t('exportCsv')}</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => exportAs('json')}>{t('exportJson')}</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-1.5">
+          {/* Folding the card is a preference of this browser, kept per
+              address, so a fleet read on a phone can show only the headers. */}
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={collapsed ? t('expand') : t('collapse')}
+            title={collapsed ? t('expand') : t('collapse')}
+            aria-expanded={!collapsed}
+            aria-controls={bodyId}
+            onClick={onToggleCollapsed}
+          >
+            <ChevronDown className={cn('size-4 transition-transform', collapsed && '-rotate-90')} />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="size-3.5" />
+                {t('export')}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={() => exportAs('csv')}>{t('exportCsv')}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => exportAs('json')}>
+                {t('exportJson')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
-      <div className="mt-4 grid gap-5 md:grid-cols-2">
-        <section>
-          <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-            {t('sections.fields')}
-          </h3>
-          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
-            <div className="col-span-2">
-              <dt className="text-[11px] text-muted-foreground">{t('labels.address')}</dt>
-              <dd className="flex items-center gap-1">
-                <span className="truncate font-mono text-xs" title={device.ip}>
-                  {device.ip}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  className="size-6 shrink-0 text-muted-foreground"
-                  aria-label={t('copy')}
-                  onClick={() => void copy()}
-                >
-                  <Copy className="size-3" />
-                </Button>
-              </dd>
-            </div>
-            <Field label={t('labels.firmware')} value={device.firmware || '—'} />
-            <Field label={t('labels.state')} value={statusLabel(t, device.status)} />
-            <Field label={t('labels.network')} value={device.ssid || '—'} />
-            <Field label={t('labels.bssid')} value={device.bssid || '—'} />
-            <Field label={t('labels.group')} value={device.group.name || '—'} />
-            <Field label={t('labels.source')} value={device.source || '—'} />
-            <Field
-              label={t('labels.volume')}
-              value={device.volume === null ? '—' : String(device.volume)}
-            />
-            <Field label={t('labels.lastSeen')} value={agoLabel(t, device.lastSeen, now)} />
-            <Field label={t('labels.failures')} value={String(device.errors)} />
-            <Field label={t('labels.push')} value={pushLabel} />
-          </dl>
-        </section>
-
-        <section className="min-w-0">
-          <div className="flex items-center justify-between gap-2">
+      <div id={bodyId} hidden={collapsed}>
+        <div className="mt-4 grid gap-5 md:grid-cols-2">
+          <section>
             <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-              {t('sections.signal')}
+              {t('sections.fields')}
             </h3>
-            <span className="inline-flex items-center gap-1 text-xs tabular-nums">
-              <SignalIcon
-                className={cn(
-                  'size-3.5',
-                  rssi !== null && rssi <= -70 ? 'text-warning' : 'text-muted-foreground'
-                )}
-              />
-              {rssi === null ? t('rssiUnknown') : t('rssi', { value: rssi })}
-            </span>
-          </div>
-          <div className="mt-1 rounded-lg border border-border/60 bg-muted/20 px-2 pt-2">
-            {live.length > 0 ? (
-              <Sparkline samples={live} />
-            ) : (
-              <div className="grid h-16 place-items-center text-xs text-muted-foreground">
-                {t('noSamples')}
+            <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
+              <div className="col-span-2">
+                <dt className="text-[11px] text-muted-foreground">{t('labels.address')}</dt>
+                <dd className="flex items-center gap-1">
+                  <span className="truncate font-mono text-xs" title={device.ip}>
+                    {device.ip}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    className="size-6 shrink-0 text-muted-foreground"
+                    aria-label={t('copy')}
+                    onClick={() => void copy()}
+                  >
+                    <Copy className="size-3" />
+                  </Button>
+                </dd>
               </div>
-            )}
-          </div>
-          <p className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
-            <span>{t('rssiChart')}</span>
-            {rssi !== null && rssi <= -70 && (
-              <Badge variant="warning" className="text-[10px]">
-                {t('weakSignal')}
-              </Badge>
-            )}
-          </p>
+              <Field label={t('labels.firmware')} value={device.firmware || '—'} />
+              <Field label={t('labels.state')} value={statusLabel(t, device.status)} />
+              <Field label={t('labels.network')} value={device.ssid || '—'} />
+              <Field label={t('labels.bssid')} value={device.bssid || '—'} />
+              <Field label={t('labels.group')} value={device.group.name || '—'} />
+              <Field label={t('labels.source')} value={device.source || '—'} />
+              <Field
+                label={t('labels.volume')}
+                value={device.volume === null ? '—' : String(device.volume)}
+              />
+              <Field label={t('labels.lastSeen')} value={agoLabel(t, device.lastSeen, now)} />
+              <Field label={t('labels.failures')} value={String(device.errors)} />
+              <Field label={t('labels.push')} value={pushLabel} />
+            </dl>
+          </section>
+
+          <section className="min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+                {t('sections.signal')}
+              </h3>
+              <span className="inline-flex items-center gap-1 text-xs tabular-nums">
+                <SignalIcon
+                  className={cn(
+                    'size-3.5',
+                    rssi !== null && rssi <= -70 ? 'text-warning' : 'text-muted-foreground'
+                  )}
+                />
+                {rssi === null ? t('rssiUnknown') : t('rssi', { value: rssi })}
+              </span>
+            </div>
+            <div className="mt-1 rounded-lg border border-border/60 bg-muted/20 px-2 pt-2">
+              {live.length > 0 ? (
+                <Sparkline samples={live} />
+              ) : (
+                <div className="grid h-16 place-items-center text-xs text-muted-foreground">
+                  {t('noSamples')}
+                </div>
+              )}
+            </div>
+            <p className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>{t('rssiChart')}</span>
+              {rssi !== null && rssi <= -70 && (
+                <Badge variant="warning" className="text-[10px]">
+                  {t('weakSignal')}
+                </Badge>
+              )}
+            </p>
+          </section>
+        </div>
+
+        <section className="mt-5">
+          <FindingsPanel device={device} now={now} />
         </section>
-      </div>
 
-      <section className="mt-5">
-        <FindingsPanel device={device} now={now} />
-      </section>
+        <section className="mt-5">
+          <GuidesPanel device={device} />
+        </section>
 
-      <section className="mt-5">
-        <GuidesPanel device={device} />
-      </section>
+        <section className="mt-5">
+          <ServicesPanel device={device} />
+        </section>
 
-      <section className="mt-5">
-        <ServicesPanel device={device} />
-      </section>
+        <section className="mt-5">
+          <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+            {t('sections.timeline')}
+          </h3>
+          <EventTimeline events={device.events} />
+        </section>
 
-      <section className="mt-5">
-        <h3 className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-          {t('sections.timeline')}
-        </h3>
-        <EventTimeline events={device.events} />
-      </section>
-
-      <div className="mt-4 border-t border-border/60 pt-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setDetails(value => !value)}
-          aria-expanded={details}
-        >
-          <ChevronDown className={cn('size-3.5 transition-transform', details && 'rotate-180')} />
-          {details ? t('hideDetails') : t('details')}
-        </Button>
-        {details && (
-          <div className="mt-3">
-            <SampleTable samples={device.samples} />
-          </div>
-        )}
+        <div className="mt-4 border-t border-border/60 pt-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDetails(value => !value)}
+            aria-expanded={details}
+          >
+            <ChevronDown className={cn('size-3.5 transition-transform', details && 'rotate-180')} />
+            {details ? t('hideDetails') : t('details')}
+          </Button>
+          {details && (
+            <div className="mt-3">
+              <SampleTable samples={device.samples} />
+            </div>
+          )}
+        </div>
       </div>
     </Card>
   )

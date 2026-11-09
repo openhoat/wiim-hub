@@ -15,6 +15,7 @@ import { inputLabel, isExternalInput } from '@/lib/labels'
 import { SettingsProvider, useSettings } from '@/lib/settings'
 import type { View } from '@/lib/types'
 import { useHub } from '@/lib/use-hub'
+import { useLayout } from '@/lib/use-layout'
 
 const viewKey = 'wiim-hub:view'
 
@@ -62,7 +63,10 @@ const Hub = () => {
   const [view, setView] = useState<View>(readView)
   const [now, setNow] = useState(() => Date.now())
 
-  const devices = hub.state?.devices ?? []
+  // The order and the folded cards are a preference of this browser: the hub
+  // keeps no such thing, and both views read the same list.
+  const layout = useLayout(hub.state?.devices ?? [])
+  const devices = layout.devices
   // The cards render a photo of the hub, so their clock stops at the moment it
   // was taken: a seek bar must not advance on a position nobody measured. The
   // banner keeps the real clock, because it dates the photo.
@@ -149,12 +153,18 @@ const Hub = () => {
                     : 'mx-auto max-w-3xl space-y-4'
                 )}
               >
-                {devices.map(device => (
+                {devices.map((device, index) => (
                   // Keyed by address, not by name: a speaker that renames
                   // itself, or one renamed from its sheet, would otherwise
                   // remount the card and close the sheet under the hand.
                   <div key={device.ip} className="space-y-4">
-                    <NowPlayingCard device={device} now={clock} />
+                    <NowPlayingCard
+                      device={device}
+                      now={clock}
+                      index={index}
+                      count={devices.length}
+                      onMove={delta => layout.move(device.ip, delta)}
+                    />
                     <SoundCard device={device} />
                   </div>
                 ))}
@@ -162,7 +172,13 @@ const Hub = () => {
             ) : (
               <div className="space-y-4">
                 {devices.map(device => (
-                  <DiagnosticCard key={device.ip} device={device} now={clock} />
+                  <DiagnosticCard
+                    key={device.ip}
+                    device={device}
+                    now={clock}
+                    collapsed={layout.collapsed.has(device.ip)}
+                    onToggleCollapsed={() => layout.toggle(device.ip)}
+                  />
                 ))}
               </div>
             ))}

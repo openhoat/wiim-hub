@@ -149,6 +149,14 @@ browser.
 Language and theme follow the browser, can be overridden in the header, and are remembered per
 browser. The selected view is remembered the same way.
 
+So is the order of the cards, and that one needs pinning. The hub answers its devices in the order
+it happens to hold them, which moves when a speaker joins or is rediscovered, so two cards could
+swap with no visible reason. The page keeps the first order it saw, appends a speaker it has never
+seen, and stores the list in `localStorage` (`src/lib/layout.ts`); the arrows in a card header move
+it against its neighbour, and only that gesture changes the order. The diagnostic view reads the
+same list, and each of its cards folds to the header, remembered per address: on a phone, the
+fleet reads as names first.
+
 The page also installs as a web app, and a service worker (`public/sw.js`) caches what makes that
 worth doing: the document, its bundle, the font and the icons, so the shell opens without a network.
 The split is deliberate. The shell changes only when the hub is redeployed, so a cached copy is
@@ -196,6 +204,7 @@ server/services.ts   streaming services and the tiers the firmware publishes
 server/server.ts     polling loop, ring buffers, HTTP routes, static bundle
 server/demo.ts       the same routes over simulated speakers
 src/                 React UI: components, settings and i18n provider, formatting helpers
+src/lib/layout.ts    the card order and the folded cards, kept per browser
 src/lib/updates.ts   worker registration, version checks, the reload the banner offers
 public/sw.js         service worker: the shell is cached, the API never is
 e2e/                 Playwright suite, run against the demo mode

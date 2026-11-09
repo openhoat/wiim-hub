@@ -1,8 +1,9 @@
-import { Disc3, Radio, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Disc3, Radio, Users } from 'lucide-react'
 import { useState } from 'react'
 import { DeviceSettingsDialog } from '@/components/device-settings'
 import { PlayerControls } from '@/components/player-controls'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { artUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
@@ -176,7 +177,55 @@ const TrackMeta = ({
   )
 }
 
-export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: number }>) => {
+// The order of the cards belongs to the reader, not to the hub: the arrows move
+// one card against its neighbour, on the order stored in the page. A single
+// speaker has nothing to move, so the pair is not drawn at all.
+const MoveButtons = ({
+  index,
+  count,
+  onMove,
+}: Readonly<{ index: number; count: number; onMove: (delta: -1 | 1) => void }>) => {
+  const { t } = useSettings()
+  if (count < 2) return null
+  return (
+    <div className="flex items-center">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t('moveEarlier')}
+        title={t('moveEarlier')}
+        disabled={index === 0}
+        onClick={() => onMove(-1)}
+      >
+        <ArrowLeft className="size-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        aria-label={t('moveLater')}
+        title={t('moveLater')}
+        disabled={index === count - 1}
+        onClick={() => onMove(1)}
+      >
+        <ArrowRight className="size-4" />
+      </Button>
+    </div>
+  )
+}
+
+export const NowPlayingCard = ({
+  device,
+  now,
+  index = 0,
+  count = 1,
+  onMove,
+}: Readonly<{
+  device: Device
+  now: number
+  index?: number
+  count?: number
+  onMove?: (delta: -1 | 1) => void
+}>) => {
   const { t } = useSettings()
   const controls = useControls(device)
   const live = controls.device
@@ -194,13 +243,17 @@ export const NowPlayingCard = ({ device, now }: Readonly<{ device: Device; now: 
   const groupPanelId = `group-panel-${device.ip}`
 
   return (
-    <Card className={cn('p-5 sm:p-6', !device.online && 'opacity-80')}>
+    <Card
+      className={cn('p-5 sm:p-6', !device.online && 'opacity-80')}
+      data-testid={`playing-${device.ip}`}
+    >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="truncate text-sm font-medium">{device.name}</h2>
           <p className="truncate text-[11px] text-muted-foreground">{device.model || device.ip}</p>
         </div>
         <div className="flex items-center gap-1.5">
+          {onMove !== undefined && <MoveButtons index={index} count={count} onMove={onMove} />}
           <DeviceSettingsDialog controls={controls} />
           <StatusBadge online={device.online} status={live.status} playing={playing && !external} />
         </div>

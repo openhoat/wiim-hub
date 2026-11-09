@@ -120,6 +120,10 @@
   "exportJson": "En JSON",
   "copy": "Copier l'adresse",
   "copied": "Copié",
+  "collapse": "Replier",
+  "expand": "Déplier",
+  "moveEarlier": "Déplacer avant",
+  "moveLater": "Déplacer après",
   "sections": {
     "fields": "Champs",
     "signal": "Signal",
