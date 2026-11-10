@@ -19,6 +19,11 @@ for the browser.
 | `/api/hosts`                          | PUT    | Change the address of a saved host, `{ "from": "…", "to": "…" }`                           |
 | `/api/hosts?host=<address>`           | DELETE | Remove a saved host; a seed from the environment and a discovered entry are refused        |
 
+The `host` parameter is the key the hub polls a device under, the address it currently answers on,
+or the name the device reports. A name is not an identity: two speakers of the same model can report
+the same one, so a name carried by more than one device is refused and the address is the way to
+say which machine is meant.
+
 ## Intents
 
 `POST /api/command` takes an intent, never a raw device command: the server owns the mapping from

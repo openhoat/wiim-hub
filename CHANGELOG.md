@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- A speaker can be addressed by the name it reports, not only by its address. The MCP client
+  already offered the name, while the lookup behind the routes only knew the key the hub polls
+  under and the address the device currently answers on: asking by name answered
+  `unknown device`. A name two speakers share is still refused, since it names no single machine;
+  the address remains the unambiguous way to ask.
+
 ## [0.9.15] - 2026-11-10
 
 ### Changed

@@ -23,6 +23,7 @@ import {
   writeHostsFile,
 } from './hosts.ts'
 import { readInventory, resolutionFor } from './inventory.ts'
+import { findDevice } from './lookup.ts'
 import { notifierFromEnv } from './notify.ts'
 import { createWriteQueue } from './queue.ts'
 import { readServices } from './services.ts'
@@ -184,7 +185,7 @@ const applyPatch = (state: DeviceState, patch: DevicePatch): void => {
 // same cleaning as a poll so the placeholder "Unknown" cannot come back through
 // the event path.
 const applyEvent = (ip: string, patch: EventPatch): void => {
-  const entry = findEntry(ip)
+  const entry = findDevice(states, ip)
   if (entry === null) return
   const state = entry.state
   if (!state.online) return
@@ -558,14 +559,6 @@ const readBody = (req: IncomingMessage, limit = 2048): Promise<string | null> =>
 // The browser knows a device by the address it last saw, which may be the
 // configured name, the resolved address, or both: accept either and write
 // through the same queue key so two spellings cannot run two writers.
-const findEntry = (host: string): { key: string; state: DeviceState } | null => {
-  const direct = states.get(host)
-  if (direct !== undefined) return { key: host, state: direct }
-  for (const [key, state] of states) {
-    if (state.ip === host) return { key, state }
-  }
-  return null
-}
 
 const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse): Promise<void> => {
   // A JSON content type cannot be produced by an HTML form, so a cross-site
@@ -576,7 +569,7 @@ const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse)
     return
   }
   const host = url.searchParams.get('host') ?? ''
-  const entry = host === '' ? null : findEntry(host)
+  const entry = host === '' ? null : findDevice(states, host)
   if (entry === null) {
     sendJson(res, 404, { error: 'unknown device' })
     return
@@ -674,7 +667,7 @@ const sendState = (res: ServerResponse): void => {
 // The report is what a user pastes into a support thread: the findings, the
 // evidence behind each of them, and the raw answers they came from.
 const sendReport = async (url: URL, res: ServerResponse): Promise<void> => {
-  const entry = findEntry(url.searchParams.get('host') ?? '')
+  const entry = findDevice(states, url.searchParams.get('host') ?? '')
   if (entry === null) {
     sendJson(res, 404, { error: 'unknown device' })
     return
@@ -709,7 +702,7 @@ const sendReport = async (url: URL, res: ServerResponse): Promise<void> => {
 // set of four writes nobody watches between visits.
 const sendSettings = async (url: URL, res: ServerResponse): Promise<void> => {
   const host = url.searchParams.get('host') ?? ''
-  const entry = host === '' ? null : findEntry(host)
+  const entry = host === '' ? null : findDevice(states, host)
   if (entry === null) {
     sendJson(res, 404, { error: 'unknown device' })
     return
@@ -743,7 +736,7 @@ const routes: Record<string, Route> = {
   // The streaming table is reference data, not live state: the page reads it
   // when the diagnostic card opens, and the poll payload stays the size it was.
   '/api/services': async (url, _req, res) => {
-    const entry = findEntry(url.searchParams.get('host') ?? '')
+    const entry = findDevice(states, url.searchParams.get('host') ?? '')
     if (entry === null) {
       sendJson(res, 404, { error: 'unknown device' })
       return true

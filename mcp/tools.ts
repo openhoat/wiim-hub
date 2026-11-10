@@ -41,7 +41,7 @@ const hostField = z
   .string()
   .min(1)
   .describe(
-    'The speaker as the hub knows it: the name or address it was configured with, or the address it currently answers on.'
+    'The speaker as the hub knows it: the name it reports, the address it is configured with, or the address it currently answers on. A name two speakers share is refused, so use the address then.'
   )
 
 const hubStateInput = z.object({}).strict()
