@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { DeviceState, Diagnostics } from './device.ts'
+import type { Diagnostics } from './device/diagnostics.ts'
+import type { DeviceState } from './device/index.ts'
 import { buildReport, findingsFor } from './findings.ts'
 import { buildInventory } from './inventory.ts'
 

@@ -19,7 +19,9 @@ import { readFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
 import { type Action, commandFor, parseAction } from './commands.ts'
-import { type DeviceSettings, type DeviceState, MAX_SAMPLES, type Sample } from './device.ts'
+import type { DeviceState } from './device/index.ts'
+import type { DeviceSettings } from './device/settings.ts'
+import { MAX_SAMPLES, type Sample } from './device/status.ts'
 import { buildReport, findingsFor } from './findings.ts'
 import {
   eqList,

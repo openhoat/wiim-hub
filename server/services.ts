@@ -10,7 +10,8 @@
 // The parser keeps the levels exactly as published and in the published order:
 // the page names the last one as the top tier, and what the firmware does not
 // say, the hub does not invent.
-import { fetchCommand, resolveTarget } from './device.ts'
+import { resolveTarget } from './device/resolve.ts'
+import { fetchCommand } from './device/transport.ts'
 import type { ProbeCommand } from './inventory.ts'
 
 export type ServiceCapability = {

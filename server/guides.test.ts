@@ -2,7 +2,8 @@
 // order itself is what these tests pin: what runs first, where the flow stops,
 // and what "could not read" looks like compared with "everything is fine".
 import { describe, expect, it } from 'vitest'
-import type { DeviceState, Diagnostics } from './device.ts'
+import type { Diagnostics } from './device/diagnostics.ts'
+import type { DeviceState } from './device/index.ts'
 import { type Guide, guideOrder, guideSection, guidesFor } from './guides.ts'
 
 // The baseline is the reference player as it reads when nothing is wrong:

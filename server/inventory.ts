@@ -7,7 +7,9 @@
 //
 // Same split as the rest of the device client: classification, assembly and
 // rendering are pure, the transport and the cache stay in `readInventory`.
-import { eqQuery, fetchCommand, resolveTarget, type Scheme, transportOf } from './device.ts'
+import { eqQuery } from './device/acoustic.ts'
+import { resolveTarget } from './device/resolve.ts'
+import { fetchCommand, type Scheme, transportOf } from './device/transport.ts'
 
 // What the hub needs from a player, by area. One line per command: the report
 // table is read by someone who does not know this API, and an area is what

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { commandFor, commandOutcome, eqBandNames, parseAction } from './commands.ts'
-import type { DeviceState } from './device.ts'
+import type { DeviceState } from './device/index.ts'
 
 // A device that supports one input, one output and one preset: enough to
 // exercise every check `commandFor` makes against the retained state.

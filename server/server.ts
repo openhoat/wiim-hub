@@ -2,21 +2,14 @@ import { readFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
 import { commandFor, parseAction } from './commands.ts'
-import {
-  artUri,
-  cleanTitle,
-  type DeviceEvent,
-  type DevicePatch,
-  type DeviceState,
-  fetchAlbumArt,
-  fetchCommand,
-  MAX_EVENTS,
-  MAX_SAMPLES,
-  pollDevice,
-  readDiagnostics,
-  readSettings,
-  resolveTarget,
-} from './device.ts'
+import { fetchAlbumArt } from './device/art.ts'
+import { readDiagnostics } from './device/diagnostics.ts'
+import { type DevicePatch, type DeviceState, pollDevice } from './device/index.ts'
+import { artUri, cleanTitle } from './device/payload.ts'
+import { resolveTarget } from './device/resolve.ts'
+import { readSettings } from './device/settings.ts'
+import { type DeviceEvent, MAX_EVENTS, MAX_SAMPLES } from './device/status.ts'
+import { fetchCommand } from './device/transport.ts'
 import { discoverSsdp } from './discovery.ts'
 import { buildReport, findingsFor } from './findings.ts'
 import { guidesFor } from './guides.ts'

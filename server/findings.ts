@@ -6,7 +6,9 @@
 //
 // The module is pure on purpose: the thresholds and the wording can be tested
 // without a speaker, and the same findings feed the page and the support report.
-import type { DeviceState, Diagnostics } from './device.ts'
+
+import type { Diagnostics } from './device/diagnostics.ts'
+import type { DeviceState } from './device/index.ts'
 import { type Guide, guideSection } from './guides.ts'
 import { type Inventory, inventorySection, type Resolution } from './inventory.ts'
 

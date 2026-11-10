@@ -198,7 +198,10 @@ second one. Both rules come from
 ## Module map
 
 ```text
-server/device.ts     device client: transport fallback, mDNS name resolution, parsing, art relay
+server/device/       device client, one module per area: transport fallback, mDNS name
+                     resolution, payload readers, art relay, playback status, inputs and
+                     outputs, presets, equalizer, multiroom, diagnostics, settings, and the
+                     probe cache; index.ts holds DeviceState and the two entry points.
 server/commands.ts   accepted intents, validation against the device state, command mapping
 server/queue.ts      per-device write queue: one command in flight, coalescing by family
 server/discovery.ts  SSDP discovery, filtered on WiiM and LinkPlay descriptions

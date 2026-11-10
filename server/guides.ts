@@ -6,7 +6,9 @@
 // reasoning, each check names the field it read, and a check that cannot be
 // read stops the flow instead of guessing. The same rules feed the page (in its
 // own language) and the support report (in English).
-import type { DeviceState, Diagnostics } from './device.ts'
+
+import type { Diagnostics } from './device/diagnostics.ts'
+import type { DeviceState } from './device/index.ts'
 
 export type GuideId = 'no-sound' | 'drops' | 'wrong-output' | 'cannot-join-group'
 

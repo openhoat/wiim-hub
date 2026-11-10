@@ -9,9 +9,10 @@
 // Sanitized: MAC addresses, BSSIDs, uuids, the device and network names, and the
 // player address. The shapes are the firmware's; only the identities changed.
 //
-// The answers below feed the four pure seams (`parseDevice`, `parseCapability`,
-// `parsePresets`, `parseRegistry`); the transport, the caches and the retries stay
-// in `device.ts`, exercised end to end by the Playwright run against the demo.
+// The answers below feed the pure seams (`parseDevice` in `device/index.ts`, then
+// `parseCapability`, `parsePresets`, `parseRegistry` and `parseAcoustic`); the
+// transport, the caches and the retries stay in `device/`, exercised end to end by
+// the Playwright run against the demo.
 
 // getStatusEx: everything is a string, the network name is hex (`essid`), and
 // the device reports both `RSSI` and the link counters.

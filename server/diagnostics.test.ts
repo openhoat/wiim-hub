@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseDiagnostics } from './device.ts'
+import { parseDiagnostics } from './device/diagnostics.ts'
 
 // The payloads below are the reference player's own answers, trimmed to the
 // fields the diagnostics read (2026-11-09). They are recorded verbatim, numbers

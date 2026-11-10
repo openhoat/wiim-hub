@@ -251,7 +251,7 @@ the feature. Rules marked **must** are correctness rules, not polish.
   36 000 000 as milliseconds, above as microseconds, and for known local sources
   (`udisk`, `line-in`, `optical`, `HDMI`) always milliseconds. A track longer than 10 hours
   must still display correctly. The hub applies the rule once, when it parses the player
-  answer (`positionMs` in `server/device.ts`), so every view reads milliseconds and the
+  answer (`positionMs` in `server/device/status.ts`), so every view reads milliseconds and the
   frontier is written in one place.
 - **Broken firmware states.** Position greater than duration, or a duration below 2 minutes
   with a plausible position, means the duration is wrong: hide the duration, keep the

@@ -23,11 +23,6 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 - [ ] Support a generic webhook and ntfy, with a per alert rule and a quiet period
 - [ ] Never send a notification twice for the same event, and log what was sent
 
-### #12 [ARCHITECTURE] Split the device module by capability and cache the capability probes (P3)
-
-- [ ] One module per area: status, playback, inputs, outputs, acoustic, multiroom
-- [ ] Cache the `unknown command` answers per firmware so a page never re-probes a missing feature
-
 ### #13 [ARCHITECTURE] Make name resolution pluggable (P3)
 
 - [ ] Keep mDNS, the last known address and a static map as interchangeable resolvers

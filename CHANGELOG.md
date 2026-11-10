@@ -10,6 +10,22 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Changed
+
+- Internal only, no behaviour change: `server/device.ts` is now a directory, one module per area
+  (`transport`, `resolve`, `payload`, `art`, `status`, `inputs`, `outputs`, `presets`, `acoustic`,
+  `multiroom`, `diagnostics`, `settings`, `probes`), with `index.ts` keeping `DeviceState` and the
+  two entry points. Each caller imports the module that owns its symbol instead of one 1200 line
+  file, and the unit suite follows the same split.
+
+### Added
+
+- The hub stops asking a player for a command its firmware does not implement. An `unknown command`
+  answer is remembered per address, firmware and command, so a model without an equalizer or a
+  preset list costs one request per build instead of one per cache window; a firmware update changes
+  the key and the probe is asked once again. The same answer seen on the write side was already
+  read as a capability verdict rather than a transient failure.
+
 ## [0.9.9] - 2026-11-09
 
 ### Changed

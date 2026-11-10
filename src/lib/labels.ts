@@ -20,7 +20,7 @@ export const eventKindLabel = (t: Translate, kind: DeviceEvent['kind']): string 
 // sources have no media to seek in and no metadata to show. The server already
 // nulls the position they report, but the page still has to name the source
 // instead of pretending nothing is playing. The list repeats the one in
-// `server/device.ts` on purpose: the UI bundle and the server image share no
+// `server/device/status.ts` on purpose: the UI bundle and the server image share no
 // module, and the device ids are the only stable key here.
 const externalInputs = new Set(['optical', 'line-in'])
 

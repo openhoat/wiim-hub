@@ -1,4 +1,4 @@
-import type { DeviceState } from './device.ts'
+import type { DeviceState } from './device/index.ts'
 
 // Every write the hub accepts, as a value. The browser never sends a device
 // command: it sends an intent, the server checks it against the state it has
