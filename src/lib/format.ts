@@ -28,7 +28,7 @@ const cached = <T>(cache: Map<string, T>, locale: string, build: () => T): T => 
 export const formatNumber = (value: number, locale: string): string =>
   cached(numberFormats, locale, () => new Intl.NumberFormat(locale))
     .format(value)
-    .replace(/\u202f/g, '\u00a0')
+    .replaceAll('\u202f', '\u00a0')
 
 export const formatClock = (at: number, locale: string): string =>
   cached(

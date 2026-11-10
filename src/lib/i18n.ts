@@ -90,7 +90,36 @@ const branchFor = (branches: Map<string, string>, count: number, locale: string)
   return branches.get(rulesFor(locale).select(count)) ?? branches.get('other') ?? ''
 }
 
-const argumentPattern = /^\s*(\w+)\s*(?:,\s*(\w+)\s*(?:,\s*([\s\S]*))?)?\s*$/
+// An argument is written `name`, `name, kind` or `name, kind, body`. It is read by
+// a small scanner rather than one expression with nested optional groups: that
+// expression backtracked on a malformed entry (Sonar S8786), and this reads the
+// way the grammar is written.
+const wordChar = /[A-Za-z0-9_]/
+
+const wordEnd = (text: string): number => {
+  let end = 0
+  while (end < text.length && wordChar.test(text[end])) end += 1
+  return end
+}
+
+type Argument = { name: string; kind: string | undefined; body: string }
+
+const parseArgument = (input: string): Argument | null => {
+  let text = input.trimStart()
+  const name = text.slice(0, wordEnd(text))
+  if (name === '') return null
+  text = text.slice(name.length).trimStart()
+  if (text === '') return { name, kind: undefined, body: '' }
+  if (text[0] !== ',') return null
+  text = text.slice(1).trimStart()
+  const kind = text.slice(0, wordEnd(text))
+  if (kind === '') return null
+  text = text.slice(kind.length).trimStart()
+  if (text === '') return { name, kind, body: '' }
+  if (text[0] !== ',') return null
+  // The body keeps the spacing of its branches: `parseBranches` is what reads it.
+  return { name, kind, body: text.slice(1).trimStart() }
+}
 
 const render = (template: string, vars: Vars, locale: string, count: number | null): string => {
   let out = ''
@@ -118,22 +147,21 @@ const render = (template: string, vars: Vars, locale: string, count: number | nu
   return out
 }
 
-const renderArgument = (body: string, vars: Vars, locale: string): string => {
-  const match = argumentPattern.exec(body)
+const renderArgument = (raw: string, vars: Vars, locale: string): string => {
+  const argument = parseArgument(raw)
   // An argument the parser does not know is printed as it came: a typo shows
   // up in the sentence instead of blanking it.
-  if (match === null) return `{${body}}`
-  const name = match[1] ?? ''
-  const kind = match[2]
+  if (argument === null) return `{${raw}}`
+  const { name, kind, body } = argument
   const value = vars[name]
   if (kind === undefined) {
     if (value === undefined) return ''
     return typeof value === 'number' ? formatNumber(value, locale) : value
   }
   if (kind === 'number') return typeof value === 'number' ? formatNumber(value, locale) : ''
-  if (kind !== 'plural') return `{${body}}`
-  if (typeof value !== 'number') return value === undefined ? '' : value
-  return render(branchFor(parseBranches(match[3] ?? ''), value, locale), vars, locale, value)
+  if (kind !== 'plural') return `{${raw}}`
+  if (typeof value !== 'number') return value ?? ''
+  return render(branchFor(parseBranches(body), value, locale), vars, locale, value)
 }
 
 // The parser's own seam: `translate` only ever hands it a dictionary entry, so

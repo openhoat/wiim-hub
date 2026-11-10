@@ -64,6 +64,14 @@ describe('createHub', () => {
     expect(received[0].headers.authorization).not.toBeUndefined()
   })
 
+  it('strips the slashes a base url may end on, and refuses a url with no scheme', async () => {
+    const received: Received[] = []
+    const baseUrl = await listen(json(200, {}), { received })
+    await createHub({ baseUrl: `${baseUrl}///` }).get('/api/state')
+    expect(received[0].url).toBe('/api/state')
+    expect(() => createHub({ baseUrl: 'hub.local:8090' })).toThrow(/http/)
+  })
+
   it('sends no authorization header without a token', async () => {
     const received: Received[] = []
     const baseUrl = await listen(json(200, {}), { received })

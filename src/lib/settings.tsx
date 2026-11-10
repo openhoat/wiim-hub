@@ -57,10 +57,8 @@ export const SettingsProvider = ({ children }: Readonly<{ children: ReactNode }>
   const [lang, setLang] = useState<Lang>(readLang)
   const [theme, setTheme] = useState<Theme>(readTheme)
   const [dark, setDark] = useState(false)
-  const resolvedLang =
-    lang === 'auto'
-      ? pickLang(navigator.languages.length > 0 ? navigator.languages : [navigator.language])
-      : lang
+  const preferred = navigator.languages.length > 0 ? navigator.languages : [navigator.language]
+  const resolvedLang = lang === 'auto' ? pickLang(preferred) : lang
 
   const t = useCallback<Translate>(
     (key, vars = {}) => translate(resolvedLang, key, vars),

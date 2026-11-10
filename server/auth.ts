@@ -43,9 +43,19 @@ export const authFromEnv = (raw: string | undefined): Auth => {
   return tokens.length === 0 ? null : { tokens }
 }
 
+// The scheme is read by hand: `\s+(.+)` backtracks on a header that is one long
+// run of spaces (Sonar S8786).
+const whitespace = /\s/
+
 const bearerOf = (authorization: string): string | null => {
-  const match = /^bearer\s+(.+)$/i.exec(authorization.trim())
-  const token = match?.[1]?.trim() ?? ''
+  const value = authorization.trim()
+  const scheme = 'bearer'
+  if (value.slice(0, scheme.length).toLowerCase() !== scheme) return null
+  const rest = value.slice(scheme.length)
+  // The scheme is a word of its own: `bearerx` is not a bearer header, and a
+  // scheme with no whitespace after it carries no token.
+  if (rest === '' || whitespace.test(rest[0]) === false) return null
+  const token = rest.trim()
   return token === '' ? null : token
 }
 

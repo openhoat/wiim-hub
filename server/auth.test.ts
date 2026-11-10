@@ -57,6 +57,11 @@ describe('authorized', () => {
     expect(authorized({ authorization: 'Bearer secre' }, auth)).toBe(false)
     expect(authorized({ authorization: 'Bearer ' }, auth)).toBe(false)
     expect(authorized({ authorization: 'Basic secret' }, auth)).toBe(false)
+    // The scheme is a word of its own: a header that only starts with the letters
+    // is not a bearer, and neither is the scheme with no whitespace after it.
+    expect(authorized({ authorization: 'bearerx secret' }, auth)).toBe(false)
+    expect(authorized({ authorization: 'bearersecret' }, auth)).toBe(false)
+    expect(authorized({ authorization: 'Bearer' }, auth)).toBe(false)
     expect(authorized({}, auth)).toBe(false)
   })
 

@@ -60,7 +60,12 @@ export const createHub = ({
   timeoutMs?: number
   send?: Send
 }): HubClient => {
-  const base = baseUrl.trim().replace(/\/+$/, '')
+  // A trailing run of slashes is stripped by hand: the expression backtracked on
+  // a long one (Sonar S8786).
+  const trimmed = baseUrl.trim()
+  let end = trimmed.length
+  while (end > 0 && trimmed[end - 1] === '/') end -= 1
+  const base = trimmed.slice(0, end)
   if (/^https?:\/\//.test(base) === false) {
     throw new Error(`WIIM_HUB_URL must start with http:// or https:// (got ${baseUrl})`)
   }

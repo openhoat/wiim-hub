@@ -39,7 +39,8 @@ const entries = (tree: Record<string, unknown>, prefix = ''): [string, string][]
 
 describe('dictionaries', () => {
   it('carries the same keys in both languages', () => {
-    expect(flatten(fr).sort()).toEqual(flatten(en).sort())
+    const sorted = (values: string[]): string[] => values.sort((a, b) => a.localeCompare(b))
+    expect(sorted(flatten(fr))).toEqual(sorted(flatten(en)))
   })
 
   it('leaves no "(s)" behind: a plural is a plural, in both languages', () => {
@@ -150,6 +151,25 @@ describe('parser guards', () => {
   it('prints an argument it does not know as it came', () => {
     expect(renderTemplate('a {n, fancy} b', 'en', { n: 2 })).toBe('a {n, fancy} b')
     expect(renderTemplate('a { } b', 'en')).toBe('a { } b')
+  })
+
+  it('tolerates the spacing around an argument, and one that is only spaces', () => {
+    expect(renderTemplate('{  n  }', 'en', { n: 3 })).toBe('3')
+    expect(renderTemplate('{n , plural , one {# item} other {# items} }', 'en', { n: 2 })).toBe(
+      '2 items'
+    )
+    // A long run of spaces used to make the argument expression backtrack: it is
+    // now a word that is not there, and the argument is printed as it came.
+    const spaces = ' '.repeat(5000)
+    expect(renderTemplate(`{${spaces}}`, 'en')).toBe(`{${spaces}}`)
+  })
+
+  it('refuses the shapes that are not an argument, and prints them as they came', () => {
+    // Nothing where the comma belongs, nothing where the kind belongs, nothing
+    // where the body begins: each one is a typo in a dictionary, not a sentence.
+    expect(renderTemplate('a {n x} b', 'en', { n: 2 })).toBe('a {n x} b')
+    expect(renderTemplate('a {n,} b', 'en', { n: 2 })).toBe('a {n,} b')
+    expect(renderTemplate('a {n, plural x} b', 'en', { n: 2 })).toBe('a {n, plural x} b')
   })
 
   it('keeps the rest of an unbalanced template instead of throwing', () => {

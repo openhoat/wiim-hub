@@ -166,19 +166,22 @@ export const createNotifier = ({
   const paged = new Map<string, Map<FindingId, number>>()
   const floor = severityRank[minSeverity]
 
+  // A channel that is down must not silence the other one, and must not reach the
+  // poll loop: the next occurrence of the rule is the retry. Channels do not know
+  // each other, so they are asked at the same time rather than one after the other.
   const deliver = async (alert: Alert): Promise<void> => {
-    for (const channel of channels) {
-      const where = `${alert.finding.id} on ${alert.device === '' ? alert.host : alert.device}`
-      try {
-        await channel.send(alert)
-        log(`wiim-hub: alert sent to ${channel.name} (${where})`)
-      } catch (error) {
-        // A channel that is down must not silence the other one, and must not
-        // reach the poll loop: the next occurrence of the rule is the retry.
-        const reason = error instanceof Error ? error.message : String(error)
-        log(`wiim-hub: alert refused by ${channel.name} (${where}): ${reason}`)
-      }
-    }
+    const where = `${alert.finding.id} on ${alert.device === '' ? alert.host : alert.device}`
+    await Promise.all(
+      channels.map(async channel => {
+        try {
+          await channel.send(alert)
+          log(`wiim-hub: alert sent to ${channel.name} (${where})`)
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error)
+          log(`wiim-hub: alert refused by ${channel.name} (${where}): ${reason}`)
+        }
+      })
+    )
   }
 
   const push: Notifier['push'] = ({ host, device, findings }) => {
