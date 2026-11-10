@@ -39,7 +39,10 @@ const entries = (tree: Record<string, unknown>, prefix = ''): [string, string][]
 
 describe('dictionaries', () => {
   it('carries the same keys in both languages', () => {
-    const sorted = (values: string[]): string[] => values.sort((a, b) => a.localeCompare(b))
+    const sorted = (values: string[]): string[] => {
+      values.sort((a, b) => a.localeCompare(b))
+      return values
+    }
     expect(sorted(flatten(fr))).toEqual(sorted(flatten(en)))
   })
 

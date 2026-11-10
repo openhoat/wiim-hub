@@ -94,7 +94,7 @@ const branchFor = (branches: Map<string, string>, count: number, locale: string)
 // a small scanner rather than one expression with nested optional groups: that
 // expression backtracked on a malformed entry (Sonar S8786), and this reads the
 // way the grammar is written.
-const wordChar = /[A-Za-z0-9_]/
+const wordChar = /\w/
 
 const wordEnd = (text: string): number => {
   let end = 0
@@ -110,13 +110,13 @@ const parseArgument = (input: string): Argument | null => {
   if (name === '') return null
   text = text.slice(name.length).trimStart()
   if (text === '') return { name, kind: undefined, body: '' }
-  if (text[0] !== ',') return null
+  if (!text.startsWith(',')) return null
   text = text.slice(1).trimStart()
   const kind = text.slice(0, wordEnd(text))
   if (kind === '') return null
   text = text.slice(kind.length).trimStart()
   if (text === '') return { name, kind, body: '' }
-  if (text[0] !== ',') return null
+  if (!text.startsWith(',')) return null
   // The body keeps the spacing of its branches: `parseBranches` is what reads it.
   return { name, kind, body: text.slice(1).trimStart() }
 }
