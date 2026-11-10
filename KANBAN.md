@@ -17,8 +17,3 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 - [ ] Per member volume and mute with coalescing, plus one synchronised volume control
 - [ ] Join, leave and kick out with a confirmation naming the device and the raw answer on failure
 - [ ] Reconcile the group state after every write instead of trusting the optimistic view
-
-### #14 [I18N] Complete the French copy and localise the formats (P3)
-
-- [ ] Review every string in context, including the diagnostic findings and the guided flows
-- [ ] Localise numbers, dates and durations through `Intl`, with no concatenated sentences

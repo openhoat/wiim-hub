@@ -77,6 +77,10 @@ on desktop never updates `icons` on an installed app.
   report says which source answered.
 - **A mixed fleet is the normal case**: transport, names and capabilities are probed per device,
   never assumed. Missing fields stay unknown instead of being guessed.
+- **Two languages, one page**: English and French, the diagnostic findings and the guided flows
+  included. Numbers, ages and plurals follow the language the page is in: a count picks the plural
+  branch of its own dictionary instead of carrying a `(s)`, and an outage older than a day reads
+  "3 days ago", not "72 h ago".
 - **Alerts that go out**: the same rules can post to a JSON webhook or an ntfy topic, once when a rule
   appears and not while it lasts, filtered by rule and severity, with a one hour quiet period.
 - **An agent surface**: a small MCP server, beside the hub and a client of its HTTP API, gives an

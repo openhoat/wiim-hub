@@ -16,8 +16,8 @@
   "dark": "Dark",
   "light": "Light",
   "discover": "Discover",
-  "discovering": "Scanning...",
-  "added": "{count} device(s) found",
+  "discovering": "Scanning…",
+  "added": "{count, plural, one {# device found} other {# devices found}}",
   "noNewDevice": "No new device",
   "discoveryFailed": "Discovery failed",
   "empty": "No device yet",
@@ -31,9 +31,6 @@
   "offline": "offline",
   "online": "reachable",
   "sample": "updated {time}",
-  "secondsAgo": "{n} s ago",
-  "minutesAgo": "{n} min ago",
-  "hoursAgo": "{n} h ago",
   "hubDown": "Hub unreachable",
   "hubDownHint": "It keeps retrying on its own.",
   "hubStale": "Last state received {age}, and it keeps retrying on its own.",
@@ -47,7 +44,7 @@
   "chipVolume": "Volume {value}",
   "group": {
     "label": "Group",
-    "members": "{n} speaker(s)",
+    "members": "{n, plural, one {# speaker} other {# speakers}}",
     "role": {
       "master": "This speaker drives the group.",
       "member": "This speaker follows the group."
@@ -75,7 +72,7 @@
     },
     "check": {
       "online": "The player answers.",
-      "offline": "The player does not answer: {failures} consecutive poll failure(s).",
+      "offline": "The player does not answer: {failures, plural, one {# consecutive poll failure} other {# consecutive poll failures}}.",
       "link": "The radio link reads {rssi} dBm, {snr} dB SNR.",
       "weakLink": "The radio link is weak: {rssi} dBm, {snr} dB SNR.",
       "muted": "The player is muted.",
@@ -99,17 +96,17 @@
       "groupCommands": "The group commands are supported (wmrm {version}).",
       "groupCommandsMissing": "The player does not report the group protocol version.",
       "groupNone": "This player is in no group.",
-      "groupMaster": "This speaker drives a group of {count} member(s).",
-      "groupMember": "This speaker follows a group of {count} member(s).",
+      "groupMaster": "This speaker drives a group of {count, plural, one {# member} other {# members}}.",
+      "groupMember": "This speaker follows a group of {count, plural, one {# member} other {# members}}.",
       "groupSavedOnly": "A saved group exists but nothing runs on it.",
       "groupNoMember": "This player is a group member and the group lists no member.",
       "counters": "The network counters are not read yet.",
       "wifiStable": "The Wi-Fi link is stable.",
-      "wifiDrops": "The Wi-Fi dropped {count} time(s), the last one {minutes} min ago.",
-      "pingFailures": "{count} ping check(s) failed.",
-      "ethDrops": "The wired link dropped {count} time(s).",
-      "abnormalReboots": "The player rebooted abnormally {count} time(s).",
-      "crashCounters": "{count} crash counter(s) are non zero: the firmware restarted."
+      "wifiDrops": "The Wi-Fi dropped {count, plural, one {# time} other {# times}}, the last one {minutes} min ago.",
+      "pingFailures": "{count, plural, one {# ping check} other {# ping checks}} failed.",
+      "ethDrops": "The wired link dropped {count, plural, one {# time} other {# times}}.",
+      "abnormalReboots": "The player rebooted abnormally {count, plural, one {# time} other {# times}}.",
+      "crashCounters": "{count, plural, one {# crash counter is} other {# crash counters are}} non zero: the firmware restarted."
     }
   },
   "offlineCount": "{n} offline",
@@ -133,7 +130,7 @@
   "services": {
     "hint": "The top tier this model reaches, as the firmware publishes it. A dash means the casting app decides.",
     "offline": "The player is offline: its table is read when it answers.",
-    "count": "{count} services",
+    "count": "{count, plural, one {# service} other {# services}}",
     "inUse": "in use",
     "replayGain": "ReplayGain",
     "failed": "Could not read the streaming table.",
@@ -190,7 +187,8 @@
     "online": "device reachable",
     "offline": "device unreachable",
     "status": "state",
-    "track": "track"
+    "track": "track",
+    "transition": "{from} → {to}"
   },
   "controls": {
     "play": "Play",
@@ -210,7 +208,7 @@
     "sleepMinutes": "{n} min",
     "presets": "Presets",
     "unsupported": "This player does not accept that command.",
-    "failed": "Command failed:",
+    "failed": "Command failed: {error}",
     "confirmVolume": "Set the volume to {n}?",
     "apply": "Apply",
     "cancel": "Cancel"
@@ -248,11 +246,11 @@
     "maxVolumeHint": "The ceiling of the volume slider.",
     "on": "On",
     "off": "Off",
-    "loading": "Reading the device...",
+    "loading": "Reading the device…",
     "loadFailed": "Could not read the settings.",
     "retry": "Retry",
     "writeFailed": "the device refused the change",
-    "failed": "Change failed:",
+    "failed": "Change failed: {error}",
     "close": "Close"
   },
   "hosts": {
@@ -295,25 +293,25 @@
       "warn": "warning",
       "info": "info"
     },
-    "offline": "The player does not answer: {failures} consecutive poll failure(s).",
+    "offline": "The player does not answer: {failures, plural, one {# consecutive poll failure} other {# consecutive poll failures}}.",
     "weakLink": "The radio link is weak: {rssi} dBm, {snr} dB SNR, {rate} Mb/s on {band} GHz.",
-    "wifiDrops": "The Wi-Fi dropped {count} time(s), the last one {minutes} min ago.",
-    "ethDrops": "The wired link dropped {count} time(s).",
-    "pingFailures": "{count} ping check(s) failed.",
-    "abnormalReboots": "The player rebooted abnormally {count} time(s).",
-    "crashCounters": "{count} crash counter(s) are non zero: the firmware restarted.",
+    "wifiDrops": "The Wi-Fi dropped {count, plural, one {# time} other {# times}}, the last one {minutes} min ago.",
+    "ethDrops": "The wired link dropped {count, plural, one {# time} other {# times}}.",
+    "pingFailures": "{count, plural, one {# ping check} other {# ping checks}} failed.",
+    "abnormalReboots": "The player rebooted abnormally {count, plural, one {# time} other {# times}}.",
+    "crashCounters": "{count, plural, one {# crash counter is} other {# crash counters are}} non zero: the firmware restarted.",
     "flashWear": "The flash shows {bad} bad blocks of {total} ({ratio}).",
     "hardwareFault": "A hardware probe reports a fault: {fields}.",
-    "upnpActionsLost": "{lost} UPnP action(s) were lost out of {total}.",
-    "eventingDegraded": "The push channel was contradicted by {misses} poll(s): the hub is polling at the fast rate.",
+    "upnpActionsLost": "{lost, plural, one {# UPnP action was} other {# UPnP actions were}} lost out of {total}.",
+    "eventingDegraded": "The push channel was contradicted by {misses, plural, one {# poll} other {# polls}}: the hub is polling at the fast rate.",
     "sleepTimer": "A sleep timer will power the player off in {minutes} min.",
     "checked": {
       "rssi": "RSSI {value} dBm",
       "snr": "SNR {value} dB",
-      "drops": "{value} Wi-Fi drop(s)",
-      "crashes": "{value} crash(es)",
+      "drops": "{value, plural, one {# Wi-Fi drop} other {# Wi-Fi drops}}",
+      "crashes": "{value, plural, one {# crash} other {# crashes}}",
       "flash": "flash {bad}/{total} bad blocks",
-      "upnp": "{value} UPnP action(s) lost"
+      "upnp": "{value, plural, one {# UPnP action lost} other {# UPnP actions lost}}"
     }
   },
   "report": {

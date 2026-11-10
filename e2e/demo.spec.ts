@@ -57,10 +57,10 @@ test('shows the group a speaker drives, and hides the one an offline speaker rem
 }) => {
   await openHub(page)
 
-  const chips = page.getByRole('button', { name: /speaker\(s\)/ })
+  const chips = page.getByRole('button', { name: /1 speaker$/ })
   await expect(chips).toHaveCount(1)
 
-  const chip = page.getByRole('button', { name: /Apartment · 1 speaker\(s\)/ })
+  const chip = page.getByRole('button', { name: /Apartment · 1 speaker$/ })
   await chip.click()
 
   const panel = page.locator('[id^="group-panel-"]')
@@ -324,7 +324,7 @@ test('stops a guided flow at its first anomaly on an offline speaker', async ({ 
   const guides = page.getByTestId('device-192.0.2.22').getByTestId('guides-panel')
   await expect(guides.getByRole('tab')).toHaveCount(4)
   await expect(
-    guides.getByText('The player does not answer: 3 consecutive poll failure(s).')
+    guides.getByText('The player does not answer: 3 consecutive poll failures.')
   ).toBeVisible()
   await expect(
     guides.getByText('The flow stops at the first anomaly: that row is the last one.')
@@ -404,6 +404,11 @@ test('remembers the view, the language and the theme', async ({ page }) => {
   await page.getByRole('menuitemradio', { name: 'Français' }).click()
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr')
   await expect(page.getByText('Champs').first()).toBeVisible()
+  // A sentence is French in its grammar, not only in its words: the count picks
+  // the plural branch of the French dictionary.
+  await expect(
+    page.getByText(/ne répond pas : 3 échecs d'interrogation consécutifs/).first()
+  ).toBeVisible()
 
   await page.reload()
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr')

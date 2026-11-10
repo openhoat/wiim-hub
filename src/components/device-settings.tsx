@@ -282,7 +282,7 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
           aria-live="polite"
           className={cn('mt-2 text-[11px] text-warning', error === null && 'sr-only')}
         >
-          {error === null ? '' : `${t('device.failed')} ${error}`}
+          {error === null ? '' : t('device.failed', { error })}
         </p>
       </DialogContent>
     </Dialog>

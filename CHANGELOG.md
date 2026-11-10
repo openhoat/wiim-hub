@@ -27,6 +27,22 @@ Releases are cut from `package.json`: the version in that file names the section
   and the image is unchanged; the tool answers are the hub's own, errors included, and the security
   boundary is the network the two sit on, since neither authenticates anybody.
 
+### Changed
+
+- The page formats through the selected language, not the browser's: numbers go through
+  `Intl.NumberFormat`, ages through `Intl.RelativeTimeFormat` (an outage older than a day reads
+  "3 days ago" instead of "72 h ago"), and the two hand-written timestamp helpers that ignored the
+  language setting are gone.
+- Translations understand `{count, plural, one {# device} other {# devices}}`: English and French
+  each pick their own branch, a count no longer carries an `(s)`, and French counts zero as
+  singular, as it should. A plural can also carry the verb, so "1 crash counter is non zero" is a
+  sentence the dictionary writes, not one the code assembles.
+- A failed command and a failed settings write are one sentence with the device's answer inside it
+  (`Command failed: {error}`), rather than two strings glued together at the call site.
+- French copy pass: the update hint addresses the reader the way the rest of the page does, the hub
+  "interroge" instead of "repolle", the crash counter is a "compteur de plantage" in both places that
+  names it, and the ellipses are the typographic ones.
+
 ## [0.9.11] - 2026-11-10
 
 ### Added

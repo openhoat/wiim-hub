@@ -16,12 +16,12 @@
   "dark": "Sombre",
   "light": "Clair",
   "discover": "Découvrir",
-  "discovering": "Recherche...",
-  "added": "{count} appareil(s) trouvé(s)",
+  "discovering": "Recherche…",
+  "added": "{count, plural, one {# appareil trouvé} other {# appareils trouvés}}",
   "noNewDevice": "Aucun nouvel appareil",
   "discoveryFailed": "Découverte impossible",
   "empty": "Aucun appareil",
-  "emptyHint": "Renseigner DEVICE_HOSTS, ou lancer un scan du réseau.",
+  "emptyHint": "Renseignez DEVICE_HOSTS, ou lancez un scan du réseau.",
   "deviceSummary": "{online} sur {total} en ligne",
   "polled": "sondage toutes les {seconds} s",
   "noPlayback": "Aucune lecture",
@@ -31,9 +31,6 @@
   "offline": "hors ligne",
   "online": "joignable",
   "sample": "relevé {time}",
-  "secondsAgo": "il y a {n} s",
-  "minutesAgo": "il y a {n} min",
-  "hoursAgo": "il y a {n} h",
   "hubDown": "Hôte injoignable",
   "hubDownHint": "La page réessaie d'elle-même.",
   "hubStale": "Dernier état reçu {age}, la page réessaie d'elle-même.",
@@ -47,7 +44,7 @@
   "chipVolume": "Volume {value}",
   "group": {
     "label": "Groupe",
-    "members": "{n} enceinte(s)",
+    "members": "{n, plural, one {# enceinte} other {# enceintes}}",
     "role": {
       "master": "Cette enceinte pilote le groupe.",
       "member": "Cette enceinte suit le groupe."
@@ -75,7 +72,7 @@
     },
     "check": {
       "online": "L'enceinte répond.",
-      "offline": "L'enceinte ne répond pas : {failures} échec(s) de poll consécutif(s).",
+      "offline": "L'enceinte ne répond pas : {failures, plural, one {# échec d'interrogation consécutif} other {# échecs d'interrogation consécutifs}}.",
       "link": "La liaison radio donne {rssi} dBm, {snr} dB de SNR.",
       "weakLink": "La liaison radio est faible : {rssi} dBm, {snr} dB de SNR.",
       "muted": "L'enceinte est en sourdine.",
@@ -99,17 +96,17 @@
       "groupCommands": "Les commandes de groupe sont prises en charge (wmrm {version}).",
       "groupCommandsMissing": "L'enceinte n'annonce pas la version du protocole de groupe.",
       "groupNone": "Cette enceinte n'est dans aucun groupe.",
-      "groupMaster": "Cette enceinte pilote un groupe de {count} membre(s).",
-      "groupMember": "Cette enceinte suit un groupe de {count} membre(s).",
+      "groupMaster": "Cette enceinte pilote un groupe de {count, plural, one {# membre} other {# membres}}.",
+      "groupMember": "Cette enceinte suit un groupe de {count, plural, one {# membre} other {# membres}}.",
       "groupSavedOnly": "Un groupe enregistré existe mais ne tourne pas.",
       "groupNoMember": "Cette enceinte est membre d'un groupe qui ne liste aucun membre.",
       "counters": "Les compteurs réseau ne sont pas encore lus.",
       "wifiStable": "La liaison Wi-Fi est stable.",
       "wifiDrops": "Le Wi-Fi a décroché {count} fois, la dernière il y a {minutes} min.",
-      "pingFailures": "{count} test(s) ping ont échoué.",
+      "pingFailures": "{count, plural, one {# test ping a échoué} other {# tests ping ont échoué}}.",
       "ethDrops": "La liaison filaire a décroché {count} fois.",
       "abnormalReboots": "L'enceinte a redémarré anormalement {count} fois.",
-      "crashCounters": "{count} compteur(s) de crash sont non nuls : le firmware a redémarré."
+      "crashCounters": "{count, plural, one {# compteur de plantage est non nul} other {# compteurs de plantage sont non nuls}} : le firmware a redémarré."
     }
   },
   "offlineCount": "{n} hors ligne",
@@ -133,7 +130,7 @@
   "services": {
     "hint": "Le palier maximal que ce modèle atteint, tel que le firmware le publie. Un tiret signifie que l'application de diffusion décide.",
     "offline": "Le lecteur est hors ligne : son tableau est lu quand il répond.",
-    "count": "{count} services",
+    "count": "{count, plural, one {# service} other {# services}}",
     "inUse": "en cours",
     "replayGain": "ReplayGain",
     "failed": "Lecture du tableau des services impossible.",
@@ -157,7 +154,7 @@
   },
   "update": {
     "ready": "Une nouvelle version du hub est prête.",
-    "hint": "Recharge pour l'appliquer. Ta vue et tes réglages sont conservés.",
+    "hint": "Rechargez pour l'appliquer. Votre vue et vos réglages sont conservés.",
     "reload": "Recharger"
   },
   "inputs": {
@@ -190,7 +187,8 @@
     "online": "appareil joignable",
     "offline": "appareil injoignable",
     "status": "état",
-    "track": "piste"
+    "track": "piste",
+    "transition": "{from} → {to}"
   },
   "controls": {
     "play": "Lire",
@@ -210,7 +208,7 @@
     "sleepMinutes": "{n} min",
     "presets": "Préréglages",
     "unsupported": "Cet appareil ne prend pas en charge cette commande.",
-    "failed": "Échec de la commande :",
+    "failed": "Échec de la commande : {error}",
     "confirmVolume": "Régler le volume à {n} ?",
     "apply": "Appliquer",
     "cancel": "Annuler"
@@ -248,11 +246,11 @@
     "maxVolumeHint": "Le plafond du curseur de volume.",
     "on": "Activé",
     "off": "Désactivé",
-    "loading": "Lecture de l'appareil...",
+    "loading": "Lecture de l'appareil…",
     "loadFailed": "Impossible de lire les réglages.",
     "retry": "Réessayer",
     "writeFailed": "l'appareil a refusé le changement",
-    "failed": "Échec du changement :",
+    "failed": "Échec du changement : {error}",
     "close": "Fermer"
   },
   "hosts": {
@@ -295,25 +293,25 @@
       "warn": "attention",
       "info": "info"
     },
-    "offline": "L'enceinte ne répond pas : {failures} échec(s) de poll consécutif(s).",
+    "offline": "L'enceinte ne répond pas : {failures, plural, one {# échec d'interrogation consécutif} other {# échecs d'interrogation consécutifs}}.",
     "weakLink": "La liaison radio est faible : {rssi} dBm, {snr} dB de SNR, {rate} Mb/s en {band} GHz.",
     "wifiDrops": "Le Wi-Fi a décroché {count} fois, la dernière il y a {minutes} min.",
     "ethDrops": "La liaison filaire a décroché {count} fois.",
-    "pingFailures": "{count} test(s) ping ont échoué.",
+    "pingFailures": "{count, plural, one {# test ping a échoué} other {# tests ping ont échoué}}.",
     "abnormalReboots": "L'enceinte a redémarré anormalement {count} fois.",
-    "crashCounters": "{count} compteur(s) de plantage non nuls : le firmware a redémarré.",
+    "crashCounters": "{count, plural, one {# compteur de plantage est non nul} other {# compteurs de plantage sont non nuls}} : le firmware a redémarré.",
     "flashWear": "La flash montre {bad} blocs défectueux sur {total} ({ratio}).",
     "hardwareFault": "Une sonde matérielle signale un défaut : {fields}.",
-    "upnpActionsLost": "{lost} action(s) UPnP perdue(s) sur {total}.",
-    "eventingDegraded": "Le canal push a été contredit par {misses} poll(s) : le hub repolle au rythme rapide.",
+    "upnpActionsLost": "{lost, plural, one {# action UPnP a été perdue} other {# actions UPnP ont été perdues}} sur {total}.",
+    "eventingDegraded": "Le canal push a été pris en défaut sur {misses, plural, one {# interrogation} other {# interrogations}} : le hub interroge au rythme rapide.",
     "sleepTimer": "Une minuterie éteindra l'enceinte dans {minutes} min.",
     "checked": {
       "rssi": "RSSI {value} dBm",
       "snr": "SNR {value} dB",
-      "drops": "{value} décrochage(s) Wi-Fi",
-      "crashes": "{value} plantage(s)",
+      "drops": "{value, plural, one {# décrochage Wi-Fi} other {# décrochages Wi-Fi}}",
+      "crashes": "{value, plural, one {# plantage} other {# plantages}}",
       "flash": "flash {bad}/{total} blocs défectueux",
-      "upnp": "{value} action(s) UPnP perdue(s)"
+      "upnp": "{value, plural, one {# action UPnP perdue} other {# actions UPnP perdues}}"
     }
   },
   "report": {

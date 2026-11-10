@@ -24,6 +24,8 @@ export default defineConfig({
         'server/queue.ts',
         'server/services.ts',
         'server/upnp.ts',
+        'src/lib/i18n.ts',
+        'src/lib/labels.ts',
         'src/lib/optimistic.ts',
         'src/lib/services.ts',
         'src/lib/snapshot.ts',

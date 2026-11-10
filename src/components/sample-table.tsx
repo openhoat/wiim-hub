@@ -1,18 +1,12 @@
+import { formatClock } from '@/lib/format'
 import { statusLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Sample } from '@/lib/types'
 
-const clockOf = (at: number): string =>
-  new Intl.DateTimeFormat(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(at)
-
 // The table reads newest first: a diagnostic session starts with "what just
 // happened", not with the oldest retained sample.
 export const SampleTable = ({ samples }: Readonly<{ samples: Sample[] }>) => {
-  const { t } = useSettings()
+  const { t, resolvedLang } = useSettings()
   const rows = samples.slice(-24).reverse()
   if (rows.length === 0) {
     return <p className="py-3 text-xs text-muted-foreground">{t('noSamples')}</p>
@@ -32,7 +26,7 @@ export const SampleTable = ({ samples }: Readonly<{ samples: Sample[] }>) => {
         <tbody className="divide-y divide-border/60 tabular-nums">
           {rows.map(sample => (
             <tr key={sample.t} className={sample.online ? undefined : 'text-muted-foreground/70'}>
-              <td className="px-3 py-1">{clockOf(sample.t)}</td>
+              <td className="px-3 py-1">{formatClock(sample.t, resolvedLang)}</td>
               <td className="px-3 py-1 text-right">{sample.rssi ?? '—'}</td>
               <td className="px-3 py-1 text-right">{sample.volume ?? '—'}</td>
               <td className="px-3 py-1">{statusLabel(t, sample.status)}</td>

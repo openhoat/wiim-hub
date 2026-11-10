@@ -9,10 +9,33 @@ export const formatDuration = (ms: number): string => {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`
 }
 
+// Formatters are built once per locale: the page formats a timestamp on every
+// tick, for every sample row, and building an Intl object is the expensive part.
+const numberFormats = new Map<string, Intl.NumberFormat>()
+const clockFormats = new Map<string, Intl.DateTimeFormat>()
+
+const cached = <T>(cache: Map<string, T>, locale: string, build: () => T): T => {
+  const known = cache.get(locale)
+  if (known !== undefined) return known
+  const created = build()
+  cache.set(locale, created)
+  return created
+}
+
+// French groups thousands with U+202F, a narrow no-break space that some
+// Chromium font stacks drop; the full-width no-break space renders everywhere
+// and reads the same.
+export const formatNumber = (value: number, locale: string): string =>
+  cached(numberFormats, locale, () => new Intl.NumberFormat(locale))
+    .format(value)
+    .replace(/\u202f/g, '\u00a0')
+
 export const formatClock = (at: number, locale: string): string =>
-  new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(
-    at
-  )
+  cached(
+    clockFormats,
+    locale,
+    () => new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  ).format(at)
 
 // A device reports its position at poll time: extrapolating while it plays
 // keeps the bar moving instead of stepping every few seconds.

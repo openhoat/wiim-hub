@@ -78,7 +78,7 @@ export const cleanChecks = (device: Device, t: ReturnType<typeof useSettings>['t
 }
 
 export const FindingsPanel = ({ device, now }: Readonly<{ device: Device; now: number }>) => {
-  const { t } = useSettings()
+  const { t, resolvedLang } = useSettings()
   const [busy, setBusy] = useState(false)
   const findings = ordered(device.findings)
   const checks = cleanChecks(device, t)
@@ -158,7 +158,7 @@ export const FindingsPanel = ({ device, now }: Readonly<{ device: Device; now: n
             )}
             {diagnostics !== null && (
               <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {t('findings.readAt', { when: agoLabel(t, diagnostics.at, now) })}
+                {t('findings.readAt', { when: agoLabel(t, resolvedLang, diagnostics.at, now) })}
               </p>
             )}
           </div>

@@ -226,7 +226,7 @@ export const NowPlayingCard = ({
   count?: number
   onMove?: (delta: -1 | 1) => void
 }>) => {
-  const { t } = useSettings()
+  const { t, resolvedLang } = useSettings()
   const controls = useControls(device)
   const live = controls.device
   const [groupOpen, setGroupOpen] = useState(false)
@@ -284,7 +284,7 @@ export const NowPlayingCard = ({
 
       {!device.online && (
         <p className="mt-2 text-[11px] text-muted-foreground">
-          {agoLabel(t, device.lastSeen, now)}
+          {agoLabel(t, resolvedLang, device.lastSeen, now)}
         </p>
       )}
     </Card>

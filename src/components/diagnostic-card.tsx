@@ -47,7 +47,7 @@ export const DiagnosticCard = ({
   collapsed: boolean
   onToggleCollapsed: () => void
 }>) => {
-  const { t } = useSettings()
+  const { t, resolvedLang } = useSettings()
   const [details, setDetails] = useState(false)
   const bodyId = `device-body-${device.ip}`
   const live = useMemo(() => device.samples.slice(-120), [device.samples])
@@ -58,7 +58,7 @@ export const DiagnosticCard = ({
   const push = device.upnp
   const pushLabel =
     push.state === 'subscribed' && push.lastEventAt !== null
-      ? `${t('upnp.subscribed')} · ${agoLabel(t, push.lastEventAt, now)}`
+      ? `${t('upnp.subscribed')} · ${agoLabel(t, resolvedLang, push.lastEventAt, now)}`
       : t(`upnp.${push.state}`)
 
   const copy = async (): Promise<void> => {
@@ -159,7 +159,10 @@ export const DiagnosticCard = ({
                 label={t('labels.volume')}
                 value={device.volume === null ? '—' : String(device.volume)}
               />
-              <Field label={t('labels.lastSeen')} value={agoLabel(t, device.lastSeen, now)} />
+              <Field
+                label={t('labels.lastSeen')}
+                value={agoLabel(t, resolvedLang, device.lastSeen, now)}
+              />
               <Field label={t('labels.failures')} value={String(device.errors)} />
               <Field label={t('labels.push')} value={pushLabel} />
             </dl>

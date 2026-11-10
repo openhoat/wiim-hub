@@ -7,25 +7,13 @@ import {
   useMemo,
   useState,
 } from 'react'
-import en from '@/locales/en.json'
-import fr from '@/locales/fr.json'
+import { type Lang, pickLang, type ResolvedLang, type Translate, translate } from '@/lib/i18n'
 
-const langNames = ['en', 'fr'] as const
-export type Lang = 'auto' | ResolvedLang
+export type { Lang, ResolvedLang, Translate }
+
 export type Theme = 'auto' | 'dark' | 'light'
-export type ResolvedLang = (typeof langNames)[number]
-export type Translate = (key: string, vars?: Record<string, string | number>) => string
 
-type Dictionary = typeof en
-
-const dictionaries: Record<ResolvedLang, Dictionary> = { en, fr }
-const supportedLangs: ReadonlySet<string> = new Set(langNames)
 const storagePrefix = 'wiim-hub:'
-
-const isResolvedLang = (value: string): value is ResolvedLang => supportedLangs.has(value)
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
 
 const readPreference = (key: string): string | null => {
   try {
@@ -41,35 +29,6 @@ const writePreference = (key: string, value: string): void => {
   } catch {
     // private mode: the choice still applies for this session
   }
-}
-
-const pickLang = (): ResolvedLang => {
-  const tags = navigator.languages.length > 0 ? navigator.languages : [navigator.language]
-  for (const tag of tags) {
-    const base = tag.toLowerCase().split(/[-_]/)[0]
-    if (isResolvedLang(base)) return base
-  }
-  return 'en'
-}
-
-const lookup = (dictionary: Dictionary, path: string): string | undefined => {
-  let node: unknown = dictionary
-  for (const part of path.split('.')) {
-    if (!isRecord(node)) return undefined
-    node = node[part]
-  }
-  return typeof node === 'string' ? node : undefined
-}
-
-// A missing translation falls back to English, then prints its own key: the
-// gap shows up in the page instead of breaking the render.
-const translate = (
-  dictionary: Dictionary,
-  key: string,
-  vars: Record<string, string | number>
-): string => {
-  const template = lookup(dictionary, key) ?? lookup(en, key) ?? key
-  return template.replace(/\{(\w+)\}/g, (_, name: string) => String(vars[name] ?? ''))
 }
 
 type SettingsValue = {
@@ -98,12 +57,14 @@ export const SettingsProvider = ({ children }: Readonly<{ children: ReactNode }>
   const [lang, setLang] = useState<Lang>(readLang)
   const [theme, setTheme] = useState<Theme>(readTheme)
   const [dark, setDark] = useState(false)
-  const resolvedLang = lang === 'auto' ? pickLang() : lang
-  const dictionary = dictionaries[resolvedLang]
+  const resolvedLang =
+    lang === 'auto'
+      ? pickLang(navigator.languages.length > 0 ? navigator.languages : [navigator.language])
+      : lang
 
   const t = useCallback<Translate>(
-    (key, vars = {}) => translate(dictionary, key, vars),
-    [dictionary]
+    (key, vars = {}) => translate(resolvedLang, key, vars),
+    [resolvedLang]
   )
 
   // The exposed setters write the preference as well as the state, so the state

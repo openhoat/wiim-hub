@@ -1,4 +1,5 @@
 import { cn } from '@/lib/cn'
+import { formatClock } from '@/lib/format'
 import { eventKindLabel, eventText } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { DeviceEvent, EventKind } from '@/lib/types'
@@ -14,15 +15,8 @@ const colors: Record<EventKind, string> = {
 
 const colorOf = (kind: EventKind): string => colors[kind]
 
-const clockOf = (at: number): string =>
-  new Intl.DateTimeFormat(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(at)
-
 export const EventTimeline = ({ events }: Readonly<{ events: DeviceEvent[] }>) => {
-  const { t } = useSettings()
+  const { t, resolvedLang } = useSettings()
   if (events.length === 0) {
     return <p className="py-3 text-xs text-muted-foreground">{t('noEvents')}</p>
   }
@@ -34,7 +28,7 @@ export const EventTimeline = ({ events }: Readonly<{ events: DeviceEvent[] }>) =
           className="flex items-baseline gap-3 py-1.5 text-xs"
         >
           <span className="w-16 shrink-0 tabular-nums text-muted-foreground/70">
-            {clockOf(event.t)}
+            {formatClock(event.t, resolvedLang)}
           </span>
           <span
             className={cn('size-1.5 shrink-0 translate-y-[-1px] rounded-full', colorOf(event.kind))}
