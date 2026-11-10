@@ -191,9 +191,11 @@ const Hub = () => {
                     <NowPlayingCard
                       card={card}
                       now={clock}
+                      fleet={devices}
                       index={index}
                       count={ordered.length}
                       onMove={delta => layout.move(card.ip, delta)}
+                      onGroupChanged={hub.refresh}
                     />
                     <SoundCard device={card.master} />
                   </div>

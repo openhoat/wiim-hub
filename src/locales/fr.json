@@ -54,7 +54,18 @@
     "follows": "Piloté par {name}.",
     "speakers": "Enceintes",
     "volumeOf": "Volume de {name}",
-    "memberSettings": "Réglages de {name}"
+    "memberSettings": "Réglages de {name}",
+    "volumeHint": "Le volume du groupe règle toutes les enceintes du groupe au même niveau.",
+    "join": "Rejoindre un groupe",
+    "joinTitle": "Ajouter {name} à un groupe",
+    "joinHint": "Le groupe joue sur l'enceinte qui le pilote ; les autres la suivent.",
+    "joinConfirm": "Ajouter {name} au groupe piloté par {master} ?",
+    "dissolve": "Dissoudre le groupe",
+    "dissolveConfirm": "Dissoudre le groupe piloté par {name} ? Les enceintes restent en ligne, elles cessent de jouer ensemble.",
+    "leave": "Quitter le groupe",
+    "leaveConfirm": "Sortir {name} de son groupe ?",
+    "remove": "Retirer du groupe",
+    "removeConfirm": "Retirer {name} du groupe ? Cette enceinte cesse de jouer avec les autres."
   },
   "guides": {
     "title": "Parcours guidés",
@@ -215,7 +226,9 @@
     "failed": "Échec de la commande : {error}",
     "confirmVolume": "Régler le volume à {n} ?",
     "apply": "Appliquer",
-    "cancel": "Annuler"
+    "cancel": "Annuler",
+    "muteOf": "Couper le son de {name}",
+    "unmuteOf": "Rétablir le son de {name}"
   },
   "sound": {
     "title": "Son",

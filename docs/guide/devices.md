@@ -89,7 +89,7 @@ marked offline, with its last known values and the number of failed polls: a spe
 mains is a case to show, not to hide. The diagnostic view still draws one card per speaker, since
 that view is about what each device answered.
 
-## Multiroom, read only
+## Multiroom
 
 The hub shows the role a speaker claims (master, member, none), the group name and its members,
 read from `multiroom:getSlaveList` and `multiroom:getnamegrouplist`. Two details it refuses to
@@ -122,9 +122,35 @@ The "no sound" flow reads the group's transport for the same reason: asking a me
 stopped would name a cause that does not exist while the room plays. The flow also drops the output
 check on such a speaker, because the sound does not leave through an output it chose.
 
-No multiroom write control is rendered: forming a group, adding a member and driving the group's
-transport from another speaker are the commands the hub does not offer, because a button it cannot
-verify is worse than no button.
+### Driving a group
+
+The card of a running group carries the volume and the mute of what the reader hears, and the two
+gestures do not take the same path. Both follow the measurements in
+[the research notes](../feature-research.md), section 5.8.1:
+
+- **Volume fans out.** `setPlayerCmd:vol` on the master moves the master alone, and
+  `setPlayerCmd:slave_vol` does no better. The hub sends the master its own level and one
+  `multiroom:SlaveVolume` per member, each in its own queue family, so a drag leaves one pending
+  value per speaker instead of one per step. There is no level the group knows: the line under the
+  slider says so, and a speaker can still be moved on its own from its row.
+- **Mute is one write.** The master's own mute reaches the members and the list it keeps, so one
+  command silences the group, and one command restores it.
+
+### Forming and breaking a group
+
+Three gestures, each sent to the speaker that owns the write:
+
+- **Join**: a speaker that follows nothing offers the speakers it can join. The write goes to the
+  joining speaker and names the master by address and uuid, which is what the firmware matches on.
+- **Remove**: the sheet of a member takes that speaker out of the group, through the master's kick.
+- **Dissolve**: the panel of the group card stops the group. A member's panel offers to leave it
+  instead, which is the card it keeps while its master is away.
+
+A membership change is not instantaneous on the firmware: the joining speaker registers first, and
+the master publishes its list after it. The hub reads the fleet back until the group moves before it
+answers, so the page never shows the group the reader just left. A join is refused rather than sent
+when the speaker already follows a group the fleet can see, when the chosen master is offline or
+published no uuid, and when the speaker is already a member of that group.
 
 ## External inputs
 

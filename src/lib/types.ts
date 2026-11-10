@@ -177,6 +177,8 @@ export type Device = {
   ssid: string
   bssid: string
   wmrmVersion: string
+  // The identity a group command names a speaker by: 24 hex characters.
+  uuid: string
   group: GroupState
   // Null unless this speaker is a member of a running group whose master the
   // hub also polls: the playback then runs on the master, not here.

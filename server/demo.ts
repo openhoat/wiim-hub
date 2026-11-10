@@ -20,6 +20,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, resolve, sep } from 'node:path'
 import { type Action, commandFor, parseAction } from './commands.ts'
 import type { DeviceState } from './device/index.ts'
+import type { GroupMember } from './device/multiroom.ts'
 import type { DeviceSettings } from './device/settings.ts'
 import { MAX_SAMPLES, type Sample } from './device/status.ts'
 import { buildReport, findingsFor } from './findings.ts'
@@ -36,6 +37,12 @@ import {
   statusEx,
   streamServices,
 } from './fixtures/wiim-pro.ts'
+import {
+  type FleetUnit,
+  type GroupIntent,
+  groupPlanFor,
+  parseGroupIntent,
+} from './group-commands.ts'
 import { reconcileGroups } from './groups.ts'
 import { guidesFor } from './guides.ts'
 import { buildInventory, type Inventory, type Resolution } from './inventory.ts'
@@ -97,6 +104,7 @@ const emptyState = (ip: string): DeviceState => ({
   ssid: '',
   bssid: '',
   wmrmVersion: '',
+  uuid: '',
   group: { role: 'none', name: '', members: [], saved: false, parent: null },
   mirror: null,
   rssi: null,
@@ -257,6 +265,7 @@ const livingRoom = (): DeviceState => {
     ssid: 'Demo Wi-Fi',
     bssid: '02:00:00:00:00:21',
     wmrmVersion: '4.3',
+    uuid: 'A1B2C3D4E5F60718293A4B01',
     group: {
       role: 'master',
       name: 'Apartment',
@@ -378,6 +387,7 @@ const bedroom = (): DeviceState => {
     ssid: 'Demo Wi-Fi',
     bssid: '02:00:00:00:00:22',
     wmrmVersion: '4.3',
+    uuid: 'A1B2C3D4E5F60718293A4B02',
     group: { role: 'none', name: 'Apartment', members: [], saved: true, parent: null },
     rssi: -68,
     volume: 30,
@@ -432,6 +442,7 @@ const hallway = (): DeviceState => {
     ssid: 'Demo Wi-Fi',
     bssid: '02:00:00:00:00:23',
     wmrmVersion: '4.3',
+    uuid: 'A1B2C3D4E5F60718293A4B03',
     // A member answers almost nothing about its group and plays nothing of its
     // own: `mode 99, stop`, no track, an empty registry. The fleet pass joins it
     // to the master that names it and mirrors the playback, which is exactly the
@@ -864,6 +875,178 @@ const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse)
   res.end(JSON.stringify({ ok: true, unsupported: false, command: command.command, body: 'OK' }))
 }
 
+// The group writes, on the simulated fleet. The refusals come from the same
+// planner the hub runs, so a demo cannot accept a gesture the real route would
+// turn down; the effect is applied to memory, then the fleet pass rebuilds the
+// group exactly as the poll does. The plan is not replayed command by command:
+// there is no transport here, and what a reader of the demo needs is the state
+// the speakers report afterwards.
+const stateAt = (ip: string): DeviceState | null => {
+  if (ip === '') return null
+  for (const state of states.values()) {
+    if (state.ip === ip) return state
+  }
+  return null
+}
+
+const emptyGroup = (): DeviceState['group'] => ({
+  role: 'none',
+  name: '',
+  members: [],
+  saved: false,
+  parent: null,
+})
+
+// The speakers the master lists and the fleet can poll, in the master's order.
+const listed = (state: DeviceState): DeviceState[] => {
+  const members: DeviceState[] = []
+  for (const entry of state.group.members) {
+    const member = stateAt(entry.ip)
+    if (member !== null && member.ip !== state.ip) members.push(member)
+  }
+  return members
+}
+
+const applyGroupIntent = (intent: GroupIntent, entry: DeviceState): void => {
+  switch (intent.intent) {
+    case 'volume':
+      // The master's own volume moves the master alone, so the group's level is
+      // a fan-out: measured, `setPlayerCmd:vol` does not propagate.
+      entry.volume = intent.level
+      for (const member of listed(entry)) member.volume = intent.level
+      break
+    case 'mute':
+      // Measured: the master's mute propagates to the group.
+      entry.mute = intent.muted
+      for (const member of listed(entry)) member.mute = intent.muted
+      break
+    case 'memberVolume': {
+      const member = stateAt(intent.member)
+      if (member !== null) member.volume = intent.level
+      break
+    }
+    case 'memberMute': {
+      const member = stateAt(intent.member)
+      if (member !== null) member.mute = intent.muted
+      break
+    }
+    case 'join': {
+      const master = stateAt(intent.master)
+      if (master === null) break
+      const kept = master.group.members.filter((member: GroupMember) => member.ip !== entry.ip)
+      master.group = {
+        ...master.group,
+        role: 'master',
+        members: [...kept, { name: entry.name, ip: entry.ip, uuid: entry.uuid }],
+      }
+      entry.group = {
+        ...emptyGroup(),
+        role: 'member',
+        parent: { name: master.name, ip: master.ip },
+      }
+      break
+    }
+    case 'kick': {
+      entry.group = {
+        ...entry.group,
+        members: entry.group.members.filter(member => member.ip !== intent.member),
+      }
+      const guest = stateAt(intent.member)
+      if (guest !== null) guest.group = emptyGroup()
+      break
+    }
+    case 'leave': {
+      const parent = entry.group.parent
+      const master = parent === null ? null : stateAt(parent.ip)
+      if (master !== null) {
+        master.group = {
+          ...master.group,
+          members: master.group.members.filter(member => member.ip !== entry.ip),
+        }
+      }
+      entry.group = emptyGroup()
+      break
+    }
+    case 'ungroup': {
+      for (const member of listed(entry)) member.group = emptyGroup()
+      entry.group = emptyGroup()
+      break
+    }
+  }
+  // A speaker that drives nothing is not a master any more: measured after a
+  // kick, the role follows the list, which is the only proof a group runs.
+  for (const state of states.values()) {
+    if (state.group.role === 'master' && state.group.members.length === 0) {
+      state.group = { ...state.group, role: 'none', name: '', saved: false }
+    }
+  }
+  reconcileGroups(states.values())
+}
+
+const groupRoute = async (url: URL, req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  const type = req.headers['content-type'] ?? ''
+  if (!type.toLowerCase().includes('application/json')) {
+    sendJson(res, 415, { error: 'content-type must be application/json' })
+    return
+  }
+  const state = findState(url.searchParams.get('host') ?? '')
+  if (state === null) {
+    sendJson(res, 404, { error: 'unknown device' })
+    return
+  }
+  if (!state.online) {
+    sendJson(res, 409, { error: 'device offline' })
+    return
+  }
+  const raw = await readBody(req)
+  if (raw === null) {
+    sendJson(res, 413, { error: 'body too large' })
+    return
+  }
+  let body: unknown
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    sendJson(res, 400, { error: 'invalid json' })
+    return
+  }
+  const parsed = parseGroupIntent(body)
+  if ('error' in parsed) {
+    sendJson(res, 400, parsed)
+    return
+  }
+  const fleet: FleetUnit[] = [...states.values()].map(unit => ({ key: unit.ip, state: unit }))
+  const plan = groupPlanFor(parsed.intent, { key: state.ip, state }, fleet)
+  if ('error' in plan) {
+    sendJson(res, 422, plan)
+    return
+  }
+  applyGroupIntent(parsed.intent, state)
+  // The simulated speakers always accept: their answer is the state they now
+  // report, and the command list is the same plan the hub would have sent.
+  sendJson(res, 200, {
+    ts: Date.now(),
+    host: state.ip,
+    results: plan.writes.map(write => ({
+      ok: true,
+      unsupported: false,
+      command: write.command,
+      body: 'OK',
+    })),
+    group: state.group,
+  })
+}
+
+// The demo fleet mutates like the hub's does, so a test that writes needs a
+// known start: this route puts the three speakers back on their seed. It is a
+// fixture control for the e2e suite, not something the page calls.
+const reseed = (): void => {
+  states.set('192.0.2.21', livingRoom())
+  states.set('192.0.2.22', bedroom())
+  states.set('192.0.2.23', hallway())
+  reconcileGroups(states.values())
+}
+
 const sendState = (res: ServerResponse): void => {
   // Same ordering as the hub: reachable first, then by name.
   const devices = [...states.values()]
@@ -979,6 +1162,17 @@ const routes: Record<string, Route> = {
   '/api/command': async (url, req, res) => {
     if (req.method !== 'POST') return false
     await commandRoute(url, req, res)
+    return true
+  },
+  '/api/group': async (url, req, res) => {
+    if (req.method !== 'POST') return false
+    await groupRoute(url, req, res)
+    return true
+  },
+  '/api/demo/reset': (_url, req, res) => {
+    if (req.method !== 'POST') return false
+    reseed()
+    sendJson(res, 200, { ts: Date.now(), devices: states.size })
     return true
   },
   '/api/discover': (_url, req, res) => {

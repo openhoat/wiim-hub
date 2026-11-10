@@ -10,10 +10,20 @@ import {
 } from './acoustic.ts'
 import type { Diagnostics } from './diagnostics.ts'
 import { type Capability, capabilityCache, capabilityFor, emptyCapability } from './inputs.ts'
+import { cachedModel, modelFor } from './model.ts'
 import type { GroupParent, GroupState, Registry } from './multiroom.ts'
 import { emptyRegistry, groupCache, groupsFor, parseGroup } from './multiroom.ts'
 import type { OutputOption } from './outputs.ts'
-import { artUri, cleanTitle, isRecord, maybeHex, num, parseJson, text } from './payload.ts'
+import {
+  artUri,
+  cleanTitle,
+  deviceUuid,
+  isRecord,
+  maybeHex,
+  num,
+  parseJson,
+  text,
+} from './payload.ts'
 import { type Preset, presetCache, presetsFor } from './presets.ts'
 import { probeCommand } from './probes.ts'
 import { forgetTarget, resolveTarget } from './resolve.ts'
@@ -86,6 +96,10 @@ export type DevicePatch = {
   // means the device does not answer the group commands at all, which is the
   // first thing to rule out when a group refuses to form.
   wmrmVersion: string
+  // The identity a group command names a speaker by: 24 hex characters, the
+  // same value a master publishes for each member. `multiroom:JoinGroup` takes
+  // it, so the hub never has to read it twice from two spellings.
+  uuid: string
   group: GroupState
   rssi: number | null
   volume: number | null
@@ -120,6 +134,10 @@ export const parseDevice = (input: {
   host: string
   ip: string
   status: Record<string, unknown> | null
+  // The name the device publishes in its UPnP description ("WiiM Mini"), empty
+  // when it does not answer there. `getStatusEx` carries a `project` string on
+  // these builds, not a model, so this is the only public name to be had.
+  modelName: string
   player: Record<string, unknown> | null
   meta: Record<string, unknown> | null
   output: Record<string, unknown> | null
@@ -135,6 +153,7 @@ export const parseDevice = (input: {
     host,
     ip,
     status,
+    modelName,
     player,
     meta,
     output,
@@ -153,12 +172,16 @@ export const parseDevice = (input: {
     ip,
     online: status !== null,
     name: text(status?.DeviceName) || host,
-    model: cleanModel(text(status?.model) || text(status?.project)),
+    // In order: the field a build publishes as the model, then the name it gives
+    // to its own UPnP description, then the internal project string, which is
+    // read only because it is better than nothing.
+    model: cleanModel(text(status?.model) || modelName || text(status?.project)),
     firmware: text(status?.firmware),
     release: text(status?.Release),
     ssid: maybeHex(text(status?.essid)),
     bssid: text(status?.BSSID),
     wmrmVersion: text(status?.wmrm_version),
+    uuid: deviceUuid(status?.uuid, status?.upnp_uuid),
     group: parseGroup(slaves, text(status?.group), registry),
     rssi: readRssi(status),
     volume: num(player?.vol),
@@ -210,15 +233,20 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
   // changes it, so the capabilities are asked again instead of staying on what
   // the previous build answered.
   const firmware = text(status?.firmware)
-  const groupId = text(status?.group)
   const registry = online ? await groupsFor(ip, firmware) : (groupCache.get(ip) ?? emptyRegistry())
-  // The slave list is the only call that tells membership, so it costs one more
-  // request when the player is grouped or when the registry points at a saved
-  // group; a player with no group at all never pays for it.
-  const grouped = (groupId !== '' && groupId !== '0') || registry.current !== ''
-  const slaves = grouped
+  // The slave list is the only call that tells membership, and it is also the
+  // only one that tells a master: `status.group` answers "I follow", never "I
+  // drive", since a master of a running group reports '0' (measured). Asking it
+  // of every speaker, one extra request per poll, is the price of never missing
+  // a group; the registry is still what names a saved one, which no slave list
+  // can carry.
+  const slaves = online
     ? parseJson(await probeCommand(ip, firmware, 'multiroom:getSlaveList'))
     : null
+  // The model is the one field the status does not carry: it is read from the
+  // description, cached for hours, and a device that stopped answering keeps the
+  // last name it published.
+  const modelName = online ? await modelFor(ip, firmware) : cachedModel(ip, firmware)
   const capability = online
     ? await capabilityFor(ip, firmware)
     : (capabilityCache.get(ip) ?? emptyCapability())
@@ -230,6 +258,7 @@ export const pollDevice = async (host: string): Promise<DevicePatch> => {
     host,
     ip,
     status,
+    modelName,
     player: parseJson(playerRaw),
     meta: parseJson(metaRaw),
     output: parseJson(outputRaw),

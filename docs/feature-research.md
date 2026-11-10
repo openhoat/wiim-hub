@@ -383,6 +383,28 @@ status, `none` otherwise), the registry entry the device points at, and its memb
 with nothing running is rendered as saved: its members have no address and their state is unknown,
 never "offline".
 
+**Measured on a real group (10/11/2026), and the role rule was wrong.** Two reachable units were
+grouped on the LAN, one at a time, and the group was read from both sides:
+
+- `status.group` is `'1'` on the member and **`'0'` on the master**. It says "I follow", never "I
+  drive", so it cannot detect a master.
+- Only the master's `multiroom:getSlaveList` proves a running group. Its payload is the member list
+  and nothing else can be used: `GroupName` stays the device's own name on both sides,
+  `getnamegrouplist` answers `{"grouplist":[],"current_group_id":""}` even while the group runs,
+  and a grouped member still answers `slaves: 0` about itself.
+- The member entry carries `name`, `uuid`, `ip`, `version`, `type` (`WiiMu-ALLWINNER`), `channel`,
+  `volume`, `mute`, `battery_percent`, `battery_charging`. The `uuid` is the 24 hex characters of
+  `getStatusEx.uuid`, without the dashes of `upnp_uuid`, so the two forms name the same speaker.
+- A member's own `getPlayerStatus` reports `mode 99, stop`, no track, and its **own** `vol` and
+  `mute`, which agree with the master's member list.
+- A group formed by a raw join leaves the registry empty: `saved` stays false because no named group
+  was created, and the hub must read the running state, not the registry, to draw the card.
+
+The 0.4.3 gating asked for the member list only when `status.group` was not `'0'`, which excluded
+exactly the master. On a real group the master was reported as `none`, the member as `member` with
+no parent and no mirror, and no card was folded. The slave list is now read on every poll: it is the
+one call that answers "do I drive a group", and it costs one request per speaker per poll.
+
 0.9.20 draws the fleet as one card per player: `src/lib/cards.ts` partitions what the hub
 confirmed, and a running group becomes the card of its master, whose members are rows with their
 own volume. A member keeps no card of its own, because the master's card already shows the cover
@@ -395,12 +417,39 @@ pinned order until it is drawn again; the diagnostic view keeps one card per spe
 masters' pinned order with members appended. A player that is not grouped pays no extra request; one
 that is, or that points at a saved group, pays one `getSlaveList` per poll.
 
-Writes wait for a second reachable unit (`multiroom:SlaveVolume`, `multiroom:SlaveMute`,
-`multiroom:JoinGroup:IP=…:uuid=…`, `multiroom:LeaveGroup`, `multiroom:SlaveKickout`, and
-`setPlayerCmd:slave_vol` for one synchronised volume with coalescing per member). Destructive
-actions need a confirmation naming the member and must report the device body on failure. A group
-command is not atomic: members apply at slightly different times, so poll the group after a write
-and never let the optimistic "grouped" view outlive one poll interval.
+### 5.8.1 Write surface, measured on the real group
+
+Every write below was sent alone, with its raw body recorded and the state re-read after it. The
+commands are sent to the master unless the row says otherwise.
+
+| Command                                                                | Measured effect                                                           |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `multiroom:JoinGroup:IP=<master>:uuid=<upnp uuid>` on the guest        | `OK`, master lists the member, guest `status.group` becomes `'1'`         |
+| `ConnectMasterAp:JoinGroupMaster:eth<master>:wifi0.0.0.0` on the guest | `OK`, same result, so the legacy form is a usable fallback                |
+| `multiroom:LeaveGroup` on the member                                   | `OK`, master's list empties, member `status.group` returns to `'0'`       |
+| `multiroom:SlaveKickout:<ip>`                                          | `OK`, both sides cleaned up, the member keeps its own volume              |
+| `multiroom:Ungroup` on the master                                      | `OK`, same clean teardown                                                 |
+| `multiroom:SlaveVolume:<ip>:<0-100>`                                   | member volume changes, the member's own `vol` and the master's list agree |
+| `multiroom:SlaveMute:<ip>:<0\|1>`                                      | member mute changes on both sides                                         |
+| `setPlayerCmd:vol:<0-100>` on the master                               | the master alone, **no propagation to the members**                       |
+| `setPlayerCmd:vol:<0-100>` on the member                               | the member alone, and the master's list follows                           |
+| `setPlayerCmd:mute:<0\|1>` on the master                               | **the whole group**, member and list included                             |
+| `setPlayerCmd:slave_vol:<0-100>` on the master                         | the master's own volume only, despite the documented "overall volume"     |
+| `setPlayerCmd:slave_mute:mute` on the master                           | `OK` and no effect at all: accepted, then ignored                         |
+
+Three consequences the implementation has to carry:
+
+- **There is no group volume.** The hub fans the value out: `setPlayerCmd:vol` to the master and one
+  `multiroom:SlaveVolume` per member, each in its own coalescing family (`volume:<ip>`) so a drag
+  leaves one pending value per speaker instead of forty.
+- **There is a group mute**, because the master's own mute propagates. One write, no fan-out, and
+  the measured propagation is what the code relies on rather than a documented behaviour.
+- The two paths disagree on purpose, so the code says which measurement each one follows.
+
+Destructive actions (`kick`, `leave`, `ungroup`) need a confirmation naming the member and must
+report the device body on failure. A group command is not atomic either: members apply at slightly
+different times, so the hub re-polls after a write and renders what the speakers answer, never the
+optimistic "grouped" view.
 
 ### 5.9 Device settings
 
@@ -787,7 +836,7 @@ disk, not the one cached at install.
 | Presets                              | v2 remote control    | grid, play by slot, relayed art                                                            |
 | Output routing, EQ read, sleep timer | v2 remote control    | read first, one write each                                                                 |
 | Diagnostic assistance                | diagnostic assistant | findings with evidence, guided flows, report export (findings and report shipped in 0.7.0) |
-| Multiroom                            | v3                   | group card and per member volume shipped in 0.9.20; join/leave open                        |
+| Multiroom                            | v3                   | group card 0.9.20; real group measured, join/leave/kick and per member control 0.9.21      |
 | UPnP events                          | performance          | replace polling, fallback kept                                                             |
 | Managed host list                    | fleet                | three sources, one card per machine, saved on a volume                                     |
 
@@ -815,3 +864,38 @@ kept outside the repository (`/tmp/opencode/wiim-write-probe.log`), the conclusi
 Steps 1 to 12 all ran; step 8 could not confirm a stream change because the reference player has
 no preset configured (`preset_num: 0`), so the acceptance of `MCUKeyShortClick` on an empty slot is
 the only observable there.
+
+## Appendix: multiroom probe, executed
+
+Two reachable units of the same model (`Muzo_Mini`, `Linkplay.4.6.833047`, `wmrm_version` 4.3),
+grouped on the LAN on 10/11/2026. Both were stopped with their volumes at 20 and 23, so no step
+could make noise. One write at a time, raw body recorded, state re-read after each one, and a
+read-only watcher logging both speakers every 1.5 s to catch the transition.
+
+1. Baseline: both answer `{"slaves":0,…,"group_type":-1}` and
+   `{"grouplist":[],"current_group_id":""}`, both report `status.group` `"0"`.
+2. `multiroom:JoinGroup:IP=<master>:uuid=<master upnp uuid>` on the guest: `OK`, and the master
+   starts listing one member. The watcher shows the change on the master only; the guest keeps
+   answering `slaves: 0` about itself and only flips its `status.group` to `"1"`.
+3. `multiroom:SlaveVolume:<guest>:30`: the guest's own `vol` follows, the master's list follows,
+   the master's own volume does not move.
+4. `multiroom:SlaveMute:<guest>:1` then `:0`: both sides follow each time.
+5. `setPlayerCmd:slave_vol:35`: only the master moves (`20` to `35`), the member stays at `30`. This
+   is the documented "overall volume", and it is not one on this firmware.
+6. `setPlayerCmd:slave_mute:mute` then `unmute`: `OK`, and neither speaker changes.
+7. `setPlayerCmd:vol:50` on the master: the master alone. `setPlayerCmd:vol:40` on the member: the
+   member alone, and the master's list picks up `40`.
+8. `setPlayerCmd:mute:1` on the master: the whole group mutes, member and list included, and
+   `mute:0` unmutes it. Mute propagates where volume does not.
+9. `multiroom:SlaveKickout:<guest>` on the master: `OK`, the list empties, the guest returns to
+   `status.group` `"0"`.
+10. Re-joined, then `multiroom:LeaveGroup` on the guest: same clean teardown, from the other side.
+11. Re-joined, then `multiroom:Ungroup` on the master: same result.
+12. Re-joined with the legacy `ConnectMasterAp:JoinGroupMaster:eth<master>:wifi0.0.0.0`: accepted,
+    so the hub has a fallback if the newer form is refused by a build.
+
+Notes that cost time and are worth keeping: the volume command is `setPlayerCmd:vol:`, not
+`setPlayerCmd:volume:` (`volume` is accepted nowhere and changes nothing), and the join needs the
+**master's** `upnp_uuid`, dashes included, while the member list publishes the short form of the
+same identifier. The group was left running on the two speakers at the end of the probe, since it
+is the state the write side has to handle.

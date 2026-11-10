@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Disc3, Radio, Users } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronRight, Disc3, Radio, Unlink, Users } from 'lucide-react'
 import { useState } from 'react'
 import { DeviceSettingsDialog } from '@/components/device-settings'
 import { MemberSheet } from '@/components/member-sheet'
@@ -6,13 +6,22 @@ import { PlayerControls, VolumeControl } from '@/components/player-controls'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { artUrl } from '@/lib/api'
 import { cardTitle, type FleetCard } from '@/lib/cards'
 import { cn } from '@/lib/cn'
-import { agoLabel, inputLabel, isExternalInput, statusLabel } from '@/lib/labels'
+import { joinTargets } from '@/lib/group'
+import { agoLabel, controlErrorLabel, inputLabel, isExternalInput, statusLabel } from '@/lib/labels'
 import { type Translate, useSettings } from '@/lib/settings'
 import type { Device, GroupMember, GroupState } from '@/lib/types'
 import { useControls } from '@/lib/use-controls'
+import { useGroupRun } from '@/lib/use-group-run'
 
 const Equalizer = () => (
   <span className="flex h-3 items-end gap-[2px]" aria-hidden="true">
@@ -59,7 +68,76 @@ const roleNoteOf = (role: GroupState['role'], t: Translate): string => {
   return role === 'member' ? t('group.role.member') : t('group.saved')
 }
 
-const GroupPanel = ({ group, id }: Readonly<{ group: GroupState; id: string }>) => {
+// The two gestures that end a group, and where each one is allowed: a master
+// dissolves what it drives, a member leaves what it follows. Both name the
+// speaker in the question, because the button sits on a card that may draw
+// three of them.
+const GroupTeardown = ({
+  role,
+  name,
+  onRun,
+  pending,
+}: Readonly<{
+  role: GroupState['role']
+  name: string
+  onRun: (action: 'ungroup' | 'leave') => void
+  pending: boolean
+}>) => {
+  const { t } = useSettings()
+  const [confirming, setConfirming] = useState(false)
+  if (role !== 'master' && role !== 'member') return null
+  const master = role === 'master'
+  if (confirming) {
+    return (
+      <div className="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-2 py-1.5 text-[11px]">
+        <p className="text-warning">
+          {t(master ? 'group.dissolveConfirm' : 'group.leaveConfirm', { name })}
+        </p>
+        <div className="mt-1 flex items-center gap-1.5">
+          <Button size="sm" variant="ghost" onClick={() => setConfirming(false)}>
+            {t('controls.cancel')}
+          </Button>
+          <Button
+            size="sm"
+            disabled={pending}
+            onClick={() => {
+              setConfirming(false)
+              onRun(master ? 'ungroup' : 'leave')
+            }}
+          >
+            {t(master ? 'group.dissolve' : 'group.leave')}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="mt-3"
+      disabled={pending}
+      onClick={() => setConfirming(true)}
+    >
+      <Unlink className="size-3.5" />
+      {t(master ? 'group.dissolve' : 'group.leave')}
+    </Button>
+  )
+}
+
+const GroupPanel = ({
+  group,
+  id,
+  name,
+  onRun,
+  pending,
+}: Readonly<{
+  group: GroupState
+  id: string
+  name: string
+  onRun: (action: 'ungroup' | 'leave') => void
+  pending: boolean
+}>) => {
   const { t } = useSettings()
   const note = roleNoteOf(group.role, t)
   return (
@@ -85,7 +163,106 @@ const GroupPanel = ({ group, id }: Readonly<{ group: GroupState; id: string }>) 
           ))}
         </ul>
       )}
+      <GroupTeardown role={group.role} name={name} onRun={onRun} pending={pending} />
     </div>
+  )
+}
+
+// A speaker that drives nothing can be drafted into a group, and the choice is
+// the master's: the hub only offers speakers that answered a uuid, since a join
+// names the master by that identifier. The confirmation names both ends, because
+// a mistake here moves the audio of two rooms at once.
+const JoinGroup = ({
+  device,
+  fleet,
+  onChanged,
+}: Readonly<{ device: Device; fleet: readonly Device[]; onChanged?: () => void }>) => {
+  const { t } = useSettings()
+  const [open, setOpen] = useState(false)
+  const [chosen, setChosen] = useState<Device | null>(null)
+  const group = useGroupRun(onChanged)
+  const targets = joinTargets(fleet, device)
+  if (targets.length === 0) return null
+
+  const close = (): void => {
+    setChosen(null)
+    group.clearError()
+    setOpen(false)
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={next => {
+        if (next) setOpen(true)
+        else close()
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm" className="mt-4" disabled={!device.online}>
+          <Users className="size-3.5" />
+          {t('group.join')}
+        </Button>
+      </DialogTrigger>
+      <DialogContent closeLabel={t('device.close')}>
+        <DialogTitle className="text-sm font-medium">
+          {t('group.joinTitle', { name: device.name })}
+        </DialogTitle>
+        <DialogDescription className="mt-1 text-[11px] text-muted-foreground">
+          {t('group.joinHint')}
+        </DialogDescription>
+        <ul className="mt-3 divide-y divide-border/60 rounded-xl border border-border/60 px-3">
+          {targets.map(target => (
+            <li key={target.ip}>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between gap-3 py-2.5 text-left disabled:opacity-50"
+                disabled={group.pending}
+                onClick={() => setChosen(target)}
+              >
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-medium">{target.name}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {target.model || target.ip}
+                  </span>
+                </span>
+                <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+              </button>
+            </li>
+          ))}
+        </ul>
+        {chosen !== null && (
+          <div className="mt-3 rounded-lg border border-warning/40 bg-warning/10 px-2 py-1.5 text-[11px]">
+            <p className="text-warning">
+              {t('group.joinConfirm', { name: device.name, master: chosen.name })}
+            </p>
+            <div className="mt-1 flex items-center gap-1.5">
+              <Button size="sm" variant="ghost" onClick={() => setChosen(null)}>
+                {t('controls.cancel')}
+              </Button>
+              <Button
+                size="sm"
+                disabled={group.pending}
+                onClick={() => {
+                  void group
+                    .run(device, { intent: 'join', master: chosen.ip })
+                    .then(ok => ok && close())
+                }}
+              >
+                {t('group.join')}
+              </Button>
+            </div>
+          </div>
+        )}
+        <p
+          role="status"
+          aria-live="polite"
+          className={cn('mt-2 text-[11px] text-warning', group.error === null && 'sr-only')}
+        >
+          {controlErrorLabel(t, group.error)}
+        </p>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -226,7 +403,17 @@ const MoveButtons = ({
 // Its equalizer and its settings live one tap away, in the sheet the row opens,
 // because the group card answers "what is playing, and where" and a row of two
 // sliders per speaker would compete with that on a phone.
-const MemberRow = ({ member, now }: Readonly<{ member: Device; now: number }>) => {
+//
+// The volume and the mute here are the member's own device writes: measured on a
+// real group, `setPlayerCmd:vol` and `setPlayerCmd:mute` sent to a member move
+// that member alone and the master's list follows. That is the same path the
+// hub shipped in 0.9.20, and the measurements kept it valid.
+const MemberRow = ({
+  member,
+  master,
+  now,
+  onChanged,
+}: Readonly<{ member: Device; master: Device; now: number; onChanged?: () => void }>) => {
   const { t, resolvedLang } = useSettings()
   const controls = useControls(member)
   const live = controls.device
@@ -245,8 +432,8 @@ const MemberRow = ({ member, now }: Readonly<{ member: Device; now: number }>) =
         </p>
       </div>
       <div className="flex min-w-0 basis-full items-center gap-1.5 sm:basis-auto sm:w-56">
-        <VolumeControl controls={controls} label={label} />
-        <MemberSheet device={member} />
+        <VolumeControl controls={controls} label={label} speaker={member.name} />
+        <MemberSheet device={member} master={master} onChanged={onChanged} />
       </div>
     </li>
   )
@@ -265,7 +452,11 @@ const AbsentRow = ({ member }: Readonly<{ member: GroupMember }>) => {
   )
 }
 
-const MemberList = ({ card, now }: Readonly<{ card: FleetCard; now: number }>) => {
+const MemberList = ({
+  card,
+  now,
+  onChanged,
+}: Readonly<{ card: FleetCard; now: number; onChanged?: () => void }>) => {
   const { t } = useSettings()
   if (card.members.length === 0 && card.absent.length === 0) return null
   return (
@@ -275,7 +466,13 @@ const MemberList = ({ card, now }: Readonly<{ card: FleetCard; now: number }>) =
       </p>
       <ul className="mt-1 divide-y divide-border/60 rounded-xl border border-border/60 px-3">
         {card.members.map(member => (
-          <MemberRow key={member.ip} member={member} now={now} />
+          <MemberRow
+            key={member.ip}
+            member={member}
+            master={card.master}
+            now={now}
+            onChanged={onChanged}
+          />
         ))}
         {card.absent.map(member => (
           <AbsentRow key={member.uuid || member.name} member={member} />
@@ -291,19 +488,29 @@ const MemberList = ({ card, now }: Readonly<{ card: FleetCard; now: number }>) =
 export const NowPlayingCard = ({
   card,
   now,
+  fleet = [],
   index = 0,
   count = 1,
   onMove,
+  onGroupChanged,
 }: Readonly<{
   card: FleetCard
   now: number
+  fleet?: readonly Device[]
   index?: number
   count?: number
   onMove?: (delta: -1 | 1) => void
+  onGroupChanged?: () => void
 }>) => {
   const { t, resolvedLang } = useSettings()
-  const controls = useControls(card.master)
+  // A card whose speaker drives a group carries the group's volume and mute: the
+  // reader set them for what they hear, and the server fans them out. Only the
+  // members the hub polls count: a group the master remembers but nothing answers
+  // for has no fan-out to do, and one write on the master is then the whole job.
+  const driven = card.master.group.role === 'master' && card.members.length > 0
+  const controls = useControls(card.master, { group: driven })
   const live = controls.device
+  const groupRun = useGroupRun(onGroupChanged)
   const [groupOpen, setGroupOpen] = useState(false)
   const title = cardTitle(card)
   // The card is a group when its title is the group's: the reader then needs to
@@ -321,6 +528,10 @@ export const NowPlayingCard = ({
   // An offline speaker keeps its last known group: showing it would claim a
   // membership nothing just confirmed.
   const showGroup = live.online && (group.role !== 'none' || group.saved)
+  // A speaker that follows nothing is the only one that can be drafted into a
+  // group, and joining is the one group gesture that is sent to it rather than
+  // to a master.
+  const canJoin = live.online && group.role === 'none' && joinTargets(fleet, live).length > 0
   const groupPanelId = `group-panel-${card.ip}`
   const chip = showGroup
     ? {
@@ -359,11 +570,34 @@ export const NowPlayingCard = ({
         />
       </div>
 
-      {showGroup && groupOpen && <GroupPanel group={group} id={groupPanelId} />}
+      {showGroup && groupOpen && (
+        <GroupPanel
+          group={group}
+          id={groupPanelId}
+          name={live.name}
+          pending={groupRun.pending}
+          onRun={action => void groupRun.run(live, { intent: action })}
+        />
+      )}
 
       <PlayerControls controls={controls} now={now} />
 
-      <MemberList card={card} now={now} />
+      {/* One slider for the whole group is a fan-out, not a group volume the
+          device knows: saying so once, where the reader meets it, is cheaper
+          than a support question about why the two rooms drift apart. */}
+      {driven && <p className="mt-2 text-[11px] text-muted-foreground">{t('group.volumeHint')}</p>}
+
+      <p
+        role="status"
+        aria-live="polite"
+        className={cn('mt-2 text-[11px] text-warning', groupRun.error === null && 'sr-only')}
+      >
+        {controlErrorLabel(t, groupRun.error)}
+      </p>
+
+      <MemberList card={card} now={now} onChanged={onGroupChanged} />
+
+      {canJoin && <JoinGroup device={live} fleet={fleet} onChanged={onGroupChanged} />}
 
       {!live.online && (
         <p className="mt-2 text-[11px] text-muted-foreground">

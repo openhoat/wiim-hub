@@ -13,6 +13,7 @@ import { type DeviceEvent, MAX_EVENTS, MAX_SAMPLES } from './device/status.ts'
 import { fetchCommand } from './device/transport.ts'
 import { discoverSsdp } from './discovery.ts'
 import { buildReport, findingsFor } from './findings.ts'
+import { type FleetUnit, groupPlanFor, parseGroupIntent } from './group-commands.ts'
 import { reconcileGroups } from './groups.ts'
 import { guidesFor } from './guides.ts'
 import {
@@ -95,6 +96,7 @@ const emptyState = (host: string): DeviceState => ({
   ssid: '',
   bssid: '',
   wmrmVersion: '',
+  uuid: '',
   group: { role: 'none', name: '', members: [], saved: false, parent: null },
   mirror: null,
   rssi: null,
@@ -607,6 +609,85 @@ const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse)
   sendJson(res, 200, outcome)
 }
 
+// A group write is several requests on one or more speakers, so it does not go
+// through the single-intent command route. The plan is built from the fleet the
+// hub polls (`server/group-commands.ts`), every write is queued, and the answer
+// carries each raw body: a member that refused is named with what it said, which
+// is the difference between "the group did not change" and a silent failure.
+//
+// Membership changes settle before the answer; a volume or a mute answers at
+// once, because a slider must not wait.
+const membershipIntents: ReadonlySet<string> = new Set(['join', 'leave', 'kick', 'ungroup'])
+const settleAttempts = 5
+const settleStepMs = 600
+
+const settleGroup = async (key: string, before: string): Promise<void> => {
+  for (let attempt = 0; attempt < settleAttempts; attempt++) {
+    await new Promise(resolve => setTimeout(resolve, settleStepMs))
+    await pollAll()
+    const now = states.get(key)
+    if (now !== undefined && JSON.stringify(now.group) !== before) return
+  }
+}
+
+const groupRoute = async (url: URL, req: IncomingMessage, res: ServerResponse): Promise<void> => {
+  const type = req.headers['content-type'] ?? ''
+  if (!type.toLowerCase().includes('application/json')) {
+    sendJson(res, 415, { error: 'content-type must be application/json' })
+    return
+  }
+  const host = url.searchParams.get('host') ?? ''
+  const entry = host === '' ? null : findDevice(states, host)
+  if (entry === null) {
+    sendJson(res, 404, { error: 'unknown device' })
+    return
+  }
+  if (!entry.state.online) {
+    sendJson(res, 409, { error: 'device offline' })
+    return
+  }
+  const raw = await readBody(req)
+  if (raw === null) {
+    sendJson(res, 413, { error: 'body too large' })
+    return
+  }
+  let body: unknown
+  try {
+    body = JSON.parse(raw)
+  } catch {
+    sendJson(res, 400, { error: 'invalid json' })
+    return
+  }
+  const parsed = parseGroupIntent(body)
+  if ('error' in parsed) {
+    sendJson(res, 400, parsed)
+    return
+  }
+  const fleet: FleetUnit[] = [...states].map(([key, state]) => ({ key, state }))
+  const plan = groupPlanFor(parsed.intent, { key: entry.key, state: entry.state }, fleet)
+  if ('error' in plan) {
+    sendJson(res, 422, plan)
+    return
+  }
+  const before = JSON.stringify(entry.state.group)
+  const results = await Promise.all(
+    plan.writes.map(write => writes.enqueue(write.key, write.command, write.family))
+  )
+  // A group write is not atomic: the members apply at slightly different times
+  // and one of them may refuse. Read every speaker back before answering, so the
+  // page renders what the devices report instead of what it asked for.
+  //
+  // A membership change is slower than that: measured, the guest takes a moment
+  // to register and the master publishes the member list after it, so an
+  // immediate poll answers the state from before the write and a join looks
+  // ignored until the next one. Those intents wait for the group to move, and
+  // answer the last read whether it moved or not.
+  if (membershipIntents.has(parsed.intent.intent)) await settleGroup(entry.key, before)
+  else await pollAll()
+  const fresh = states.get(entry.key) ?? entry.state
+  sendJson(res, 200, { ts: Date.now(), host: entry.key, results, group: fresh.group })
+}
+
 const contentTypes: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -755,6 +836,11 @@ const routes: Record<string, Route> = {
   '/api/command': async (url, req, res) => {
     if (req.method !== 'POST') return false
     await commandRoute(url, req, res)
+    return true
+  },
+  '/api/group': async (url, req, res) => {
+    if (req.method !== 'POST') return false
+    await groupRoute(url, req, res)
     return true
   },
   '/api/discover': async (_url, req, res) => {

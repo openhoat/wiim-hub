@@ -8,12 +8,3 @@ Detailed requirements live in `docs/feature-research.md`; cards stay coarse and 
 Fine grained work in progress goes to the gitignored `.scratch/<slug>/` directory, never here.
 
 ## Backlog
-
-### #4 [UX] Add a multiroom group view with per member control (P2)
-
-[//]: # Blocked on a second reachable unit: the member payload of `multiroom:getSlaveList` (with members) and the join/leave/kick semantics cannot be measured while only one speaker answers. The read side shipped in 0.4.3; the writes wait.
-
-- [x] Read the role from `multiroom:getSlaveList` and render master, members and orphans
-- [ ] Per member volume and mute with coalescing, plus one synchronised volume control
-- [ ] Join, leave and kick out with a confirmation naming the device and the raw answer on failure
-- [ ] Reconcile the group state after every write instead of trusting the optimistic view

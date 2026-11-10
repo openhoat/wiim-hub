@@ -54,7 +54,18 @@
     "follows": "Driven by {name}.",
     "speakers": "Speakers",
     "volumeOf": "Volume of {name}",
-    "memberSettings": "Settings for {name}"
+    "memberSettings": "Settings for {name}",
+    "volumeHint": "Group volume sets every speaker in the group to the same level.",
+    "join": "Join a group",
+    "joinTitle": "Add {name} to a group",
+    "joinHint": "The group plays on the speaker that drives it; the others follow it.",
+    "joinConfirm": "Add {name} to the group driven by {master}?",
+    "dissolve": "Dissolve the group",
+    "dissolveConfirm": "Dissolve the group driven by {name}? The speakers stay online, they stop playing together.",
+    "leave": "Leave the group",
+    "leaveConfirm": "Take {name} out of its group?",
+    "remove": "Remove from the group",
+    "removeConfirm": "Remove {name} from the group? It stops playing with the others."
   },
   "guides": {
     "title": "Guided checks",
@@ -215,7 +226,9 @@
     "failed": "Command failed: {error}",
     "confirmVolume": "Set the volume to {n}?",
     "apply": "Apply",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "muteOf": "Mute {name}",
+    "unmuteOf": "Unmute {name}"
   },
   "sound": {
     "title": "Sound",

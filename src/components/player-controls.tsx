@@ -47,7 +47,8 @@ const sleepOptions = [0, 15, 30, 45, 60, 90]
 export const VolumeControl = ({
   controls,
   label,
-}: Readonly<{ controls: Controls; label?: string }>) => {
+  speaker,
+}: Readonly<{ controls: Controls; label?: string; speaker?: string }>) => {
   const { t } = useSettings()
   const device = controls.device
   const ceiling = ceilingOf(device.maxVolume)
@@ -72,6 +73,13 @@ export const VolumeControl = ({
   }
 
   const muted = device.mute
+  // The name of the speaker the button mutes, where the row already names it: a
+  // group card draws one mute button per speaker, and two of them announced as
+  // "Mute" tell a screen reader nothing about which one it just silenced.
+  const muteLabel =
+    speaker === undefined
+      ? t(muted ? 'controls.unmute' : 'controls.mute')
+      : t(muted ? 'controls.unmuteOf' : 'controls.muteOf', { name: speaker })
 
   return (
     <div className="min-w-0 flex-1">
@@ -80,7 +88,7 @@ export const VolumeControl = ({
           variant="ghost"
           size="icon-sm"
           disabled={!device.online}
-          aria-label={muted ? t('controls.unmute') : t('controls.mute')}
+          aria-label={muteLabel}
           aria-pressed={muted}
           onClick={() => void controls.run({ action: 'mute', muted: !muted })}
         >

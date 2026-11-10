@@ -23,6 +23,10 @@ const replaceTemporarily = async (
 // browser would have picked: the assertions below read the page, not the
 // machine they run on.
 const openHub = async (page: Page): Promise<void> => {
+  // The demo fleet mutates like a real one, so every test starts from the seed:
+  // the assertions below read exact levels and track names, and a write a test
+  // made through the page would otherwise decide what the next one sees.
+  await page.request.post('/api/demo/reset')
   await page.goto('/')
   // Preferences are written once, then the page reloads: an init script would
   // run again on every reload and make the persistence test prove nothing.
@@ -657,7 +661,7 @@ test('offers a new version to a window that stayed open, instead of a reinstall'
         const registration = await navigator.serviceWorker.ready
         return {
           waiting: registration.waiting !== null,
-          banner: document.body.innerText.includes('A new version of the hub is ready.'),
+          banner: document.body.textContent.includes('A new version of the hub is ready.'),
         }
       })
       expect(after).toEqual({ waiting: false, banner: false })
@@ -716,5 +720,101 @@ test.describe('on a phone', () => {
     expect(group).not.toBeNull()
     expect(bedroom).not.toBeNull()
     expect(bedroom?.y ?? 0).toBeGreaterThan(group?.y ?? 0)
+  })
+})
+
+// The group gestures, on the demo fleet. The demo applies the same plan the hub
+// sends (`server/demo.ts`), so what the page reads back is what a group of real
+// speakers reports: a group volume fans out, a group mute is one write, and the
+// two teardown gestures belong to the speaker that owns the group.
+test.describe('multiroom', () => {
+  test('sets the same volume on every speaker in the group', async ({ page }) => {
+    await openHub(page)
+
+    const group = page.getByTestId('playing-192.0.2.21')
+    // A group volume is a fan-out, not a level the device knows: the card says
+    // so where the reader meets the slider.
+    await expect(
+      group.getByText('Group volume sets every speaker in the group to the same level.')
+    ).toBeVisible()
+
+    const volume = group.getByRole('slider', { name: 'Volume', exact: true })
+    await expect(volume).toHaveValue('44')
+    await volume.press('ArrowRight')
+    await expect(volume).toHaveValue('45')
+    // One gesture, one level: the member's row follows the master's slider.
+    await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('45')
+
+    const response = await page.request.get('/api/state')
+    expect(response.ok()).toBe(true)
+    const state: { devices: { name: string; volume: number | null }[] } = await response.json()
+    expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(45)
+  })
+
+  test('mutes the whole group, and the member row reports the member muted', async ({ page }) => {
+    await openHub(page)
+
+    const group = page.getByTestId('playing-192.0.2.21')
+    // Two mute buttons on one card are named: the group's own, and the member's.
+    await expect(group.getByRole('button', { name: 'Mute', exact: true })).toHaveCount(1)
+    await expect(group.getByRole('button', { name: 'Mute Hallway' })).toBeVisible()
+    await group.getByRole('button', { name: 'Mute', exact: true }).click()
+    await expect(group.getByRole('button', { name: 'Unmute', exact: true })).toBeVisible()
+
+    // Measured: the master's mute reaches the members, so one write silences the
+    // group and the member's own row reports it.
+    await expect(group.getByRole('button', { name: 'Unmute Hallway' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+  })
+
+  test('takes a member out of the group, from the sheet of that member', async ({ page }) => {
+    await openHub(page)
+
+    const group = page.getByTestId('playing-192.0.2.21')
+    await group.getByRole('button', { name: 'Settings for Hallway' }).click()
+    const sheet = page.getByRole('dialog')
+    // The gesture asks once: the speaker stops rendering the stream.
+    await sheet.getByRole('button', { name: 'Remove from the group' }).click()
+    await sheet.getByRole('button', { name: 'Remove from the group' }).click()
+
+    // The kicked speaker is on its own again, and the card of the group stops
+    // offering its row and its group volume.
+    await expect(page.getByTestId('playing-192.0.2.23')).toBeVisible()
+    await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveCount(0)
+    await expect(
+      group.getByText('Group volume sets every speaker in the group to the same level.')
+    ).toHaveCount(0)
+  })
+
+  test('dissolves the group, then drafts a speaker back into it', async ({ page }) => {
+    await openHub(page)
+
+    const group = page.getByTestId('playing-192.0.2.21')
+    await group.getByRole('button', { name: /Apartment · 2 speakers$/ }).click()
+    const panel = page.locator('[id^="group-panel-"]')
+    await expect(panel).toBeVisible()
+    await panel.getByRole('button', { name: 'Dissolve the group' }).click()
+    await panel.getByRole('button', { name: 'Dissolve the group' }).click()
+
+    // Nothing drives the group any more: every speaker keeps a card of its own.
+    await expect(page.locator('[data-testid^="playing-"]')).toHaveCount(3)
+    await expect(page.getByTestId('playing-192.0.2.23')).toBeVisible()
+
+    // A speaker alone can be added to a group it does not drive, and the choice
+    // is the master's: the dialog names what the join costs.
+    const hallway = page.getByTestId('playing-192.0.2.23')
+    await hallway.getByRole('button', { name: 'Join a group' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByRole('button', { name: /Living Room/ }).click()
+    await expect(dialog.getByText('Add Hallway to the group driven by Living Room?')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Join a group' }).click()
+
+    // One player again: the master's card carries the member as a row.
+    await expect(page.locator('[data-testid^="playing-"]')).toHaveCount(2)
+    const restored = page.getByTestId('playing-192.0.2.21')
+    await expect(restored.getByRole('heading', { level: 2, name: 'Living Room' })).toBeVisible()
+    await expect(restored.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
   })
 })

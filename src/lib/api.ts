@@ -1,4 +1,11 @@
-import type { Device, DeviceSettings, Finding, HubState, ServiceCapability } from './types'
+import type {
+  Device,
+  DeviceSettings,
+  Finding,
+  GroupState,
+  HubState,
+  ServiceCapability,
+} from './types'
 
 const readJson = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(path, { cache: 'no-store', ...init })
@@ -119,6 +126,40 @@ export const sendCommand = (device: Device, action: Action): Promise<CommandResu
 // requests, which the poll does not pay every three seconds.
 export const fetchSettings = (device: Device): Promise<DeviceSettings> =>
   readJson<DeviceSettings>(`/api/settings?host=${encodeURIComponent(device.ip)}`)
+
+// A group write is not one command on one device: the server fans it out and
+// answers every body it got, so the page can name the speaker that refused. The
+// shape is the same union the server validates.
+export type GroupAction =
+  | { intent: 'volume'; level: number }
+  | { intent: 'mute'; muted: boolean }
+  | { intent: 'memberVolume'; member: string; level: number }
+  | { intent: 'memberMute'; member: string; muted: boolean }
+  | { intent: 'join'; master: string }
+  | { intent: 'leave' }
+  | { intent: 'kick'; member: string }
+  | { intent: 'ungroup' }
+
+// The group the speakers report after the write, never the one the page asked
+// for: a member that refused is visible in `results` and absent from `group`.
+export type GroupAnswer = {
+  ts: number
+  host: string
+  results: CommandResult[]
+  group: GroupState
+}
+
+// The host is the only field this route reads: a group write is addressed to the
+// speaker the server plans from, and a member's own mute goes through its master.
+export const sendGroupAction = (
+  device: Pick<Device, 'ip'>,
+  action: GroupAction
+): Promise<GroupAnswer> =>
+  readJson<GroupAnswer>(`/api/group?host=${encodeURIComponent(device.ip)}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(action),
+  })
 
 // Cover art travels through the hub: the page is served over https while the// speaker only answers plain http, and a browser drops that mixed content. The
 // device address and the track URI form the cache key, so a cover is fetched

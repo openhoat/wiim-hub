@@ -75,6 +75,7 @@ const savedRegistry = (): Registry => ({
 const device = (overrides: Partial<DeviceInput> = {}): DeviceInput => ({
   host: '192.0.2.150',
   ip: '192.0.2.150',
+  modelName: '',
   status: json(statusEx),
   player: json(playerStatusEx),
   meta: json(metaInfo),
@@ -96,7 +97,8 @@ describe('parseDevice', () => {
       online: true,
       name: 'Living Room',
       // The model is only ever sent as `project` on this firmware, and the
-      // vendor suffix is not part of the name a user reads.
+      // vendor suffix is not part of the name a user reads. A description read
+      // in `pollDevice` beats it, which is what the next test pins.
       model: 'WiiM Pro',
       firmware: 'Linkplay.4.8.833748',
       release: '20261027',
@@ -105,6 +107,8 @@ describe('parseDevice', () => {
       bssid: '02:00:00:00:00:05',
       // The multiroom protocol the group guide checks first.
       wmrmVersion: '4.3',
+      // The identity a group command names this speaker by, short form.
+      uuid: 'A1B2C3D4E5F60718293A4B5C',
       group: {
         role: 'none',
         name: 'Apartment',
@@ -317,5 +321,29 @@ describe('parseDevice', () => {
       { name: 'band1khz', value: -2.5 },
       { name: 'band2khz', value: 1 },
     ])
+  })
+})
+
+describe('parseDevice, model and identity', () => {
+  it('prefers the name the device publishes over the internal project string', () => {
+    // Measured: the Mini says `project: "Muzo_Mini"` and calls itself "WiiM Mini
+    // Receiver" in its UPnP description, so the description wins.
+    expect(parseDevice(device({ modelName: 'WiiM Mini' })).model).toBe('WiiM Mini')
+  })
+
+  it('falls back to the project string when the description did not answer', () => {
+    expect(parseDevice(device({ modelName: '' })).model).toBe('WiiM Pro')
+  })
+
+  it('reads the group identity from either spelling of the status', () => {
+    expect(parseDevice(device()).uuid).toBe('A1B2C3D4E5F60718293A4B5C')
+    const status = {
+      ...json(statusEx),
+      uuid: '',
+      upnp_uuid: 'uuid:A1B2C3D4-E5F6-0718-293A-4B5CA1B2C3D4',
+    }
+    // A build that only publishes the dashed UPnP form still answers with the
+    // value a join takes: the scheme prefix goes, the dashes stay.
+    expect(parseDevice(device({ status })).uuid).toBe('A1B2C3D4-E5F6-0718-293A-4B5CA1B2C3D4')
   })
 })

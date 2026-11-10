@@ -53,6 +53,21 @@ export const artUri = (value: string): string => {
   return /^(un[_-]?know?n?|-)$/i.test(uri) ? '' : uri
 }
 
+// `getStatusEx` publishes the identity twice: `uuid` as 24 hex characters, and
+// `upnp_uuid` as `uuid:XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX`. The multiroom join
+// accepts either spelling (measured), so the hub keeps the short one and falls
+// back to the dashed one with its scheme prefix removed, which is the form a join
+// takes. The two are not turned into each other: the short form is not a prefix
+// of the dashed one on every build, and inventing a conversion would send a
+// command naming a speaker the device does not know.
+export const deviceUuid = (short: unknown, dashed: unknown): string => {
+  const plain = text(short).trim()
+  if (plain !== '') return plain
+  return text(dashed)
+    .trim()
+    .replace(/^uuid:/i, '')
+}
+
 // Firmware encodes some strings as hex (essid, Title): decode only when the
 // bytes read as printable text, so numeric values stay untouched.
 export const maybeHex = (value: string): string => {

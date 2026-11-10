@@ -10,6 +10,47 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The hub drives a multiroom group instead of only reading one: `POST /api/group` takes a volume
+  level, a mute flag, and the four membership gestures (join, leave, kick, dissolve). A group
+  volume is a fan-out, because the firmware has none: the master takes `setPlayerCmd:vol` and each
+  member a `multiroom:SlaveVolume`, in one queue family per speaker, so a drag leaves one pending
+  value per speaker instead of one per step. A group mute is a single write on the master, which
+  was measured to reach the members. Both paths follow the measurements written down in the
+  feature research, section 5.8.1, not the vendor documentation.
+- A membership change waits for the fleet before it answers: the joining speaker registers first
+  and the master publishes its list afterwards, so the route reads the devices back until the
+  group moves and the page never shows the group the reader just left. A join is refused rather
+  than sent where the fleet proves it wrong: the speaker already follows a group the hub can see,
+  it already drives one, the chosen master is offline or published no uuid, or the speaker is a
+  member of that group already.
+- A speaker that follows nothing offers the speakers it can join, through a dialog that names the
+  master and the gesture; the sheet of a member takes that speaker out of the group with the
+  master's kick; the panel of the group card dissolves the group, or leaves it when the panel
+  belongs to a member. The mute button of a member row is named after that speaker, since one card
+  now carries two of them.
+
+### Fixed
+
+- The model a card shows is the name the speaker publishes, not the build name its firmware
+  answered. `getStatusEx` carries no `model` field on the units measured, only a `project` string,
+  so a WiiM Mini was drawn as "Muzo Mini" while its own description calls it "WiiM Mini Receiver".
+  The public name is now read on the UPnP description the hub already fetches, trimmed of the DLNA
+  role, cached for six hours and keyed by firmware; the project string answers only for a build
+  that publishes no description, and a failed read is retried ten minutes later rather than kept
+  for the day.
+
+### Changed
+
+- The demo answers `/api/group` with the same planner the hub runs, then applies the plan to its
+  simulated fleet, so it cannot accept a gesture the real route would refuse. It also reseeds the
+  three speakers on `POST /api/demo/reset`, a fixture control the end to end suite now calls before
+  every test, since a write can decide what the next one reads.
+- The multiroom section of the device guide covers the two driving gestures and the three
+  membership ones with the measurement behind each, and the research notes carry the write
+  surface command by command, alongside the roadmap position of the release.
+
 ## [0.9.20] - 2026-11-10
 
 ### Changed

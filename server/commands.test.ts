@@ -13,6 +13,7 @@ const device = (overrides: Partial<DeviceState> = {}): DeviceState => ({
   ssid: 'lab',
   bssid: 'aa:bb:cc:dd:ee:ff',
   wmrmVersion: '4.3',
+  uuid: 'A1B2C3D4E5F60718293A4B5C',
   mirror: null,
   group: { role: 'none', name: '', members: [], saved: false, parent: null },
   rssi: -55,
