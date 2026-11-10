@@ -12,8 +12,8 @@ replaying recorded payloads would test a snapshot of the answers, not the behavi
 
 ## Decision
 
-`server/demo.ts` serves the real UI bundle with two simulated speakers (one playing, one offline
-with a saved group), in memory, with no extra dependency. Its states are typed as the `DeviceState`
+`server/demo.ts` serves the real UI bundle with three simulated speakers (a running group of two
+players, and one offline speaker with a saved group), in memory, with no extra dependency. Its states are typed as the `DeviceState`
 the hub renders, its writes go through the same `parseAction` and `commandFor` as the real server,
 and they mutate the state the page reads back on the next poll. Playwright drives it on port 8091
 (`e2e/`), in CI too. The README screenshots come from it.

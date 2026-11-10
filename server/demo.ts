@@ -260,7 +260,14 @@ const livingRoom = (): DeviceState => {
     group: {
       role: 'master',
       name: 'Apartment',
-      members: [{ name: 'Bedroom', ip: '', uuid: 'a1b27c4d-e6f0-498b-93d5-e0c7a4f28b61' }],
+      // A running group names its members with an address; a member the vendor
+      // app remembers but the fleet cannot poll keeps an empty one, and the card
+      // shows it as a row with no state. Bedroom is not listed here: it holds a
+      // saved group of its own and is off, which is the "not running" case.
+      members: [
+        { name: 'Hallway', ip: '192.0.2.23', uuid: '7d53b1f0-2a4c-4c22-9f6e-1c8f4b2ad901' },
+        { name: 'Bathroom', ip: '', uuid: 'a1b27c4d-e6f0-498b-93d5-e0c7a4f28b61' },
+      ],
       saved: false,
       parent: null,
     },
@@ -413,9 +420,68 @@ const bedroom = (): DeviceState => {
   }
 }
 
+const hallway = (): DeviceState => {
+  const state = emptyState('192.0.2.23')
+  const now = Date.now()
+  return {
+    ...state,
+    name: 'Hallway',
+    model: 'Muzo Mini',
+    firmware: 'Linkplay.4.8.833748',
+    release: '20261027',
+    ssid: 'Demo Wi-Fi',
+    bssid: '02:00:00:00:00:23',
+    wmrmVersion: '4.3',
+    // A member answers almost nothing about its group and plays nothing of its
+    // own: `mode 99, stop`, no track, an empty registry. The fleet pass joins it
+    // to the master that names it and mirrors the playback, which is exactly the
+    // shape the group card reads.
+    group: { role: 'member', name: '', members: [], saved: false, parent: null },
+    rssi: -61,
+    volume: 35,
+    status: 'stop',
+    mode: '99',
+    input: 'wifi',
+    maxVolume: 100,
+    mute: false,
+    sleepSeconds: null,
+    inputs: ['wifi', 'bluetooth', 'line-in', 'optical', 'udisk'],
+    inputLabels: {
+      wifi: 'Wi-Fi',
+      bluetooth: 'Bluetooth',
+      'line-in': 'Line in',
+      optical: 'Optical',
+      udisk: 'USB',
+    },
+    outputs: [{ hardware: 2, name: 'Line out' }],
+    outputHardware: 2,
+    presets: [],
+    eq: {
+      enabled: true,
+      name: 'Bass Booster',
+      source: 'wifi',
+      bands: eqBands.map((name, index) => ({ name, value: Math.max(-3, eqValues[index] - 3) })),
+      presets: eqPresets,
+      roomFit: false,
+    },
+    quality: { sampleRate: 48_000, bitDepth: 24, bitRate: 1536 },
+    link: { snr: 29, noise: -86, freqMhz: 2437, rateMbps: 144 },
+    updatedAt: now,
+    online: true,
+    lastSeen: now,
+    errors: 0,
+    samples: history(17, -61, MAX_SAMPLES - 8),
+    events: [
+      { t: now - 120_000, kind: 'online', from: '', to: '' },
+      { t: now - 1_200_000, kind: 'status', from: 'play', to: 'stop' },
+    ],
+  }
+}
+
 const states = new Map<string, DeviceState>([
   ['192.0.2.21', livingRoom()],
   ['192.0.2.22', bedroom()],
+  ['192.0.2.23', hallway()],
 ])
 
 const settings = new Map<string, DeviceSettings>([
@@ -433,6 +499,10 @@ const settings = new Map<string, DeviceSettings>([
   [
     '192.0.2.22',
     { name: 'Bedroom', ledOn: true, buttonsOn: false, balance: 0, maxVolume: 90, fade: false },
+  ],
+  [
+    '192.0.2.23',
+    { name: 'Hallway', ledOn: false, buttonsOn: true, balance: 0.2, maxVolume: 100, fade: true },
   ],
 ])
 

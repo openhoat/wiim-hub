@@ -78,7 +78,7 @@ const BandBar = ({
 // The curve is read live and edited one band at a time: a row of ten vertical
 // sliders is unusable on a phone, so a band is picked on the curve and the
 // slider under it drives the value.
-const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
+export const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
   const { t } = useSettings()
   const device = controls.device
   const eq = device.eq
@@ -209,7 +209,7 @@ const EqualizerPanel = ({ controls }: Readonly<{ controls: Controls }>) => {
 // The stream numbers describe the codec in flight: they come with every
 // metadata read and disappear when playback stops, so they are shown next to
 // the equalizer rather than in a panel of their own.
-const QualityChip = ({ device }: Readonly<{ device: Device }>) => {
+export const QualityChip = ({ device }: Readonly<{ device: Device }>) => {
   const { t } = useSettings()
   const parts = [
     rangeLabel(

@@ -52,7 +52,9 @@
     "saved": "Saved group, not running.",
     "unknown": "state unknown",
     "follows": "Driven by {name}.",
-    "reflected": "The group's playback, driven by {name}."
+    "speakers": "Speakers",
+    "volumeOf": "Volume of {name}",
+    "memberSettings": "Settings for {name}"
   },
   "guides": {
     "title": "Guided checks",

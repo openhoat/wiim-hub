@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   emptyLayout,
+  type Keyed,
   type Layout,
   type LayoutStore,
   moveDevice,
@@ -11,7 +12,6 @@ import {
   toggleCollapsed,
   writeLayout,
 } from './layout'
-import type { Device } from './types'
 
 // Private mode and a browser that refuses storage both raise on the accessor
 // itself, before any call: reading through a guarded getter keeps the page
@@ -29,19 +29,20 @@ const persist = (layout: Layout): void => {
   if (store !== null) writeLayout(store, layout)
 }
 
-export type LayoutControls = {
-  // The hub's devices, in the order the page shows them.
-  devices: Device[]
+export type LayoutControls<T extends Keyed> = {
+  // The hub's cards, in the order the page shows them.
+  devices: T[]
   collapsed: ReadonlySet<string>
   move: (ip: string, delta: -1 | 1) => void
   toggle: (ip: string) => void
 }
 
-// The order is pinned the first time a device is seen and kept from then on:
+// The order is pinned the first time a speaker is seen and kept from then on:
 // the hub is free to answer in another order (a speaker rejoins, discovery
 // names it first) without the cards swapping under a refresh. Only an explicit
-// move changes it, and that move is stored.
-export const useLayout = (devices: Device[]): LayoutControls => {
+// move changes it, and that move is stored. The page hands in whatever it draws
+// a card for, which is a group since a group is one card.
+export const useLayout = <T extends Keyed>(devices: T[]): LayoutControls<T> => {
   const [layout, setLayout] = useState<Layout>(() => {
     const store = browserStore()
     return store === null ? emptyLayout : readLayout(store)

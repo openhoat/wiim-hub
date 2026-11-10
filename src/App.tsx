@@ -10,10 +10,12 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/toaster'
 import { UpdateBanner } from '@/components/update-banner'
+import { fleetCards } from '@/lib/cards'
 import { cn } from '@/lib/cn'
 import { inputLabel, isExternalInput } from '@/lib/labels'
+import { sortDevices } from '@/lib/layout'
 import { SettingsProvider, useSettings } from '@/lib/settings'
-import type { View } from '@/lib/types'
+import type { Device, View } from '@/lib/types'
 import { useHub } from '@/lib/use-hub'
 import { useLayout } from '@/lib/use-layout'
 
@@ -63,10 +65,21 @@ const Hub = () => {
   const [view, setView] = useState<View>(readView)
   const [now, setNow] = useState(() => Date.now())
 
+  const devices = hub.state?.devices ?? []
+  // A running group is one player, so the page draws (and orders) one card for
+  // it: the partition decides which speaker drives which, from what the hub
+  // confirmed, and the layout follows the cards rather than the speakers.
+  const cards = fleetCards(devices)
   // The order and the folded cards are a preference of this browser: the hub
-  // keeps no such thing, and both views read the same list.
-  const layout = useLayout(hub.state?.devices ?? [])
-  const devices = layout.devices
+  // keeps no such thing, and both views read the same list. The diagnostic view
+  // still draws one card per speaker, in the order the groups gave the masters
+  // and with the members appended.
+  const layout = useLayout(cards)
+  const ordered = layout.devices
+  const orderedDevices = sortDevices(
+    devices,
+    ordered.map(card => card.ip)
+  )
   // The cards render a photo of the hub, so their clock stops at the moment it
   // was taken: a seek bar must not advance on a position nobody measured. The
   // banner keeps the real clock, because it dates the photo.
@@ -99,14 +112,29 @@ const Hub = () => {
     }
   }
 
-  const announce = devices
-    .map(device => {
-      if (!device.online) return `${device.name}: ${t('offline')}`
-      // An external input announces the source, the same words the card shows.
-      if (isExternalInput(device.input)) {
-        return `${device.name}: ${inputLabel(t, device.inputLabels, device.input)}`
-      }
-      return `${device.name}: ${device.title === '' ? t('noPlayback') : device.title}`
+  const lineOf = (device: Device): string => {
+    if (!device.online) return `${device.name}: ${t('offline')}`
+    // An external input announces the source, the same words the card shows.
+    if (isExternalInput(device.input)) {
+      return `${device.name}: ${inputLabel(t, device.inputLabels, device.input)}`
+    }
+    return `${device.name}: ${device.title === '' ? t('noPlayback') : device.title}`
+  }
+
+  // A group is announced as what it is on screen: the master plays, the members
+  // follow it, and a named member the fleet cannot poll says so. Announcing the
+  // master's track once per member would read the same sentence three times.
+  const announce = ordered
+    .flatMap(card => {
+      const members = [
+        ...card.members.map(member =>
+          member.online
+            ? `${member.name}: ${t('group.follows', { name: card.master.name })}`
+            : lineOf(member)
+        ),
+        ...card.absent.map(member => `${member.name}: ${t('group.unknown')}`),
+      ]
+      return [lineOf(card.master), ...members]
     })
     .join('. ')
 
@@ -144,34 +172,36 @@ const Hub = () => {
             <EmptyState onDiscover={() => void discover()} discovering={hub.discovering} />
           )}
 
-          {devices.length > 0 &&
+          {ordered.length > 0 &&
             (view === 'user' ? (
               <div
                 className={cn(
-                  devices.length > 1
+                  ordered.length > 1
                     ? 'grid items-start gap-4 xl:grid-cols-2'
                     : 'mx-auto max-w-3xl space-y-4'
                 )}
               >
-                {devices.map((device, index) => (
-                  // Keyed by address, not by name: a speaker that renames
-                  // itself, or one renamed from its sheet, would otherwise
-                  // remount the card and close the sheet under the hand.
-                  <div key={device.ip} className="space-y-4">
+                {ordered.map((card, index) => (
+                  // Keyed by the card's address, not by name: a speaker that
+                  // renames itself, or one renamed from its sheet, would
+                  // otherwise remount the card and close the sheet under the
+                  // hand. A group is keyed on its master, so the card survives
+                  // a member joining or leaving.
+                  <div key={card.ip} className="space-y-4">
                     <NowPlayingCard
-                      device={device}
+                      card={card}
                       now={clock}
                       index={index}
-                      count={devices.length}
-                      onMove={delta => layout.move(device.ip, delta)}
+                      count={ordered.length}
+                      onMove={delta => layout.move(card.ip, delta)}
                     />
-                    <SoundCard device={device} />
+                    <SoundCard device={card.master} />
                   </div>
                 ))}
               </div>
             ) : (
               <div className="space-y-4">
-                {devices.map(device => (
+                {orderedDevices.map(device => (
                   <DiagnosticCard
                     key={device.ip}
                     device={device}

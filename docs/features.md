@@ -20,14 +20,14 @@ and the behaviours measured on a real player are recorded in the
 
 ## The fleet
 
-| Feature                                                                | What you get                                                                                                  |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| [An explicit list, or discovery](/guide/devices#discovery)             | Addresses from the environment, hosts saved from the page, or one SSDP pass that finds the rest               |
-| [Manage from the page](/guide/devices#adding-a-host-from-the-page)     | Add, rename or remove a saved host; an address that came from the environment stays read only                 |
-| [Names resolved in a stated order](/guide/configuration#names)         | Static pairs, the router's lease file, the system resolver, then mDNS, and the report says which one answered |
-| [A mixed fleet is the normal case](/guide/devices#a-mixed-fleet)       | Pro, Mini, Amp, Ultra and OEM players side by side, each probed for what it supports                          |
-| [A group member reads as a member](/guide/devices#multiroom-read-only) | The group, its members and the speaker it follows; the track and the cover are drawn once, on the master      |
-| [External inputs](/guide/devices#external-inputs)                      | A player on optical, line or coax is shown playing that input, with no track invented                         |
+| Feature                                                            | What you get                                                                                                  |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
+| [An explicit list, or discovery](/guide/devices#discovery)         | Addresses from the environment, hosts saved from the page, or one SSDP pass that finds the rest               |
+| [Manage from the page](/guide/devices#adding-a-host-from-the-page) | Add, rename or remove a saved host; an address that came from the environment stays read only                 |
+| [Names resolved in a stated order](/guide/configuration#names)     | Static pairs, the router's lease file, the system resolver, then mDNS, and the report says which one answered |
+| [A mixed fleet is the normal case](/guide/devices#a-mixed-fleet)   | Pro, Mini, Amp, Ultra and OEM players side by side, each probed for what it supports                          |
+| [A running group is one card](/guide/devices#multiroom-read-only)  | The group's name, the speaker that drives it, and its members as rows with their own volume                   |
+| [External inputs](/guide/devices#external-inputs)                  | A player on optical, line or coax is shown playing that input, with no track invented                         |
 
 ## Control
 
@@ -56,14 +56,14 @@ and the behaviours measured on a real player are recorded in the
 
 ## Operations
 
-| Feature                                                            | What you get                                                                                |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| [Push instead of poll](/guide/events)                              | UPnP events carried on the LAN, with a return to polling when they stop                     |
-| [Alerts](/guide/notifications)                                     | A webhook or an ntfy topic, one message as a rule appears, then silence for an hour         |
-| [Key or forward auth](/guide/configuration#behind-a-reverse-proxy) | A bearer key for scripts and agents, or the identity a reverse proxy leaves behind          |
-| [Agents, over MCP](/guide/mcp)                                     | Four read and control tools for an MCP client, with no state of its own                     |
-| [A small HTTP API](/reference/http-api)                            | State, report, services, settings, command, discover, art, hosts and health                 |
-| [Demo mode](/guide/demo)                                           | Two simulated speakers behind the same interface, which is what the end to end suite drives |
+| Feature                                                            | What you get                                                                                  |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
+| [Push instead of poll](/guide/events)                              | UPnP events carried on the LAN, with a return to polling when they stop                       |
+| [Alerts](/guide/notifications)                                     | A webhook or an ntfy topic, one message as a rule appears, then silence for an hour           |
+| [Key or forward auth](/guide/configuration#behind-a-reverse-proxy) | A bearer key for scripts and agents, or the identity a reverse proxy leaves behind            |
+| [Agents, over MCP](/guide/mcp)                                     | Four read and control tools for an MCP client, with no state of its own                       |
+| [A small HTTP API](/reference/http-api)                            | State, report, services, settings, command, discover, art, hosts and health                   |
+| [Demo mode](/guide/demo)                                           | Three simulated speakers behind the same interface, which is what the end to end suite drives |
 
 ## Deliberate limits
 

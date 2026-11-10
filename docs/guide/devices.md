@@ -79,11 +79,15 @@ Consequences worth knowing:
   `getAudioInputCapbility`), so the source picker offers what that unit accepts.
 - The volume ceiling is the device's own `max_volume`, not a constant.
 
-## One card per speaker
+## One card per player
 
-Cards are ordered by name, and every device has its own state, its own write queue and its own
-poll. A device that stops answering keeps its card, marked offline, with its last known values and
-the number of failed polls: a speaker pulled off the mains is a case to show, not to hide.
+A card is what you hear, not what answers: a speaker alone, or a group, which is one player driven
+by its master and rendered by the speakers that follow it. Cards are ordered by name and the order
+belongs to the browser, so the arrows move one card against its neighbour. Every device keeps its
+own state, its own write queue and its own poll. A device that stops answering keeps its card,
+marked offline, with its last known values and the number of failed polls: a speaker pulled off the
+mains is a case to show, not to hide. The diagnostic view still draws one card per speaker, since
+that view is about what each device answered.
 
 ## Multiroom, read only
 
@@ -97,16 +101,22 @@ flatten:
 A member answers very little about its group: its own registry is empty, because the group is
 remembered on the speaker that drives it, and its transport reads `mode 99, stop` with no track,
 because the stream runs on the master. Read alone, such a speaker looks like a stopped player in no
-group. The hub polls the whole fleet, so it completes the picture from the master's own answer: the
-member card carries the group name, the member list and the speaker it follows, while the track and
-the cover stay on the master's card. A group plays once: the player is drawn on the speaker that
-drives it, and repeating it on every member card multiplied one cover by the number of speakers. The
-member's own fields are left alone. The copy lives in a separate `mirror`, so the diagnostic view
-and the exported report still say what the device itself answered.
+group. The hub polls the whole fleet, so it completes the picture from the master's own answer, and
+draws the group as one card: the group's name heads it, the speaker that drives it sits under it,
+and the speakers that follow are rows with their own volume. A member that plays something of its
+own keeps its own card, because its answer wins over the group it is supposed to follow. The copy
+lives in a separate `mirror`, so the diagnostic view and the exported report still say what the
+device itself answered.
 
-The transport is not offered on a mirrored card. A command sent to a member drives its own silent
-input, not the group, and the hub does not write to another speaker on your behalf. Volume stays:
-it is the member's own, and the master reports it in its slave list.
+The transport is not offered on a member. A command sent to a member drives its own silent input,
+not the group, and the hub does not write to another speaker on your behalf. Volume stays: it is the
+member's own, and the master reports it in its slave list. A button on the row opens that speaker's
+own sheet, with its volume, its equalizer and its settings, which is what its card used to carry.
+
+A group is folded only when it currently runs: a saved group that is not running, and a group whose
+master stopped answering, leave the speakers on their own cards, since nothing confirms that the
+group is live. A member the master names and the fleet cannot poll keeps a row with its name and an
+unknown state, so the count stays honest instead of silently dropping it.
 
 The "no sound" flow reads the group's transport for the same reason: asking a member why it is
 stopped would name a cause that does not exist while the room plays. The flow also drops the output

@@ -56,9 +56,10 @@ npm run build
 npm start
 ```
 
-**No speaker at hand?** `npm run build && npm run demo` serves the same interface over two simulated
-players, with a real write path: a volume change lands in the state the page renders. The
-end-to-end suite runs against it, which is why the project is testable without hardware.
+**No speaker at hand?** `npm run build && npm run demo` serves the same interface over three
+simulated players, one of them a running group, with a real write path: a volume change lands in
+the state the page renders. The end-to-end suite runs against it, which is why the project is
+testable without hardware.
 
 The page also **installs as a web app**: Chrome and Edge offer it from the address bar, it then runs
 in a window of its own, with the project's icon. A service worker caches the shell and never the
@@ -106,7 +107,7 @@ on desktop never updates `icons` on an installed app.
 | [Configuration](https://openhoat.github.io/wiim-hub/guide/configuration) | Environment variables, reverse proxy, sizing, logs                |
 | [Devices](https://openhoat.github.io/wiim-hub/guide/devices)             | Explicit list, discovery, mDNS names, mixed fleet, external input |
 | [UPnP events](https://openhoat.github.io/wiim-hub/guide/events)          | Push instead of poll, and how it degrades                         |
-| [Demo mode](https://openhoat.github.io/wiim-hub/guide/demo)              | The two simulated players and what is not faked                   |
+| [Demo mode](https://openhoat.github.io/wiim-hub/guide/demo)              | The three simulated players and what is not faked                 |
 | [Development](https://openhoat.github.io/wiim-hub/guide/development)     | The gate, the suites, the docs site                               |
 | [How it works](https://openhoat.github.io/wiim-hub/how-it-works)         | Poll loop, write queue, findings, cover relay, module map         |
 | [HTTP API](https://openhoat.github.io/wiim-hub/reference/http-api)       | Routes, accepted intents, relay rules                             |

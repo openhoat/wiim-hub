@@ -1,15 +1,17 @@
 import { ArrowLeft, ArrowRight, Disc3, Radio, Users } from 'lucide-react'
 import { useState } from 'react'
 import { DeviceSettingsDialog } from '@/components/device-settings'
-import { GroupControls, PlayerControls } from '@/components/player-controls'
+import { MemberSheet } from '@/components/member-sheet'
+import { PlayerControls, VolumeControl } from '@/components/player-controls'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { artUrl } from '@/lib/api'
+import { cardTitle, type FleetCard } from '@/lib/cards'
 import { cn } from '@/lib/cn'
 import { agoLabel, inputLabel, isExternalInput, statusLabel } from '@/lib/labels'
 import { type Translate, useSettings } from '@/lib/settings'
-import type { Device, GroupState } from '@/lib/types'
+import type { Device, GroupMember, GroupState } from '@/lib/types'
 import { useControls } from '@/lib/use-controls'
 
 const Equalizer = () => (
@@ -186,7 +188,7 @@ const TrackMeta = ({
 
 // The order of the cards belongs to the reader, not to the hub: the arrows move
 // one card against its neighbour, on the order stored in the page. A single
-// speaker has nothing to move, so the pair is not drawn at all.
+// card has nothing to move, so the pair is not drawn at all.
 const MoveButtons = ({
   index,
   count,
@@ -220,41 +222,106 @@ const MoveButtons = ({
   )
 }
 
+// A row of the group: the speaker's own name, what it answers, and its volume.
+// Its equalizer and its settings live one tap away, in the sheet the row opens,
+// because the group card answers "what is playing, and where" and a row of two
+// sliders per speaker would compete with that on a phone.
+const MemberRow = ({ member, now }: Readonly<{ member: Device; now: number }>) => {
+  const { t, resolvedLang } = useSettings()
+  const controls = useControls(member)
+  const live = controls.device
+  const label = t('group.volumeOf', { name: member.name })
+
+  return (
+    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 sm:flex-nowrap">
+      <div className="min-w-0 flex-1">
+        <p className={cn('truncate text-xs font-medium', !live.online && 'text-muted-foreground')}>
+          {member.name}
+        </p>
+        <p className="truncate text-[11px] text-muted-foreground">
+          {live.online
+            ? live.model || live.ip
+            : `${t('offline')} · ${agoLabel(t, resolvedLang, live.lastSeen, now)}`}
+        </p>
+      </div>
+      <div className="flex min-w-0 basis-full items-center gap-1.5 sm:basis-auto sm:w-56">
+        <VolumeControl controls={controls} label={label} />
+        <MemberSheet device={member} />
+      </div>
+    </li>
+  )
+}
+
+// A member the master names and the fleet does not poll: the vendor app keeps
+// it in the saved group, so the row keeps its name and says the address is
+// unknown rather than dropping it from the count.
+const AbsentRow = ({ member }: Readonly<{ member: GroupMember }>) => {
+  const { t } = useSettings()
+  return (
+    <li className="flex items-center justify-between gap-3 py-2.5">
+      <p className="truncate text-xs font-medium text-muted-foreground">{member.name}</p>
+      <span className="shrink-0 text-[11px] text-muted-foreground">{t('group.unknown')}</span>
+    </li>
+  )
+}
+
+const MemberList = ({ card, now }: Readonly<{ card: FleetCard; now: number }>) => {
+  const { t } = useSettings()
+  if (card.members.length === 0 && card.absent.length === 0) return null
+  return (
+    <div className="mt-4">
+      <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+        {t('group.speakers')}
+      </p>
+      <ul className="mt-1 divide-y divide-border/60 rounded-xl border border-border/60 px-3">
+        {card.members.map(member => (
+          <MemberRow key={member.ip} member={member} now={now} />
+        ))}
+        {card.absent.map(member => (
+          <AbsentRow key={member.uuid || member.name} member={member} />
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+// One card per thing the reader hears: a speaker alone, or a group, which is
+// one player driven by its master and rendered by the speakers that follow it
+// (src/lib/cards.ts decides which is which, from what the hub confirmed).
 export const NowPlayingCard = ({
-  device,
+  card,
   now,
   index = 0,
   count = 1,
   onMove,
 }: Readonly<{
-  device: Device
+  card: FleetCard
   now: number
   index?: number
   count?: number
   onMove?: (delta: -1 | 1) => void
 }>) => {
   const { t, resolvedLang } = useSettings()
-  const controls = useControls(device)
+  const controls = useControls(card.master)
   const live = controls.device
   const [groupOpen, setGroupOpen] = useState(false)
-  // A member of a running group plays nothing of its own: what is audible comes
-  // from the speaker that drives the group, and the fleet pass copied it here.
-  // An offline speaker shows no mirror, since nothing just confirmed the group.
-  const mirror = live.online ? live.mirror : null
+  const title = cardTitle(card)
+  // The card is a group when its title is the group's: the reader then needs to
+  // know which speaker drives it, and the sub-line says so instead of repeating
+  // the model under a name that is not the speaker's.
+  const grouped = title !== live.name
+  const subtitle = grouped ? `${live.name} · ${live.model}` : live.model || live.ip
   // An external input has no track to show: the card names the source, and the
   // badge keeps the transport state without the "a track is playing" meter.
   const external = isExternalInput(live.input)
   const sourceName = external ? inputLabel(t, live.inputLabels, live.input) : ''
-  // A mirrored playback names the track on the master's card; an external input
-  // names the source; a device with nothing to report keeps the empty headline
-  // the card words itself.
-  const ownHeadline = sourceName === '' ? live.title : sourceName
-  const playing = live.online && (mirror?.status ?? live.status) === 'play'
+  const headline = sourceName === '' ? live.title : sourceName
+  const playing = live.online && live.status === 'play'
   const group = live.group
   // An offline speaker keeps its last known group: showing it would claim a
   // membership nothing just confirmed.
   const showGroup = live.online && (group.role !== 'none' || group.saved)
-  const groupPanelId = `group-panel-${device.ip}`
+  const groupPanelId = `group-panel-${card.ip}`
   const chip = showGroup
     ? {
         group,
@@ -266,68 +333,41 @@ export const NowPlayingCard = ({
 
   return (
     <Card
-      className={cn('p-5 sm:p-6', !device.online && 'opacity-80')}
-      data-testid={`playing-${device.ip}`}
+      className={cn('p-5 sm:p-6', !live.online && 'opacity-80')}
+      data-testid={`playing-${card.ip}`}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-sm font-medium">{device.name}</h2>
-          <p className="truncate text-[11px] text-muted-foreground">{device.model || device.ip}</p>
+          <h2 className="truncate text-sm font-medium">{title}</h2>
+          <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
         </div>
         <div className="flex items-center gap-1.5">
           {onMove !== undefined && <MoveButtons index={index} count={count} onMove={onMove} />}
           <DeviceSettingsDialog controls={controls} />
-          <StatusBadge
-            online={device.online}
-            status={mirror?.status ?? live.status}
-            playing={playing && !external}
-          />
+          <StatusBadge online={live.online} status={live.status} playing={playing && !external} />
         </div>
       </div>
 
-      {mirror === null ? (
-        <div className="mt-5 flex gap-5">
-          <Cover art={artUrl(live)} offline={!device.online} />
-          <TrackMeta
-            title={ownHeadline}
-            artist={live.artist}
-            album={live.album}
-            source={device.source}
-            chip={chip}
-          />
-        </div>
-      ) : (
-        // A group plays once: the card of the speaker that drives it already
-        // shows the cover and names the track. Repeating them on every member
-        // card turned a three-speaker group into three copies of one cover, so
-        // a member keeps what is its own, the speaker it follows, its volume
-        // and its diagnostics, and draws no player at all.
-        <div className="mt-5 space-y-2">
-          <p className="text-[11px] text-muted-foreground">
-            {t('group.reflected', { name: mirror.from.name })}
-          </p>
-          {chip !== null && (
-            <GroupChip
-              group={chip.group}
-              open={chip.open}
-              onToggle={chip.onToggle}
-              panelId={chip.panelId}
-            />
-          )}
-        </div>
-      )}
+      <div className="mt-5 flex gap-5">
+        <Cover art={artUrl(live)} offline={!live.online} />
+        <TrackMeta
+          title={headline}
+          artist={live.artist}
+          album={live.album}
+          source={live.source}
+          chip={chip}
+        />
+      </div>
 
       {showGroup && groupOpen && <GroupPanel group={group} id={groupPanelId} />}
 
-      {mirror === null ? (
-        <PlayerControls controls={controls} now={now} />
-      ) : (
-        <GroupControls controls={controls} mirror={mirror} now={now} />
-      )}
+      <PlayerControls controls={controls} now={now} />
 
-      {!device.online && (
+      <MemberList card={card} now={now} />
+
+      {!live.online && (
         <p className="mt-2 text-[11px] text-muted-foreground">
-          {agoLabel(t, resolvedLang, device.lastSeen, now)}
+          {agoLabel(t, resolvedLang, live.lastSeen, now)}
         </p>
       )}
     </Card>

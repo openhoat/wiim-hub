@@ -64,8 +64,8 @@ to check.
 
 ## Without a speaker
 
-The repository ships a demo mode: two simulated players, deterministic signal history, generated
-covers and the real write path.
+The repository ships a demo mode: three simulated players, a running group and an offline speaker,
+deterministic signal history, generated covers and the real write path.
 
 ```sh
 npm ci

@@ -52,7 +52,9 @@
     "saved": "Groupe enregistré, inactif.",
     "unknown": "état inconnu",
     "follows": "Piloté par {name}.",
-    "reflected": "Lecture du groupe, pilotée par {name}."
+    "speakers": "Enceintes",
+    "volumeOf": "Volume de {name}",
+    "memberSettings": "Réglages de {name}"
   },
   "guides": {
     "title": "Parcours guidés",

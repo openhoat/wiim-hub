@@ -31,15 +31,20 @@ const openHub = async (page: Page): Promise<void> => {
     window.localStorage.setItem('wiim-hub:theme', 'dark')
   })
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
+  // A card is what the page shows once the fleet answers: a speaker alone, or a
+  // group, which is one card.
+  await expect(page.locator('[data-testid^="playing-"]').first()).toBeVisible()
 }
 
-test('renders one reachable speaker and one offline speaker', async ({ page }) => {
+test('renders a group as one card, and an offline speaker beside it', async ({ page }) => {
   await openHub(page)
 
-  await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Bedroom' })).toBeVisible()
-  await expect(page.getByText('WiiM Pro')).toBeVisible()
+  // The group's name heads the card and the speaker that drives it sits under
+  // it: the reader sees one player, as the vendor app shows it.
+  const group = page.getByTestId('playing-192.0.2.21')
+  await expect(group.getByRole('heading', { level: 2, name: 'Apartment' })).toBeVisible()
+  await expect(group.getByText('Living Room · WiiM Pro')).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Bedroom' })).toBeVisible()
   await expect(page.getByText('Late Ferry', { exact: true })).toBeVisible()
   await expect(page.getByText('The Harbour Lights')).toBeVisible()
   await expect(page.getByText('playing', { exact: true })).toBeVisible()
@@ -97,84 +102,53 @@ test('shows the group a speaker drives, and hides the one an offline speaker rem
 }) => {
   await openHub(page)
 
-  const chips = page.getByRole('button', { name: /1 speaker$/ })
+  // The offline speaker reports a saved group: it keeps its own card and has no
+  // chip, since nothing just confirmed that group.
+  const chips = page.getByRole('button', { name: /2 speakers$/ })
   await expect(chips).toHaveCount(1)
 
-  const chip = page.getByRole('button', { name: /Apartment · 1 speaker$/ })
+  const chip = page.getByRole('button', { name: /Apartment · 2 speakers$/ })
   await chip.click()
 
   const panel = page.locator('[id^="group-panel-"]')
   await expect(panel).toBeVisible()
   await expect(panel.getByText('This speaker drives the group.')).toBeVisible()
-  await expect(panel.getByText('Bedroom')).toBeVisible()
+  await expect(panel.getByText('Hallway')).toBeVisible()
+  await expect(panel.getByText('192.0.2.23')).toBeVisible()
   // A member with no address is not claimed offline: nothing confirmed it.
+  await expect(panel.getByText('Bathroom')).toBeVisible()
   await expect(panel.getByText('state unknown')).toBeVisible()
 })
 
-// A group plays once. The card of the speaker that drives it keeps the cover and
-// the track, and a member draws no player: repeating the mirror on every card
-// turned a three-speaker group into three copies of one cover. The demo's own
-// pair is a saved group with an offline member, so the running pair is patched
-// into a real /api/state answer, the way the optical payload is.
-test('draws the group playback once, on the speaker that drives it', async ({ page }) => {
-  const state: { devices: Record<string, unknown>[] } = await (
-    await page.request.get('/api/state')
-  ).json()
-  const living = state.devices.find(device => device.name === 'Living Room')
-  const bedroom = state.devices.find(device => device.name === 'Bedroom')
-  if (living === undefined || bedroom === undefined) throw new Error('the demo fleet changed')
-  const track = String(living.title)
-  const member = {
-    ...bedroom,
-    online: true,
-    status: 'stop',
-    title: '',
-    artist: '',
-    album: '',
-    albumArt: '',
-    source: '',
-    curposMs: null,
-    totalMs: null,
-    group: {
-      role: 'member',
-      name: 'Apartment',
-      members: [],
-      saved: false,
-      parent: { name: living.name, ip: living.ip },
-    },
-    mirror: {
-      from: { name: living.name, ip: living.ip },
-      group: 'Apartment',
-      status: living.status,
-      title: living.title,
-      artist: living.artist,
-      album: living.album,
-      albumArt: living.albumArt,
-      curposMs: living.curposMs,
-      totalMs: living.totalMs,
-      source: living.source,
-      updatedAt: living.updatedAt,
-    },
-  }
-  await page.route('**/api/state', route =>
-    route.fulfill({ json: { ...state, devices: [living, member] } })
-  )
-
+// A running group is one player: the speaker that drives it carries the cover,
+// the track and the transport, and the speakers that follow it are rows of the
+// same card with their own volume. The demo runs that shape natively (Living
+// Room drives Apartment, Hallway renders it) and remembers a member it cannot
+// poll at all.
+test('draws a running group as one card, with its members as rows', async ({ page }) => {
   await openHub(page)
 
-  // One cover for the whole group, and it belongs to the master.
-  await expect(page.locator('img[src^="/api/art"]')).toHaveCount(1)
-  const master = page.getByTestId('playing-192.0.2.21')
-  await expect(master.getByText(track, { exact: true })).toBeVisible()
+  const group = page.getByTestId('playing-192.0.2.21')
+  // One card per group: the member has no card of its own any more.
+  await expect(page.locator('[data-testid^="playing-"]')).toHaveCount(2)
+  await expect(page.getByTestId('playing-192.0.2.23')).toHaveCount(0)
 
-  // The member names the speaker that drives the group and keeps its own
-  // controls; it draws no cover, no track and no transport.
-  const follower = page.getByTestId('playing-192.0.2.22')
-  await expect(follower.getByText("The group's playback, driven by Living Room.")).toBeVisible()
-  await expect(follower.locator('img[src^="/api/art"]')).toHaveCount(0)
-  await expect(follower.getByText(track, { exact: true })).toHaveCount(0)
-  await expect(follower.getByRole('button', { name: 'Previous' })).toHaveCount(0)
-  await expect(follower.getByRole('button', { name: /Apartment/ })).toBeVisible()
+  // One cover for the whole group, and it belongs to the master.
+  await expect(group.locator('img[src^="/api/art"]')).toHaveCount(1)
+  await expect(group.getByText('Late Ferry', { exact: true })).toBeVisible()
+  await expect(group.getByRole('button', { name: 'Previous' })).toBeVisible()
+
+  // The members are rows of that card: one the fleet polls, with its own
+  // volume, and one the master remembers and nothing confirms.
+  await expect(group.getByText('Speakers', { exact: true })).toBeVisible()
+  await expect(group.getByText('Hallway')).toBeVisible()
+  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
+  await expect(group.getByText('Bathroom')).toBeVisible()
+  await expect(group.getByText('state unknown')).toBeVisible()
+
+  // The offline speaker keeps its own card and draws no row of the group.
+  const bedroom = page.getByTestId('playing-192.0.2.22')
+  await expect(bedroom.getByRole('heading', { level: 2, name: 'Bedroom' })).toBeVisible()
 })
 
 test('opens the sound card on the curve, the presets and the stream quality', async ({ page }) => {
@@ -220,7 +194,9 @@ test('keeps the name being typed across a poll, then renames the speaker', async
   await sheet.getByRole('button', { name: 'Rename' }).click()
   await expect(name).toHaveValue('Kitchen')
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('heading', { name: 'Kitchen' })).toBeVisible()
+  // The card heads on the group's name, so the rename shows on the line that
+  // names the speaker driving it.
+  await expect(page.getByText('Kitchen · WiiM Pro')).toBeVisible()
 
   // The demo holds one fleet in memory: put the name back, or every test after
   // this one would meet a speaker it was not written against.
@@ -231,7 +207,7 @@ test('keeps the name being typed across a poll, then renames the speaker', async
   await page.getByRole('dialog').getByRole('button', { name: 'Rename' }).click()
   await expect(reopened).toHaveValue('Living Room')
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
+  await expect(page.getByText('Living Room · WiiM Pro')).toBeVisible()
 })
 
 test('moves a card against its neighbour, and remembers the order', async ({ page }) => {
@@ -293,7 +269,7 @@ test('exports the sample history from the diagnostic view', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
   await expect(page.getByText('192.0.2.21')).toBeVisible()
   await expect(page.getByText('Demo Wi-Fi').first()).toBeVisible()
-  await expect(page.getByText('reachable', { exact: true })).toBeVisible()
+  await expect(page.getByText('reachable', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('offline', { exact: true })).toBeVisible()
 
   const download = page.waitForEvent('download')
@@ -313,8 +289,9 @@ test('states the findings, and says explicitly when there is nothing to report',
 
   // The playing speaker reads clean, and the panel shows the counters it read:
   // "no anomaly" is a measurement, not a shrug.
-  await expect(page.getByTestId('findings-empty')).toHaveText('No anomaly detected')
-  await expect(page.getByText(/RSSI -5\d dBm · SNR 35 dB · 0 Wi-Fi drop/)).toBeVisible()
+  const clean = page.getByTestId('device-192.0.2.21')
+  await expect(clean.getByTestId('findings-empty')).toHaveText('No anomaly detected')
+  await expect(page.getByText(/RSSI -5\d dBm · SNR 35 dB · 0 Wi-Fi drop/).first()).toBeVisible()
 
   // The silent speaker gets one alert, whose evidence names the failed polls.
   const offline = page.getByText(/does not answer: 3 consecutive poll failure/).first()
@@ -477,7 +454,8 @@ test('states the streaming tier each service reaches, and which one is playing',
 test('keeps a volume written from the page across a poll', async ({ page }) => {
   await openHub(page)
 
-  const volume = page.getByRole('slider', { name: 'Volume' }).first()
+  const card = page.getByTestId('playing-192.0.2.21')
+  const volume = card.getByRole('slider', { name: 'Volume', exact: true })
   await expect(volume).toHaveValue('44')
   await volume.press('ArrowRight')
   await expect(volume).toHaveValue('45')
@@ -491,6 +469,28 @@ test('keeps a volume written from the page across a poll', async ({ page }) => {
   expect(response.ok()).toBe(true)
   const state: { devices: { name: string; volume: number | null }[] } = await response.json()
   expect(state.devices.find(device => device.name === 'Living Room')?.volume).toBe(45)
+})
+
+// A member of a group has no card, so its volume is written from the row the
+// group card carries. The write goes to that speaker, not to the master: each
+// speaker renders the stream at its own level, and mixing the two up would move
+// the wrong room.
+test('writes the volume of a group member from its row', async ({ page }) => {
+  await openHub(page)
+
+  const card = page.getByTestId('playing-192.0.2.21')
+  const volume = card.getByRole('slider', { name: 'Volume of Hallway' })
+  await expect(volume).toHaveValue('35')
+  await volume.press('ArrowRight')
+  await expect(volume).toHaveValue('36')
+  await page.waitForTimeout(4000)
+  await expect(volume).toHaveValue('36')
+
+  const response = await page.request.get('/api/state')
+  const state: { devices: { name: string; volume: number | null }[] } = await response.json()
+  expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(36)
+  // The master kept its own level.
+  expect(state.devices.find(device => device.name === 'Living Room')?.volume).not.toBe(36)
 })
 
 test('remembers the view, the language and the theme', async ({ page }) => {
@@ -535,11 +535,12 @@ test('lists the addresses it polls, and says which ones it does not own', async 
   const dialog = page.getByRole('dialog')
   await expect(dialog.getByText('192.0.2.21')).toBeVisible()
   await expect(dialog.getByText('192.0.2.22')).toBeVisible()
+  await expect(dialog.getByText('192.0.2.23')).toBeVisible()
 
   // The demo fleet is fixed, like a seed from the environment: the list is
   // readable, and it says where the entries come from instead of offering an
   // edit that would not persist.
-  await expect(dialog.getByText('from the environment')).toHaveCount(2)
+  await expect(dialog.getByText('from the environment')).toHaveCount(3)
   await expect(dialog.getByRole('button', { name: 'Remove' })).toHaveCount(0)
 
   // A write is refused with the reason, not silently dropped.
@@ -598,7 +599,7 @@ test('opens on the cached shell when the network is gone', async ({ page, contex
   await page.reload({ waitUntil: 'load' })
 
   // The document, its bundle and its icons all came from the cache.
-  await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 2, name: 'Apartment' })).toBeVisible()
   await expect(page.getByText('Hub unreachable')).toBeVisible()
   await context.setOffline(false)
 
@@ -648,7 +649,7 @@ test('offers a new version to a window that stayed open, instead of a reinstall'
       const navigation = page.waitForEvent('framenavigated')
       await page.getByRole('button', { name: 'Reload' }).click()
       await navigation
-      await expect(page.getByRole('heading', { name: 'Living Room' })).toBeVisible()
+      await expect(page.getByRole('heading', { level: 2, name: 'Apartment' })).toBeVisible()
 
       // Reloaded once, on the new worker, and the banner is gone: nothing is left
       // waiting and nothing invites a second click.
@@ -708,12 +709,12 @@ test.describe('on a phone', () => {
     // The labels are hidden below the sm breakpoint; the buttons keep their
     // accessible name, so the icon alone is still announced.
     await expect(page.getByRole('button', { name: 'Now playing' }).locator('span')).toBeHidden()
-    await expect(page.getByText('1 of 2 online')).toBeHidden()
+    await expect(page.getByText('2 of 3 online')).toBeHidden()
 
-    const livingRoom = await page.getByRole('heading', { name: 'Living Room' }).boundingBox()
+    const group = await page.getByRole('heading', { name: 'Apartment' }).boundingBox()
     const bedroom = await page.getByRole('heading', { name: 'Bedroom' }).boundingBox()
-    expect(livingRoom).not.toBeNull()
+    expect(group).not.toBeNull()
     expect(bedroom).not.toBeNull()
-    expect(bedroom?.y ?? 0).toBeGreaterThan(livingRoom?.y ?? 0)
+    expect(bedroom?.y ?? 0).toBeGreaterThan(group?.y ?? 0)
   })
 })

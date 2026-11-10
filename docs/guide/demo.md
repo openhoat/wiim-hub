@@ -1,6 +1,6 @@
 # Demo mode
 
-No speaker at hand? The repository ships a demo that serves the same bundle over two simulated
+No speaker at hand? The repository ships a demo that serves the same bundle over three simulated
 players. It needs no device, no network and no extra dependency.
 
 ```sh
@@ -11,16 +11,19 @@ npm run demo         # http://localhost:8090, PORT=8091 to move it
 
 ## What is simulated
 
-Two players, on documentation addresses (`192.0.2.21` and `192.0.2.22`):
+Three players, on documentation addresses (`192.0.2.21`, `.22` and `.23`):
 
-| Device  | State                                                                           |
-| ------- | ------------------------------------------------------------------------------- |
-| Living  | playing, with a generated cover, a saved group it drives, and a full sound card |
-| Bedroom | offline, three failed polls, with a group it remembers but does not run         |
+| Device  | State                                                                             |
+| ------- | --------------------------------------------------------------------------------- |
+| Living  | playing, with a generated cover, a running group it drives, and a full sound card |
+| Bedroom | offline, three failed polls, with a group it remembers but does not run           |
+| Hallway | online, member of the running group, answering nothing about its own playback     |
 
-Both report a deterministic signal history, so the sparkline has a shape rather than noise, and the
-offline card carries the findings a real one would: a device that does not answer, and a group
-that is saved without running.
+The running group is the shape the page draws as one card: Living Room drives it, Hallway renders
+it, and Bathroom is a member the master names with no address, which the card shows with an unknown
+state. All three report a deterministic signal history, so the sparkline has a shape rather than
+noise, and the offline card carries the findings a real one would: a device that does not answer,
+and a group that is saved without running.
 
 What is **not** faked is the path a write takes. The demo goes through the same action parser and
 the same command builder as the hub: the volume ceiling, the available inputs and outputs and the

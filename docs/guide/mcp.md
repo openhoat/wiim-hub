@@ -97,5 +97,5 @@ the real answer survived.
   forwarded untouched, the hub's error passed through, and the schemas rejecting a key they do not
   name.
 - The demo mode is the end-to-end path: `PORT=8080 npm run demo`, then point `WIIM_HUB_URL` at it.
-  It serves two simulated players, one online and one offline, so both the answer and the `409`
-  are one call away.
+  It serves three simulated players, a running group and an offline one, so both the answer and the
+  `409` are one call away.

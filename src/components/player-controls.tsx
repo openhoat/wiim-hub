@@ -25,7 +25,6 @@ import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
 import { controlErrorLabel, inputLabel, isExternalInput } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
-import type { PlaybackMirror } from '@/lib/types'
 import type { Controls } from '@/lib/use-controls'
 
 // The volume ceiling the device reports, with a sane fallback so a missing
@@ -41,7 +40,14 @@ const sleepOptions = [0, 15, 30, 45, 60, 90]
 
 // Dragging is local state; the write happens once, on release. The server queue
 // coalesces too, but the cheapest request is the one never sent.
-const VolumeControl = ({ controls }: Readonly<{ controls: Controls }>) => {
+//
+// The label names the speaker the slider drives when it is drawn outside the
+// player: a group card shows one row per speaker, and two sliders announced as
+// "Volume" tell a screen reader nothing about which one it just moved.
+export const VolumeControl = ({
+  controls,
+  label,
+}: Readonly<{ controls: Controls; label?: string }>) => {
   const { t } = useSettings()
   const device = controls.device
   const ceiling = ceilingOf(device.maxVolume)
@@ -87,7 +93,7 @@ const VolumeControl = ({ controls }: Readonly<{ controls: Controls }>) => {
           step={1}
           value={Math.min(level, ceiling)}
           disabled={!device.online}
-          aria-label={t('controls.volume')}
+          aria-label={label ?? t('controls.volume')}
           onChange={event => setLevel(Number(event.currentTarget.value))}
           onPointerUp={() => commit(level)}
           onKeyUp={() => commit(level)}
@@ -331,42 +337,6 @@ export const PlayerControls = ({
 
 // A member of a running group plays nothing of its own: the stream runs on the
 // master, and a transport sent here would drive the member's own silent input,
-// not the group. The card therefore shows the progress the master reports, read
-// only, and keeps the volume, which is this speaker's own. Driving the group is
-// a write on the master, which the hub does not do yet.
-const GroupProgress = ({ mirror, now }: Readonly<{ mirror: PlaybackMirror; now: number }>) => {
-  const { t } = useSettings()
-  const total = mirror.totalMs ?? 0
-  const position = positionOf(mirror, now) ?? mirror.curposMs ?? 0
-  const ratio = total > 0 ? Math.min(1, position / total) : 0
-  return (
-    <div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn(
-            'h-full rounded-full bg-accent/60',
-            mirror.status === 'play' && 'animate-pulse'
-          )}
-          style={{ width: `${Math.round(ratio * 100)}%` }}
-        />
-      </div>
-      <div className="mt-1.5 flex items-center justify-between text-[11px] tabular-nums text-muted-foreground">
-        <span>{formatDuration(position)}</span>
-        <span>{total > 0 ? formatDuration(total) : t('controls.live')}</span>
-      </div>
-    </div>
-  )
-}
-
-export const GroupControls = ({
-  controls,
-  mirror,
-  now,
-}: Readonly<{ controls: Controls; mirror: PlaybackMirror; now: number }>) => (
-  <div className="mt-5 space-y-3">
-    <GroupProgress mirror={mirror} now={now} />
-    <div className="flex flex-wrap items-center gap-3">
-      <VolumeControl controls={controls} />
-    </div>
-  </div>
-)
+// not the group. The group card therefore draws no player on a member: its row
+// keeps the volume, which is this speaker's own, and the progress belongs to
+// the speaker that drives the group.

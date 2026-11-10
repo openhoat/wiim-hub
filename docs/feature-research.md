@@ -381,10 +381,18 @@ uuid:"A1B27C4DE6F0498B93D5E0C7A4F28B61"}]}],current_group_id:"6E2A9D14-…"}`. A
 Shipped read only in 0.4.3: `role` (`master` from a member list, `member` from a group id in the
 status, `none` otherwise), the registry entry the device points at, and its members. A saved group
 with nothing running is rendered as saved: its members have no address and their state is unknown,
-never "offline". A member card draws no player of its own: the master's card already shows the cover
-and names the track, and copying them onto every member card drew the same cover once per speaker,
-which is what the vendor app avoids by showing one player per group. The member keeps the group it
-follows, its own volume and its diagnostics. A player that is not grouped pays no extra request; one
+never "offline".
+
+0.9.20 draws the fleet as one card per player: `src/lib/cards.ts` partitions what the hub
+confirmed, and a running group becomes the card of its master, whose members are rows with their
+own volume. A member keeps no card of its own, because the master's card already shows the cover
+and names the track, and copying them onto every member card drew the same cover once per speaker
+(measured: three copies for a group of three), which is what the vendor app avoids by showing one
+player per group. The fold needs the group to run: a saved group, or a master that stopped
+answering, leaves the speakers on their own cards, and a member that plays its own track keeps its
+card because its answer wins. The layout follows the cards, so a folded member loses its rank in the
+pinned order until it is drawn again; the diagnostic view keeps one card per speaker, in the
+masters' pinned order with members appended. A player that is not grouped pays no extra request; one
 that is, or that points at a saved group, pays one `getSlaveList` per poll.
 
 Writes wait for a second reachable unit (`multiroom:SlaveVolume`, `multiroom:SlaveMute`,
@@ -779,7 +787,7 @@ disk, not the one cached at install.
 | Presets                              | v2 remote control    | grid, play by slot, relayed art                                                            |
 | Output routing, EQ read, sleep timer | v2 remote control    | read first, one write each                                                                 |
 | Diagnostic assistance                | diagnostic assistant | findings with evidence, guided flows, report export (findings and report shipped in 0.7.0) |
-| Multiroom                            | v3                   | group card, per member volume, join/leave                                                  |
+| Multiroom                            | v3                   | group card and per member volume shipped in 0.9.20; join/leave open                        |
 | UPnP events                          | performance          | replace polling, fallback kept                                                             |
 | Managed host list                    | fleet                | three sources, one card per machine, saved on a volume                                     |
 

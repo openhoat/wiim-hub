@@ -107,10 +107,12 @@ const Level = ({
   )
 }
 
-export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls }>) => {
+// The rows themselves, without the sheet that carries them: the page shows them
+// behind a card's settings button, and a member of a group shows them in its own
+// sheet, since a member has no card of its own.
+export const DeviceSettingsBody = ({ controls }: Readonly<{ controls: Controls }>) => {
   const { t } = useSettings()
   const device = controls.device
-  const [open, setOpen] = useState(false)
   const [settings, setSettings] = useState<DeviceSettings | null>(null)
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -142,10 +144,11 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
 
   // One read when the sheet opens, and one after each write: the speaker holds
   // the values, so a read while the sheet is open would only undo what is being
-  // typed there.
+  // typed there. The sheet mounts its content when it opens, so a mount is an
+  // open.
   useEffect(() => {
-    if (open) void load()
-  }, [open, load])
+    void load()
+  }, [load])
 
   // A failed write leaves the speaker untouched: re-read anyway, so the row
   // shows what the device really holds instead of the value the user clicked.
@@ -164,6 +167,120 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
   const ceiling = settings?.maxVolume ?? 100
 
   return (
+    <>
+      {loading && settings === null && (
+        <p className="py-6 text-[11px] text-muted-foreground">{t('device.loading')}</p>
+      )}
+
+      {!loading && settings === null && (
+        <div className="flex items-center gap-2 py-6">
+          <p className="text-[11px] text-warning">{error ?? t('device.loadFailed')}</p>
+          <Button size="sm" variant="outline" onClick={() => void load()}>
+            {t('device.retry')}
+          </Button>
+        </div>
+      )}
+
+      {settings !== null && (
+        <div className="mt-3 divide-y divide-border/60">
+          <Row label={t('device.name')}>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={name}
+                disabled={disabled}
+                maxLength={32}
+                aria-label={t('device.name')}
+                onChange={event => setName(event.currentTarget.value)}
+                className="h-8 w-40 rounded-lg border border-border bg-transparent px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
+              />
+              <Button
+                size="sm"
+                disabled={disabled || name.trim() === '' || name.trim() === settings.name}
+                onClick={() => void save({ action: 'rename', name })}
+              >
+                {t('device.save')}
+              </Button>
+            </div>
+          </Row>
+
+          {settings.ledOn !== null && (
+            <Row label={t('device.led')} hint={t('device.ledHint')}>
+              <Toggle
+                on={settings.ledOn}
+                disabled={disabled}
+                onChange={on => void save({ action: 'led', on })}
+              />
+            </Row>
+          )}
+
+          {settings.buttonsOn !== null && (
+            <Row label={t('device.buttons')} hint={t('device.buttonsHint')}>
+              <Toggle
+                on={settings.buttonsOn}
+                disabled={disabled}
+                onChange={on => void save({ action: 'buttons', on })}
+              />
+            </Row>
+          )}
+
+          {settings.fade !== null && (
+            <Row label={t('device.fade')} hint={t('device.fadeHint')}>
+              <Toggle
+                on={settings.fade}
+                disabled={disabled}
+                onChange={on => void save({ action: 'fade', on })}
+              />
+            </Row>
+          )}
+
+          <Row label={t('device.balance')} hint={t('device.balanceHint')}>
+            <div className="flex w-44 items-center gap-2">
+              <span className="text-[11px] text-muted-foreground">L</span>
+              <Level
+                value={balance}
+                min={-1}
+                max={1}
+                step={0.5}
+                disabled={disabled}
+                ariaLabel={`${t('device.balance')} ${balance}`}
+                onCommit={value => void save({ action: 'balance', value })}
+              />
+              <span className="text-[11px] text-muted-foreground">R</span>
+            </div>
+          </Row>
+
+          <Row label={t('device.maxVolume')} hint={t('device.maxVolumeHint')}>
+            <Level
+              value={ceiling}
+              min={1}
+              max={100}
+              step={1}
+              disabled={disabled}
+              ariaLabel={t('device.maxVolume')}
+              format={value => String(Math.round(value))}
+              onCommit={value => void save({ action: 'maxVolume', level: Math.round(value) })}
+            />
+          </Row>
+        </div>
+      )}
+
+      <p
+        role="status"
+        aria-live="polite"
+        className={cn('mt-2 text-[11px] text-warning', error === null && 'sr-only')}
+      >
+        {error === null ? '' : t('device.failed', { error })}
+      </p>
+    </>
+  )
+}
+
+export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls }>) => {
+  const { t } = useSettings()
+  const device = controls.device
+  const [open, setOpen] = useState(false)
+
+  return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
@@ -180,110 +297,7 @@ export const DeviceSettingsDialog = ({ controls }: Readonly<{ controls: Controls
         <DialogDescription className="mt-1 text-[11px] text-muted-foreground">
           {t('device.subtitle')}
         </DialogDescription>
-
-        {loading && settings === null && (
-          <p className="py-6 text-[11px] text-muted-foreground">{t('device.loading')}</p>
-        )}
-
-        {!loading && settings === null && (
-          <div className="flex items-center gap-2 py-6">
-            <p className="text-[11px] text-warning">{error ?? t('device.loadFailed')}</p>
-            <Button size="sm" variant="outline" onClick={() => void load()}>
-              {t('device.retry')}
-            </Button>
-          </div>
-        )}
-
-        {settings !== null && (
-          <div className="mt-3 divide-y divide-border/60">
-            <Row label={t('device.name')}>
-              <div className="flex items-center gap-1.5">
-                <input
-                  value={name}
-                  disabled={disabled}
-                  maxLength={32}
-                  aria-label={t('device.name')}
-                  onChange={event => setName(event.currentTarget.value)}
-                  className="h-8 w-40 rounded-lg border border-border bg-transparent px-2 text-xs outline-none focus-visible:ring-2 focus-visible:ring-accent/50"
-                />
-                <Button
-                  size="sm"
-                  disabled={disabled || name.trim() === '' || name.trim() === settings.name}
-                  onClick={() => void save({ action: 'rename', name })}
-                >
-                  {t('device.save')}
-                </Button>
-              </div>
-            </Row>
-
-            {settings.ledOn !== null && (
-              <Row label={t('device.led')} hint={t('device.ledHint')}>
-                <Toggle
-                  on={settings.ledOn}
-                  disabled={disabled}
-                  onChange={on => void save({ action: 'led', on })}
-                />
-              </Row>
-            )}
-
-            {settings.buttonsOn !== null && (
-              <Row label={t('device.buttons')} hint={t('device.buttonsHint')}>
-                <Toggle
-                  on={settings.buttonsOn}
-                  disabled={disabled}
-                  onChange={on => void save({ action: 'buttons', on })}
-                />
-              </Row>
-            )}
-
-            {settings.fade !== null && (
-              <Row label={t('device.fade')} hint={t('device.fadeHint')}>
-                <Toggle
-                  on={settings.fade}
-                  disabled={disabled}
-                  onChange={on => void save({ action: 'fade', on })}
-                />
-              </Row>
-            )}
-
-            <Row label={t('device.balance')} hint={t('device.balanceHint')}>
-              <div className="flex w-44 items-center gap-2">
-                <span className="text-[11px] text-muted-foreground">L</span>
-                <Level
-                  value={balance}
-                  min={-1}
-                  max={1}
-                  step={0.5}
-                  disabled={disabled}
-                  ariaLabel={`${t('device.balance')} ${balance}`}
-                  onCommit={value => void save({ action: 'balance', value })}
-                />
-                <span className="text-[11px] text-muted-foreground">R</span>
-              </div>
-            </Row>
-
-            <Row label={t('device.maxVolume')} hint={t('device.maxVolumeHint')}>
-              <Level
-                value={ceiling}
-                min={1}
-                max={100}
-                step={1}
-                disabled={disabled}
-                ariaLabel={t('device.maxVolume')}
-                format={value => String(Math.round(value))}
-                onCommit={value => void save({ action: 'maxVolume', level: Math.round(value) })}
-              />
-            </Row>
-          </div>
-        )}
-
-        <p
-          role="status"
-          aria-live="polite"
-          className={cn('mt-2 text-[11px] text-warning', error === null && 'sr-only')}
-        >
-          {error === null ? '' : t('device.failed', { error })}
-        </p>
+        <DeviceSettingsBody controls={controls} />
       </DialogContent>
     </Dialog>
   )

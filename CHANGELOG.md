@@ -10,6 +10,19 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Changed
+
+- A running group is drawn as one card, the way the vendor app shows it: the group's name heads the
+  card, the speaker that drives it sits under it, and the speakers that follow are rows of the same
+  card, each with its own volume and a button that opens that speaker's equalizer and settings. A
+  saved group, or a group whose master stopped answering, leaves the speakers on their own cards,
+  and a member that plays something of its own keeps its card. The diagnostic view still draws one
+  card per speaker. The layout follows the cards, so a folded member loses its pinned rank until it
+  is drawn again.
+- The demo serves three simulated speakers: Living Room drives a running group, Hallway renders it
+  as a member that answers nothing about its own playback, and Bedroom stays offline with a saved
+  group. The end to end suite drives that shape instead of patching a state answer.
+
 ## [0.9.19] - 2026-11-10
 
 ### Changed

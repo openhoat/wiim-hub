@@ -37,7 +37,7 @@ features:
   - title: Yours, on your network
     details: A bearer key for scripts and agents, or the identity your reverse proxy already leaves. The hub calls no vendor cloud, and ships no vendor code.
   - title: No speaker, no problem
-    details: A demo mode serves the same interface over two simulated players. The end-to-end suite runs against it, so the project is testable without hardware.
+    details: A demo mode serves the same interface over three simulated players. The end-to-end suite runs against it, so the project is testable without hardware.
 ---
 
 ## What the hub is
