@@ -1,5 +1,4 @@
 import {
-  Layers,
   Pause,
   Play,
   SkipBack,
@@ -11,6 +10,7 @@ import {
   VolumeX,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { BrowseSheet } from '@/components/browse-sheet'
 import { PlayUrlDialog } from '@/components/play-url-dialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,7 +21,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { presetArtUrl } from '@/lib/api'
 import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
 import { controlErrorLabel, inputLabel, isExternalInput } from '@/lib/labels'
@@ -316,59 +315,8 @@ export const PlayerControls = ({
         )}
 
         <PlayUrlDialog controls={controls} />
+        <BrowseSheet controls={controls} />
       </div>
-
-      {device.presets.length > 0 && (
-        <div className="space-y-1.5">
-          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <Layers className="size-3" />
-            {t('controls.presets')}
-          </span>
-          {/* What the app saved, in the player's own slot order. A slot is not
-              always a playlist: radios and saved configurations share the list,
-              so the cover and the name come from the payload and the service it
-              was saved from is printed as the firmware spells it. */}
-          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {device.presets.map(preset => {
-              const art = presetArtUrl(device, preset.artwork)
-              const detail =
-                preset.source === '' ? preset.name : `${preset.name} · ${preset.source}`
-              return (
-                <button
-                  key={preset.number}
-                  type="button"
-                  disabled={!online || busy}
-                  onClick={() => void controls.run({ action: 'preset', slot: preset.number })}
-                  title={detail}
-                  aria-label={detail}
-                  className="group min-w-0 text-left disabled:opacity-50"
-                >
-                  <span className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted transition-colors group-hover:border-foreground/40">
-                    {art === null ? (
-                      <span className="grid size-full place-items-center text-xs tabular-nums text-muted-foreground">
-                        {preset.number}
-                      </span>
-                    ) : (
-                      <>
-                        <img src={art} alt="" loading="lazy" className="size-full object-cover" />
-                        <span className="absolute left-1 top-1 rounded bg-background/80 px-1 text-[10px] tabular-nums text-muted-foreground">
-                          {preset.number}
-                        </span>
-                      </>
-                    )}
-                  </span>
-                  <span className="mt-1 block truncate text-[11px]">{preset.name}</span>
-                  {preset.source !== '' && (
-                    <span className="block truncate text-[10px] text-muted-foreground">
-                      {preset.source}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       <p
         role="status"

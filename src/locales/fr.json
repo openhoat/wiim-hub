@@ -209,7 +209,6 @@
     "sleep": "Minuteur",
     "sleepOff": "Désactivé",
     "sleepMinutes": "{n} min",
-    "presets": "Préréglages",
     "unsupported": "Cet appareil ne prend pas en charge cette commande.",
     "failed": "Échec de la commande : {error}",
     "confirmVolume": "Régler le volume à {n} ?",
@@ -284,6 +283,13 @@
     "hint": "L'enceinte va chercher l'adresse elle-même. http ou https uniquement.",
     "address": "Adresse du flux",
     "play": "Lire",
+    "close": "Fermer"
+  },
+  "browse": {
+    "open": "Parcourir",
+    "title": "Parcourir",
+    "hint": "Enregistrés dans le lecteur. Un créneau joue ce que l'enceinte a mémorisé, et le lecteur va chercher un service lui-même.",
+    "slot": "Créneau {n}",
     "close": "Fermer"
   },
   "findings": {

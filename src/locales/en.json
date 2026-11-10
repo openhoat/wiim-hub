@@ -209,7 +209,6 @@
     "sleep": "Sleep timer",
     "sleepOff": "Off",
     "sleepMinutes": "{n} min",
-    "presets": "Presets",
     "unsupported": "This player does not accept that command.",
     "failed": "Command failed: {error}",
     "confirmVolume": "Set the volume to {n}?",
@@ -284,6 +283,13 @@
     "hint": "The speaker fetches the address itself. http or https only.",
     "address": "Stream address",
     "play": "Play",
+    "close": "Close"
+  },
+  "browse": {
+    "open": "Browse",
+    "title": "Browse",
+    "hint": "Saved in the player. A slot plays what the speaker memorised, and the player fetches a service itself.",
+    "slot": "Slot {n}",
     "close": "Close"
   },
   "findings": {

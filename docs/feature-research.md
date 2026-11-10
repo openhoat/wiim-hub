@@ -300,8 +300,8 @@ the feature. Rules marked **must** are correctness rules, not polish.
 
 ### 5.4 Presets
 
-- `getPresetInfo` gives name, source, stream URL, cover URL, slot number. A hub can render a
-  real preset grid, something the app does well but the community tools often skip.
+- `getPresetInfo` gives name, source, stream URL, cover URL, slot number. A hub can render the
+  slots as a cover list, something the app does well but the community tools often skip.
 - Play with `MCUKeyShortClick:<slot>`. Slot numbers are not contiguous in the payload (a
   device can report slots 1 and 6), so key on `number`, never on array index.
 - Empty list is the common case on a fresh device (`preset_num: 0` here): show an affordance
@@ -310,6 +310,13 @@ the feature. Rules marked **must** are correctness rules, not polish.
   content otherwise). The relay accepts only a URI the device reported, follows no redirect,
   resolves the name once and connects to the checked address, refuses private targets other than
   the speaker itself, sniffs the image type from the bytes, and stops at 6 MiB / 5 s.
+- Measured on 10/11/2026, on a slot saved from YouTube Music: `url` answers `unknow`, so the
+  player resolves the stream itself when the slot is played and the hub needs no account of its
+  own. The third field of `MCUKeyShortClick:<slot>:<track>` is not a jump: it answered `OK` for
+  tracks 1, 7 and 150 and replayed the list from its first track every time. `next` and `prev` do
+  walk a service list, one track per call, in a stable order. The hub therefore lists the slots in
+  a Browse sheet and sends only the slot number: it draws no track list, because the player
+  publishes none (`plicount` stays 0 and the `getPlaylist*` family answers `unknown command`).
 
 ### 5.5 EQ and acoustic
 

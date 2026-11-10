@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Changed
+
+- Saved presets leave the player card for a Browse sheet, opened from the controls row: cover,
+  name, slot number and the service the slot was saved from, and one tap sends the slot. The card
+  keeps only what is playing now, since a list of favourites competes with the track on a phone.
+  The player resolves a service slot itself, so a YouTube Music playlist still starts with no
+  account held by the hub, and a speaker that saved nothing shows no trigger at all.
+
 ## [0.9.17] - 2026-11-10
 
 ### Added

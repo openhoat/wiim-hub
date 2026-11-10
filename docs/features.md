@@ -31,17 +31,17 @@ and the behaviours measured on a real player are recorded in the
 
 ## Control
 
-| Feature                                                    | What you get                                                                                                           |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| [Playback](/reference/http-api#intents)                    | Play, pause, toggle, stop, next, previous, seek in seconds, volume and mute                                            |
-| [Sources and sleep](/reference/http-api#intents)           | Switch input, set a sleep timer the player counts down itself                                                          |
-| [Audio route](/reference/http-api#intents)                 | Choose the output the player should drive, when it publishes the list                                                  |
-| [A stream URL](/reference/http-api#intents)                | Hand the player a URL it fetches itself, so the stream outlives the hub                                                |
-| [Saved presets](/feature-research#_5-4-presets)            | The slots the player holds, cover and service included; the player resolves a service slot itself, so one tap plays it |
-| [Equalizer](/feature-research#_5-5-eq-and-acoustic)        | On or off, presets, bands, RoomFit, and the quality the device reports                                                 |
-| [Device settings](/reference/http-api)                     | Name, LED, front buttons, balance, maximum volume and fade                                                             |
-| [One queue per speaker](/how-it-works#the-write-path)      | Writes to a device are serialised, so two gestures cannot race each other                                              |
-| [Intents, never raw commands](/reference/http-api#intents) | The body is an intent the hub maps itself, so no caller can send an arbitrary firmware command                         |
+| Feature                                                    | What you get                                                                                                             |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| [Playback](/reference/http-api#intents)                    | Play, pause, toggle, stop, next, previous, seek in seconds, volume and mute                                              |
+| [Sources and sleep](/reference/http-api#intents)           | Switch input, set a sleep timer the player counts down itself                                                            |
+| [Audio route](/reference/http-api#intents)                 | Choose the output the player should drive, when it publishes the list                                                    |
+| [A stream URL](/reference/http-api#intents)                | Hand the player a URL it fetches itself, so the stream outlives the hub                                                  |
+| [Saved presets](/feature-research#_5-4-presets)            | The slots the player holds, browsed from a sheet with cover, name and service; the player resolves a service slot itself |
+| [Equalizer](/feature-research#_5-5-eq-and-acoustic)        | On or off, presets, bands, RoomFit, and the quality the device reports                                                   |
+| [Device settings](/reference/http-api)                     | Name, LED, front buttons, balance, maximum volume and fade                                                               |
+| [One queue per speaker](/how-it-works#the-write-path)      | Writes to a device are serialised, so two gestures cannot race each other                                                |
+| [Intents, never raw commands](/reference/http-api#intents) | The body is an intent the hub maps itself, so no caller can send an arbitrary firmware command                           |
 
 ## Diagnostics
 

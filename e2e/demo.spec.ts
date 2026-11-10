@@ -52,6 +52,46 @@ test('renders one reachable speaker and one offline speaker', async ({ page }) =
   await expect(art.first()).toHaveAttribute('src', /uri=demo%3A%2F%2Fcover%2F/)
 })
 
+// The card answers what is playing now; the slots the player saved live one tap
+// away, in a sheet. The demo saves a radio and a YouTube Music playlist, and the
+// offline speaker saved nothing, so it gets no trigger at all.
+test('browses the saved slots from a sheet instead of the card', async ({ page }) => {
+  await openHub(page)
+
+  // Nothing of the list sits on the card before the sheet is opened.
+  await expect(page.getByRole('button', { name: /Sunday Jazz/ })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Browse' })).toHaveCount(1)
+
+  await page.getByRole('button', { name: 'Browse' }).click()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.getByRole('button', { name: 'Morning Radio, vTuner · Slot 1' })).toBeVisible()
+  await expect(
+    sheet.getByRole('button', { name: 'Sunday Jazz, YouTubeMusic · Slot 3' })
+  ).toBeVisible()
+
+  // A tap carries the slot number and nothing else: on a service slot the player
+  // resolves what it plays. The write is intercepted, because the demo keeps
+  // what a preset changed for the rest of the run and the other tests read the
+  // track it started with; the answer is the one the route returns.
+  let sent: unknown = null
+  await page.route('**/api/command?**', async route => {
+    sent = route.request().postDataJSON()
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        unsupported: false,
+        command: 'MCUKeyShortClick:3',
+        body: 'OK',
+      }),
+    })
+  })
+  await sheet.getByRole('button', { name: /Sunday Jazz/ }).click()
+  await expect(sheet).toHaveCount(0)
+  expect(sent).toEqual({ action: 'preset', slot: 3 })
+})
+
 test('shows the group a speaker drives, and hides the one an offline speaker remembers', async ({
   page,
 }) => {
