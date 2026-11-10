@@ -10,6 +10,18 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The twelve diagnostic rules can post an alert: a JSON webhook in `NOTIFY_WEBHOOK` and an ntfy
+  topic in `NOTIFY_NTFY` (with an optional `NOTIFY_NTFY_TOKEN`), both optional and independent. A
+  rule that stays raised is one message and not one per poll, and a rule that clears and comes back
+  inside `NOTIFY_QUIET_MS` (one hour by default) is held: a weak link flapping around its threshold
+  is one fault. `NOTIFY_MIN_SEVERITY` leaves the four `info` rules out by default, `NOTIFY_RULES`
+  narrows the channel to the rules named, and an unknown id is reported at start rather than
+  silently ignored. A send is fire and forget with a five second budget, so a channel that is down
+  is a log line, never a poll that waits or a channel that silences the other one. Nothing is
+  retried and nothing is stored: a restart announces the open rules once, as a first start would.
+
 ## [0.9.11] - 2026-11-10
 
 ### Added

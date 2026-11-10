@@ -21,6 +21,7 @@ import {
   writeHostsFile,
 } from './hosts.ts'
 import { readInventory, resolutionFor } from './inventory.ts'
+import { notifierFromEnv } from './notify.ts'
 import { createWriteQueue } from './queue.ts'
 import { readServices } from './services.ts'
 import { createEventHub, type EventPatch } from './upnp.ts'
@@ -44,6 +45,9 @@ const diagnosticsMs = 60_000
 // environment, and the compose file knows it.
 const hubVersion = (process.env.HUB_VERSION ?? 'dev').trim()
 const discoveryEnabled = (process.env.DISCOVERY ?? '1') !== '0'
+// Null while no channel has an address: a hub that has nowhere to send says so
+// once at start, and the poll loop pays a null test per device.
+const notifier = notifierFromEnv()
 const discoveryIntervalMs = 300_000
 const distDir = resolve(import.meta.dirname, '..', 'dist', 'app')
 
@@ -265,6 +269,15 @@ const pollAll = async (): Promise<void> => {
         state.upnp = hub.status(state.ip)
         ensureSubscription(state)
         refreshDiagnostics(state)
+        // The findings are cheap and read the state the poll just wrote, so they
+        // are evaluated every tick: a player that goes offline is then reported
+        // at once instead of at the next diagnostic pass. The notifier speaks
+        // only when a rule appears, which is why this call is not throttled.
+        notifier?.push({
+          host,
+          device: state.name,
+          findings: findingsFor({ state, diagnostics: state.diagnostics }),
+        })
       })
     )
   } finally {
@@ -818,6 +831,11 @@ const main = async (): Promise<void> => {
     })
   } else {
     console.log('wiim-hub: UPnP events off (UPNP_CALLBACK is empty)')
+  }
+  if (notifier === null) {
+    console.log('wiim-hub: notifications off (NOTIFY_WEBHOOK and NOTIFY_NTFY are empty)')
+  } else {
+    console.log(`wiim-hub: notifications on (${notifier.channels.join(', ')})`)
   }
   await pollAll()
   scheduleNextPoll()

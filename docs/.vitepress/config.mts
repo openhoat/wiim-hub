@@ -39,6 +39,7 @@ export default withMermaid(
             { text: 'Configuration', link: '/guide/configuration' },
             { text: 'Devices', link: '/guide/devices' },
             { text: 'UPnP events', link: '/guide/events' },
+            { text: 'Notifications', link: '/guide/notifications' },
             { text: 'Demo mode', link: '/guide/demo' },
             { text: 'Development', link: '/guide/development' },
           ],

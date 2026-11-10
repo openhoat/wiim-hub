@@ -77,6 +77,8 @@ on desktop never updates `icons` on an installed app.
   report says which source answered.
 - **A mixed fleet is the normal case**: transport, names and capabilities are probed per device,
   never assumed. Missing fields stay unknown instead of being guessed.
+- **Alerts that go out**: the same rules can post to a JSON webhook or an ntfy topic, once when a rule
+  appears and not while it lasts, filtered by rule and severity, with a one hour quiet period.
 - **Evidence over verdicts**: twelve rules turn the device's own counters into short facts, each with
   its number and the command it came from, and the same content exports as a Markdown report to
   paste into a support thread.

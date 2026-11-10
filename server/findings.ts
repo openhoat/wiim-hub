@@ -277,7 +277,12 @@ const sentences: Record<FindingId, (values: Record<string, string | number>) => 
   sleepTimer: values => `A sleep timer will power the player off in ${values.minutes} min.`,
 }
 
-const sentenceFor = (finding: Finding): string => sentences[finding.id](finding.values)
+export const findingSentence = (finding: Finding): string => sentences[finding.id](finding.values)
+
+// The ids as values, so a configuration that names them can be checked instead
+// of trusted: a typo in a rule list would otherwise silence an alert without a
+// word. `Object.hasOwn` rather than `in`, which would accept `toString`.
+export const isFindingId = (value: string): value is FindingId => Object.hasOwn(sentences, value)
 
 // The report is the artefact a user pastes into a support thread: facts first,
 // then the raw answers, so the reader can check every claim.
@@ -336,7 +341,7 @@ export const buildReport = (input: {
   } else {
     lines.push('## Findings', '')
     for (const finding of findings) {
-      lines.push(`- **${finding.severity}** ${sentenceFor(finding)}`)
+      lines.push(`- **${finding.severity}** ${findingSentence(finding)}`)
       for (const evidence of finding.evidence) lines.push(`  - ${evidence}`)
     }
     lines.push('')

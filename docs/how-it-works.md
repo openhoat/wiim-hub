@@ -110,6 +110,19 @@ of readings, the findings, the guided checks, the capability inventory and the r
 built from. It is meant to be pasted into a support thread, which is why it quotes the evidence
 rather than a conclusion.
 
+## The alerts
+
+A finding is a fact; an alert is that fact appearing. The poll loop evaluates the rules on every tick
+and hands them to `server/notify.ts`, which speaks only when a rule is not already open: a fault that
+lasts an hour is one message, not twelve hundred. A rule that clears and comes back inside the quiet
+period (one hour by default) is held too, which is what keeps a weak link flapping around its
+threshold from paging on every flap.
+
+Two channels ship, a JSON webhook and an ntfy topic, both optional and independent. A send is fire and
+forget with a five second budget: a channel that is down is a line in the log, never a poll that waits
+or a second channel that stays silent. Nothing is retried and nothing is stored, so a restart
+announces the open rules once again, exactly as a first start would.
+
 ## The guided checks
 
 Four flows (no sound, drops, wrong output, cannot join a group) walk the cheapest question first and

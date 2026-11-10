@@ -18,11 +18,6 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 - [ ] Join, leave and kick out with a confirmation naming the device and the raw answer on failure
 - [ ] Reconcile the group state after every write instead of trusting the optimistic view
 
-### #11 [UX] Add notifications and webhooks for the alerts (P3)
-
-- [ ] Support a generic webhook and ntfy, with a per alert rule and a quiet period
-- [ ] Never send a notification twice for the same event, and log what was sent
-
 ### #14 [I18N] Complete the French copy and localise the formats (P3)
 
 - [ ] Review every string in context, including the diagnostic findings and the guided flows

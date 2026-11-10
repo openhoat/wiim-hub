@@ -15,6 +15,12 @@ the environment wins over the file.
 | `DEVICE_STATIC_HOSTS` | empty             | Fixed `name=address` pairs, asked first when a name is resolved                                 |
 | `DEVICE_LEASES_FILE`  | empty             | dnsmasq lease file the hub may read, asked second when a name is resolved                       |
 | `HOSTS_FILE`          | `data/hosts.json` | Where the hosts added from the page are written; `DEVICE_HOSTS` stays read only                 |
+| `NOTIFY_WEBHOOK`      | empty             | URL that receives one JSON object per alert; enables the webhook channel                        |
+| `NOTIFY_NTFY`         | empty             | ntfy topic URL, posted as text with a title and a priority; enables the ntfy channel            |
+| `NOTIFY_NTFY_TOKEN`   | empty             | Bearer token for a protected ntfy topic                                                         |
+| `NOTIFY_RULES`        | empty             | Comma separated rule ids to send, empty meaning all of them                                     |
+| `NOTIFY_MIN_SEVERITY` | `warn`            | Lowest severity sent, `info`, `warn` or `alert`                                                 |
+| `NOTIFY_QUIET_MS`     | `3600000`         | How long a rule that cleared stays silent before it may speak again                             |
 | `DISCOVERY`           | `1`               | SSDP discovery, best effort, set `0` to disable                                                 |
 | `HUB_VERSION`         | `dev`             | Version string written in the diagnostic report; the image carries no `package.json` at runtime |
 
@@ -69,6 +75,12 @@ the last known address, so a lease change stays invisible instead of making the 
 The diagnostic report says which source answered: `Probe path: kitchen → 192.168.1.10, resolved by
 dhcp leases over https.` That is the line that tells a support thread whether mDNS is the suspect at
 all.
+
+## Alerts
+
+`NOTIFY_WEBHOOK` and `NOTIFY_NTFY` are off until one of them has an address. Both take one alert per
+rule that appears, never the same one twice while it stays, subject to a quiet period:
+[Notifications](/guide/notifications) covers the filters and the message shapes.
 
 ## Behind a reverse proxy
 
