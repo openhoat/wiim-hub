@@ -10,6 +10,21 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.15] - 2026-11-10
+
+### Changed
+
+- Three parsers read their input by hand instead of with an expression Sonar flags as
+  super-linear: the API key check, the argument formatter behind every sentence, and the base
+  URL of the MCP client. A header that is one long run of spaces, a malformed argument in a
+  dictionary, or a URL ending on a trail of slashes no longer costs more than the input it
+  carries. The formatter still prints an argument it does not understand as it came, which is
+  how a typo shows up in the sentence instead of blanking it.
+- Alerts reach their channels at the same time instead of one after the other: a channel slow to
+  answer no longer delays the other, and a refusal still stays out of the poll loop.
+- The settings screen and a mirrored card's headline name their branches instead of nesting
+  them, and the dictionary parity test sorts with `localeCompare`.
+
 ## [0.9.14] - 2026-11-10
 
 ### Fixed
@@ -558,6 +573,7 @@ Releases are cut from `package.json`: the version in that file names the section
 - English and French labels, picked from the browser, with an English fallback.
 
 [Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.11...HEAD
+[0.9.15]: https://github.com/openhoat/wiim-hub/compare/v0.9.14...v0.9.15
 [0.9.14]: https://github.com/openhoat/wiim-hub/compare/v0.9.13...v0.9.14
 [0.9.13]: https://github.com/openhoat/wiim-hub/compare/v0.9.12...v0.9.13
 [0.9.12]: https://github.com/openhoat/wiim-hub/compare/v0.9.11...v0.9.12
