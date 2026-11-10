@@ -1,7 +1,7 @@
 import { ArrowLeft, ArrowRight, Disc3, Radio, Users } from 'lucide-react'
 import { useState } from 'react'
 import { DeviceSettingsDialog } from '@/components/device-settings'
-import { PlayerControls } from '@/components/player-controls'
+import { GroupControls, PlayerControls } from '@/components/player-controls'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -63,6 +63,11 @@ const GroupPanel = ({ group, id }: Readonly<{ group: GroupState; id: string }>) 
   return (
     <div id={id} className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3">
       <p className="text-[11px] text-muted-foreground">{note}</p>
+      {group.parent !== null && (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {t('group.follows', { name: group.parent.name })}
+        </p>
+      )}
       {group.members.length > 0 && (
         <ul className="mt-2 space-y-1">
           {group.members.map(member => (
@@ -129,16 +134,21 @@ const Cover = ({ art, offline }: Readonly<{ art: string | null; offline: boolean
 )
 
 // The track block: a headline that falls back to the source name on an external
-// input, then the metadata the player reported, then the source and the group.
+// input, then the metadata the player reported, then the source, the note that
+// says where a mirrored playback comes from, and the group.
 const TrackMeta = ({
-  device,
-  headline,
+  title,
+  artist,
+  album,
   source,
+  note,
   chip,
 }: Readonly<{
-  device: Device
-  headline: string
+  title: string
+  artist: string
+  album: string
   source: string
+  note: string | null
   chip: { group: GroupState; open: boolean; onToggle: () => void; panelId: string } | null
 }>) => {
   const { t } = useSettings()
@@ -148,13 +158,14 @@ const TrackMeta = ({
       <p
         className={cn(
           'truncate text-2xl leading-tight font-semibold tracking-tight sm:text-3xl',
-          headline === '' && 'text-muted-foreground'
+          title === '' && 'text-muted-foreground'
         )}
       >
-        {headline === '' ? t('noPlayback') : headline}
+        {title === '' ? t('noPlayback') : title}
       </p>
-      <p className="mt-1 truncate text-sm text-muted-foreground">{device.artist || ' '}</p>
-      <p className="truncate text-xs text-muted-foreground/70">{device.album || ' '}</p>
+      <p className="mt-1 truncate text-sm text-muted-foreground">{artist || ' '}</p>
+      <p className="truncate text-xs text-muted-foreground/70">{album || ' '}</p>
+      {note !== null && <p className="mt-1 truncate text-[11px] text-muted-foreground">{note}</p>}
       {(showSource || chip !== null) && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {showSource && (
@@ -230,17 +241,25 @@ export const NowPlayingCard = ({
   const controls = useControls(device)
   const live = controls.device
   const [groupOpen, setGroupOpen] = useState(false)
+  // A member of a running group plays nothing of its own: what is audible comes
+  // from the speaker that drives the group, and the fleet pass copied it here.
+  // An offline speaker shows no mirror, since nothing just confirmed the group.
+  const mirror = live.online ? live.mirror : null
   // An external input has no track to show: the card names the source, and the
   // badge keeps the transport state without the "a track is playing" meter.
   const external = isExternalInput(live.input)
   const sourceName = external ? inputLabel(t, live.inputLabels, live.input) : ''
-  const headline = sourceName === '' ? live.title : sourceName
-  const playing = live.online && live.status === 'play'
+  const headline = mirror !== null ? mirror.title : sourceName === '' ? live.title : sourceName
+  const playing = live.online && (mirror?.status ?? live.status) === 'play'
   const group = live.group
   // An offline speaker keeps its last known group: showing it would claim a
   // membership nothing just confirmed.
   const showGroup = live.online && (group.role !== 'none' || group.saved)
   const groupPanelId = `group-panel-${device.ip}`
+  // The cover of a mirrored playback belongs to the master: the art route checks
+  // the uri against the answer of the speaker it is asked for.
+  const coverArt =
+    mirror === null ? artUrl(live) : artUrl({ ip: mirror.from.ip, albumArt: mirror.albumArt })
 
   return (
     <Card
@@ -255,16 +274,22 @@ export const NowPlayingCard = ({
         <div className="flex items-center gap-1.5">
           {onMove !== undefined && <MoveButtons index={index} count={count} onMove={onMove} />}
           <DeviceSettingsDialog controls={controls} />
-          <StatusBadge online={device.online} status={live.status} playing={playing && !external} />
+          <StatusBadge
+            online={device.online}
+            status={mirror?.status ?? live.status}
+            playing={playing && !external}
+          />
         </div>
       </div>
 
       <div className="mt-5 flex gap-5">
-        <Cover art={artUrl(live)} offline={!device.online} />
+        <Cover art={coverArt} offline={!device.online} />
         <TrackMeta
-          device={device}
-          headline={headline}
-          source={device.source}
+          title={headline}
+          artist={mirror?.artist ?? live.artist}
+          album={mirror?.album ?? live.album}
+          source={mirror?.source ?? device.source}
+          note={mirror === null ? null : t('group.reflected', { name: mirror.from.name })}
           chip={
             showGroup
               ? {
@@ -280,7 +305,11 @@ export const NowPlayingCard = ({
 
       {showGroup && groupOpen && <GroupPanel group={group} id={groupPanelId} />}
 
-      <PlayerControls controls={controls} now={now} />
+      {mirror === null ? (
+        <PlayerControls controls={controls} now={now} />
+      ) : (
+        <GroupControls controls={controls} mirror={mirror} now={now} />
+      )}
 
       {!device.online && (
         <p className="mt-2 text-[11px] text-muted-foreground">

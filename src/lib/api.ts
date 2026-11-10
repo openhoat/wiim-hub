@@ -123,8 +123,11 @@ export const fetchSettings = (device: Device): Promise<DeviceSettings> =>
 // Cover art travels through the hub: the page is served over https while the// speaker only answers plain http, and a browser drops that mixed content. The
 // device address and the track URI form the cache key, so a cover is fetched
 // once per track rather than once per poll.
-export const artUrl = (device: Device): string | null => {
-  if (device.albumArt === '') return null
+// The route validates the uri against the answer of the host it is given, so the
+// caller names the speaker that reported the cover: for a member of a group that
+// is the master, and the two are not interchangeable.
+export const artUrl = (device: Pick<Device, 'ip' | 'albumArt'>): string | null => {
+  if (device.albumArt === '' || device.ip === '') return null
   const params = new URLSearchParams({ host: device.ip, uri: device.albumArt })
   return `/api/art?${params.toString()}`
 }

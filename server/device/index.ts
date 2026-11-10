@@ -10,7 +10,7 @@ import {
 } from './acoustic.ts'
 import type { Diagnostics } from './diagnostics.ts'
 import { type Capability, capabilityCache, capabilityFor, emptyCapability } from './inputs.ts'
-import type { GroupState, Registry } from './multiroom.ts'
+import type { GroupParent, GroupState, Registry } from './multiroom.ts'
 import { emptyRegistry, groupCache, groupsFor, parseGroup } from './multiroom.ts'
 import type { OutputOption } from './outputs.ts'
 import { artUri, cleanTitle, isRecord, maybeHex, num, parseJson, text } from './payload.ts'
@@ -41,6 +41,12 @@ export type DeviceState = DevicePatch & {
   online: boolean
   lastSeen: number | null
   errors: number
+  // What a member of a running group actually plays. A member answers
+  // `mode 99, stop` and no track of its own: the stream runs on the speaker that
+  // drives the group. The fleet pass copies what that speaker reports, so a
+  // member card can show something audible, with the master named. Null when
+  // the device plays on its own or no master is in the fleet.
+  mirror: PlaybackMirror | null
   // The UPnP subscription behind the playback fields: `subscribed` means the
   // device pushes volume, mute and transport changes, `degraded` means a poll
   // contradicted it and the hub is back on the fast poll.
@@ -48,6 +54,23 @@ export type DeviceState = DevicePatch & {
   diagnostics: Diagnostics | null
   samples: Sample[]
   events: DeviceEvent[]
+}
+
+export type PlaybackMirror = {
+  // The speaker the playback was read from, named for the reader.
+  from: GroupParent
+  group: string
+  status: string
+  title: string
+  artist: string
+  album: string
+  albumArt: string
+  curposMs: number | null
+  totalMs: number | null
+  source: string
+  // The master's own poll time, so the progress of a mirror keeps advancing
+  // between two polls instead of freezing on the last reading.
+  updatedAt: number | null
 }
 
 export type DevicePatch = {

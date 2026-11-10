@@ -6,6 +6,11 @@ import { probeCommand } from './probes.ts'
 // firmware assigned, which is not the MAC on every model.
 export type GroupMember = { name: string; ip: string; uuid: string }
 
+// The speaker that drives the group a member follows. A member cannot answer
+// this itself: it keeps no registry and its status only says `group: "1"`, so
+// the hub names the master from its own fleet (`server/groups.ts`).
+export type GroupParent = { name: string; ip: string }
+
 // Multiroom, read only for now. `role` is what this speaker does in the group,
 // `members` is what the device lists right now, and `saved` says a persistent
 // group exists through `current_group_id` while nothing runs. `name` comes from
@@ -16,6 +21,8 @@ export type GroupState = {
   name: string
   members: GroupMember[]
   saved: boolean
+  // Null unless the fleet pass found the master this member follows.
+  parent: GroupParent | null
 }
 
 // The uuid is what the app joins a group with, so a member that lost its name
@@ -112,5 +119,7 @@ export const parseGroup = (
     name: saved?.name ?? '',
     members: role === 'none' ? (saved?.members ?? []) : reported,
     saved: saved !== null,
+    // Only the fleet pass can answer this: a member's own registry is empty.
+    parent: null,
   }
 }

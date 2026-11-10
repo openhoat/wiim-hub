@@ -90,6 +90,18 @@ const volumeCheck = (state: DeviceState): GuideCheck => {
 }
 
 const transportCheck = (state: DeviceState): GuideCheck => {
+  // A member of a running group answers `stop` whatever the group does: only the
+  // master's transport says whether the room is silent, and the fleet pass copied
+  // it onto the member.
+  if (state.mirror !== null) {
+    const { status, from } = state.mirror
+    return check(
+      'groupTransport',
+      status === 'play' ? 'pass' : 'warn',
+      `group transport ${status} from ${from.name}`,
+      { status, name: from.name }
+    )
+  }
   if (state.status === '') {
     return check('transportUnknown', 'unknown', 'getPlayerStatusEx.status missing')
   }
@@ -172,7 +184,10 @@ const noSound = (state: DeviceState): GuideCheck[] =>
         }),
     sourceCheck(state),
     transportCheck(state),
-    outputCheck(state),
+    // The sound leaves through the group, not through an output the member
+    // chose: asking a member for its output list would stop the flow on a
+    // question that does not apply.
+    state.mirror === null ? outputCheck(state) : null,
     state.group.role === 'member' && state.group.members.length === 0
       ? check('groupNoMember', 'warn', 'multiroom:getSlaveList empty')
       : null,
@@ -254,10 +269,15 @@ const groupCheck = (state: DeviceState): GuideCheck => {
   if (role === 'member' && members.length === 0) {
     return check('groupNoMember', 'warn', `multiroom:getSlaveList empty for ${name || 'a member'}`)
   }
+  // A member answered through the fleet: its own status only says `group 1`, so
+  // the master it follows is the fact worth quoting.
+  const parent = state.group.parent
   return check(
     role === 'master' ? 'groupMaster' : 'groupMember',
     'pass',
-    `getStatusEx.group ${role}, ${members.length} member(s)`,
+    parent === null
+      ? `getStatusEx.group ${role}, ${members.length} member(s)`
+      : `getStatusEx.group ${role} of ${name || 'unnamed'}, driven by ${parent.name}`,
     { count: members.length }
   )
 }

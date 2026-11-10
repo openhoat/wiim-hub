@@ -16,6 +16,7 @@ export default defineConfig({
         'server/auth.ts',
         'server/commands.ts',
         'server/findings.ts',
+        'server/groups.ts',
         'server/guides.ts',
         'server/hosts.ts',
         'mcp/hub.ts',

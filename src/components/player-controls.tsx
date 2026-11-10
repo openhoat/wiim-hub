@@ -26,6 +26,7 @@ import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
 import { controlErrorLabel, inputLabel, isExternalInput } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
+import type { PlaybackMirror } from '@/lib/types'
 import type { Controls } from '@/lib/use-controls'
 
 // The volume ceiling the device reports, with a sane fallback so a missing
@@ -359,3 +360,45 @@ export const PlayerControls = ({
     </div>
   )
 }
+
+// A member of a running group plays nothing of its own: the stream runs on the
+// master, and a transport sent here would drive the member's own silent input,
+// not the group. The card therefore shows the progress the master reports, read
+// only, and keeps the volume, which is this speaker's own. Driving the group is
+// a write on the master, which the hub does not do yet.
+const GroupProgress = ({ mirror, now }: Readonly<{ mirror: PlaybackMirror; now: number }>) => {
+  const { t } = useSettings()
+  const total = mirror.totalMs ?? 0
+  const position = positionOf(mirror, now) ?? mirror.curposMs ?? 0
+  const ratio = total > 0 ? Math.min(1, position / total) : 0
+  return (
+    <div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+        <div
+          className={cn(
+            'h-full rounded-full bg-accent/60',
+            mirror.status === 'play' && 'animate-pulse'
+          )}
+          style={{ width: `${Math.round(ratio * 100)}%` }}
+        />
+      </div>
+      <div className="mt-1.5 flex items-center justify-between text-[11px] tabular-nums text-muted-foreground">
+        <span>{formatDuration(position)}</span>
+        <span>{total > 0 ? formatDuration(total) : t('controls.live')}</span>
+      </div>
+    </div>
+  )
+}
+
+export const GroupControls = ({
+  controls,
+  mirror,
+  now,
+}: Readonly<{ controls: Controls; mirror: PlaybackMirror; now: number }>) => (
+  <div className="mt-5 space-y-3">
+    <GroupProgress mirror={mirror} now={now} />
+    <div className="flex flex-wrap items-center gap-3">
+      <VolumeControl controls={controls} />
+    </div>
+  </div>
+)

@@ -110,6 +110,7 @@ describe('parseDevice', () => {
         name: 'Apartment',
         members: [{ name: 'Bedroom', ip: '', uuid: 'A1B2C3D4E5F60718293A4B5C' }],
         saved: true,
+        parent: null,
       },
       rssi: -51,
       volume: 81,
@@ -185,7 +186,7 @@ describe('parseDevice', () => {
         { hardware: 2, name: 'Line Out' },
         { hardware: 3, name: 'COAX Out' },
       ],
-      group: { role: 'none', name: 'Apartment', saved: true },
+      group: { role: 'none', name: 'Apartment', saved: true, parent: null },
       eq: { enabled: false, presets: recordedAcoustic().presets },
       quality: { sampleRate: 48000, bitDepth: null, bitRate: null },
     })
@@ -273,6 +274,7 @@ describe('parseDevice', () => {
       name: '',
       members: [{ name: 'Kitchen', ip: '192.0.2.11', uuid: 'u1' }],
       saved: false,
+      parent: null,
     })
   })
 

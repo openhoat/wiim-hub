@@ -18,6 +18,7 @@ describe('parseGroup', () => {
       name: '',
       members: [],
       saved: false,
+      parent: null,
     })
   })
 
@@ -36,6 +37,7 @@ describe('parseGroup', () => {
         { name: 'Kitchen', ip: '192.0.2.12', uuid: 'uuid-2' },
       ],
       saved: false,
+      parent: null,
     })
   })
 
@@ -78,6 +80,7 @@ describe('parseGroup', () => {
       name: 'Apartment',
       members: [{ name: 'Bedroom', ip: '', uuid: 'uuid-1' }],
       saved: true,
+      parent: null,
     })
   })
 
@@ -97,6 +100,7 @@ describe('parseGroup', () => {
       name: 'Apartment',
       members: [{ name: 'Bedroom', ip: '', uuid: 'uuid-1' }],
       saved: true,
+      parent: null,
     })
   })
 
@@ -107,6 +111,7 @@ describe('parseGroup', () => {
       name: '',
       members: [],
       saved: false,
+      parent: null,
     })
   })
 

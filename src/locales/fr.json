@@ -50,7 +50,9 @@
       "member": "Cette enceinte suit le groupe."
     },
     "saved": "Groupe enregistré, inactif.",
-    "unknown": "état inconnu"
+    "unknown": "état inconnu",
+    "follows": "Piloté par {name}.",
+    "reflected": "Lecture du groupe, pilotée par {name}."
   },
   "guides": {
     "title": "Parcours guidés",
@@ -87,6 +89,7 @@
       "transportUnknown": "L'enceinte n'a pas annoncé son état de lecture.",
       "stopped": "La lecture est arrêtée : rien ne joue.",
       "paused": "La lecture est en pause.",
+      "groupTransport": "La lecture du groupe est en état {status}, pilotée par {name}.",
       "source": "L'entrée {input} joue.",
       "externalSilent": "L'entrée {input} est sélectionnée et ne joue pas : aucun signal n'atteint l'enceinte.",
       "output": "Sortie {active} ; disponibles : {available}.",

@@ -284,6 +284,24 @@ export const findingSentence = (finding: Finding): string => sentences[finding.i
 // word. `Object.hasOwn` rather than `in`, which would accept `toString`.
 export const isFindingId = (value: string): value is FindingId => Object.hasOwn(sentences, value)
 
+// A member of a running group answers `stop` with no track of its own: the sound
+// comes from the speaker that drives the group, and the report must not read as
+// "this player is silent" while the room is not.
+const playbackLine = (state: DeviceState): string => {
+  const own = `${state.status || 'unknown'}, ${state.source || 'no source'}, ${state.input || 'no input'}`
+  if (state.mirror === null) return own
+  return `${own}, group playback from ${state.mirror.from.name}`
+}
+
+// A member the fleet resolved names the speaker it follows: the device alone
+// only answers `group: "1"`, which used to print as "none" once its name was
+// missing. A member the fleet could not resolve says `member`, not `none`.
+const groupLine = (group: DeviceState['group']): string => {
+  if (group.name === '') return group.role === 'none' ? 'none' : group.role
+  const base = `${group.role}, ${group.name}`
+  return group.parent === null ? base : `${base} (follows ${group.parent.name})`
+}
+
 // The report is the artefact a user pastes into a support thread: facts first,
 // then the raw answers, so the reader can check every claim.
 export const buildReport = (input: {
@@ -317,12 +335,9 @@ export const buildReport = (input: {
       'Link',
       `${number(state.rssi, 'dBm')}, ${number(state.link.snr, 'dB SNR')}, ${number(state.link.rateMbps, 'Mb/s')}`,
     ],
-    [
-      'Playback',
-      `${state.status || 'unknown'}, ${state.source || 'no source'}, ${state.input || 'no input'}`,
-    ],
+    ['Playback', playbackLine(state)],
     ['Volume', volume],
-    ['Group', state.group.name === '' ? 'none' : `${state.group.role}, ${state.group.name}`],
+    ['Group', groupLine(state.group)],
     ['Last seen', state.lastSeen === null ? 'never' : new Date(state.lastSeen).toISOString()],
   ]
   const lines: string[] = []

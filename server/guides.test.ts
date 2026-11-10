@@ -18,7 +18,8 @@ const device = (overrides: Partial<DeviceState> = {}): DeviceState => ({
   ssid: 'lab',
   bssid: 'aa:bb:cc:dd:ee:ff',
   wmrmVersion: '4.3',
-  group: { role: 'none', name: '', members: [], saved: false },
+  mirror: null,
+  group: { role: 'none', name: '', members: [], saved: false, parent: null },
   rssi: -53,
   volume: 30,
   status: 'play',
@@ -129,6 +130,66 @@ describe('guidesFor', () => {
     expect(guide.verdict?.id).toBe('stopped')
   })
 
+  it('reads the "no sound" flow on the group a member follows, not on its own silence', () => {
+    // The device answers `stop` with no track: read alone it fails the flow while
+    // the room is playing, and asks for an output list it does not have.
+    const mirror = {
+      from: { name: 'Salon', ip: '192.0.2.10' },
+      group: 'Appart',
+      status: 'play',
+      title: 'Track',
+      artist: 'Artist',
+      album: 'Album',
+      albumArt: '',
+      curposMs: 30_000,
+      totalMs: 200_000,
+      source: 'YouTubeMusic',
+      updatedAt: 1,
+    }
+    const guide = guideOf(
+      run(
+        device({
+          status: 'stop',
+          title: '',
+          group: {
+            role: 'member',
+            name: 'Appart',
+            members: [{ name: 'Cuisine', ip: '192.0.2.11', uuid: 'u1' }],
+            saved: false,
+            parent: { name: 'Salon', ip: '192.0.2.10' },
+          },
+          mirror,
+        })
+      ),
+      'no-sound'
+    )
+    expect(guide.verdict).toBeNull()
+    expect(ids(guide)).toEqual(['online', 'unmuted', 'volume', 'sleepTimer', 'groupTransport'])
+    const transport = guide.checks.find(entry => entry.id === 'groupTransport')
+    expect(transport?.values).toEqual({ status: 'play', name: 'Salon' })
+
+    // A paused group is worth the same warning as a paused player.
+    const paused = guideOf(
+      run(
+        device({
+          status: 'stop',
+          title: '',
+          group: {
+            role: 'member',
+            name: 'Appart',
+            members: [{ name: 'Cuisine', ip: '192.0.2.11', uuid: 'u1' }],
+            saved: false,
+            parent: { name: 'Salon', ip: '192.0.2.10' },
+          },
+          mirror: { ...mirror, status: 'pause' },
+        })
+      ),
+      'no-sound'
+    )
+    expect(paused.verdict?.id).toBe('groupTransport')
+    expect(paused.verdict?.status).toBe('warn')
+  })
+
   it('blames the selected input when an external one carries no signal', () => {
     const inputLabels = { wifi: 'Wi-Fi', optical: 'Optical', 'line-in': 'Line In' }
 
@@ -217,7 +278,9 @@ describe('guidesFor', () => {
 
   it('reads a saved group that keeps nothing running, and one that does', () => {
     const saved = guideOf(
-      run(device({ group: { role: 'none', name: 'Appart', members: [], saved: true } })),
+      run(
+        device({ group: { role: 'none', name: 'Appart', members: [], saved: true, parent: null } })
+      ),
       'cannot-join-group'
     )
     expect(saved.verdict?.id).toBe('groupSavedOnly')
@@ -231,6 +294,7 @@ describe('guidesFor', () => {
             name: 'Appart',
             members: [{ name: 'Kitchen', ip: '192.0.2.11', uuid: 'u1' }],
             saved: false,
+            parent: null,
           },
         })
       ),
@@ -243,6 +307,27 @@ describe('guidesFor', () => {
       'groupMember',
       'link',
     ])
+  })
+
+  it('quotes the speaker a member follows, which the fleet resolved for it', () => {
+    const guide = guideOf(
+      run(
+        device({
+          status: 'stop',
+          title: '',
+          group: {
+            role: 'member',
+            name: 'Appart',
+            members: [{ name: 'Cuisine', ip: '192.0.2.11', uuid: 'u1' }],
+            saved: false,
+            parent: { name: 'Salon', ip: '192.0.2.10' },
+          },
+        })
+      ),
+      'cannot-join-group'
+    )
+    const check = guide.checks.find(entry => entry.id === 'groupMember')
+    expect(check?.evidence).toBe('getStatusEx.group member of Appart, driven by Salon')
   })
 
   it('admits when this model cannot answer the group commands at all', () => {
@@ -331,7 +416,7 @@ describe('report wording', () => {
     },
     {
       flow: 'no-sound',
-      state: { group: { role: 'member', name: 'Appart', members: [], saved: false } },
+      state: { group: { role: 'member', name: 'Appart', members: [], saved: false, parent: null } },
       sentence: 'This player is a group member and the group lists no member.',
     },
     {
@@ -397,7 +482,7 @@ describe('report wording', () => {
     },
     {
       flow: 'cannot-join-group',
-      state: { group: { role: 'none', name: 'Appart', members: [], saved: true } },
+      state: { group: { role: 'none', name: 'Appart', members: [], saved: true, parent: null } },
       sentence: 'A saved group exists but nothing runs on it.',
     },
   ]

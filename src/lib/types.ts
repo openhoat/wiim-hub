@@ -135,14 +135,37 @@ export type DeviceEvent = {
 
 export type GroupMember = { name: string; ip: string; uuid: string }
 
+// The speaker that drives the group a member follows: a member keeps no
+// registry of its own, so the hub names the master from its own fleet.
+export type GroupParent = { name: string; ip: string }
+
 // Multiroom, read only: `role` is what this speaker does in the group,
 // `members` is what the device lists, and `saved` says the vendor app keeps a
-// group while nothing runs.
+// group while nothing runs. `parent` and the group name of a member come from
+// the fleet, not from the device.
 export type GroupState = {
   role: 'none' | 'master' | 'member'
   name: string
   members: GroupMember[]
   saved: boolean
+  parent: GroupParent | null
+}
+
+// What a member of a running group plays: its own answer is `mode 99, stop` with
+// no track, because the stream runs on the master. The hub copies the master's
+// reading here, names it, and leaves the device's own fields alone.
+export type PlaybackMirror = {
+  from: GroupParent
+  group: string
+  status: string
+  title: string
+  artist: string
+  album: string
+  albumArt: string
+  curposMs: number | null
+  totalMs: number | null
+  source: string
+  updatedAt: number | null
 }
 
 export type Device = {
@@ -155,6 +178,9 @@ export type Device = {
   bssid: string
   wmrmVersion: string
   group: GroupState
+  // Null unless this speaker is a member of a running group whose master the
+  // hub also polls: the playback then runs on the master, not here.
+  mirror: PlaybackMirror | null
   rssi: number | null
   volume: number | null
   status: string

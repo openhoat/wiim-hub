@@ -36,6 +36,7 @@ import {
   statusEx,
   streamServices,
 } from './fixtures/wiim-pro.ts'
+import { reconcileGroups } from './groups.ts'
 import { guidesFor } from './guides.ts'
 import { buildInventory, type Inventory, type Resolution } from './inventory.ts'
 import { parseServicesCapability } from './services.ts'
@@ -96,7 +97,8 @@ const emptyState = (ip: string): DeviceState => ({
   ssid: '',
   bssid: '',
   wmrmVersion: '',
-  group: { role: 'none', name: '', members: [], saved: false },
+  group: { role: 'none', name: '', members: [], saved: false, parent: null },
+  mirror: null,
   rssi: null,
   volume: null,
   status: '',
@@ -260,6 +262,7 @@ const livingRoom = (): DeviceState => {
       name: 'Apartment',
       members: [{ name: 'Bedroom', ip: '', uuid: 'a1b27c4d-e6f0-498b-93d5-e0c7a4f28b61' }],
       saved: false,
+      parent: null,
     },
     rssi: -52,
     volume: 44,
@@ -358,7 +361,7 @@ const bedroom = (): DeviceState => {
     ssid: 'Demo Wi-Fi',
     bssid: '02:00:00:00:00:22',
     wmrmVersion: '4.3',
-    group: { role: 'none', name: 'Apartment', members: [], saved: true },
+    group: { role: 'none', name: 'Apartment', members: [], saved: true, parent: null },
     rssi: -68,
     volume: 30,
     status: 'pause',
@@ -984,4 +987,7 @@ setInterval(() => {
       state.samples.splice(0, state.samples.length - MAX_SAMPLES)
     }
   }
+  // The same fleet pass the hub runs: a simulated member would read its group
+  // and its playback off the simulated master, with nothing special-cased here.
+  reconcileGroups(states.values())
 }, tickMs)

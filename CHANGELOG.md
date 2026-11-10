@@ -10,6 +10,19 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- A speaker that joins a group is now shown with the group it follows. Its own answer carries
+  neither the group name nor its members, and its transport reads `mode 99, stop` because the
+  stream runs on the speaker that drives the group; the hub joins the two answers it already
+  polls, so a member card names the group, the speaker it follows, and the track that speaker is
+  playing, labelled as the group's playback. The member's own fields are untouched, the copy lives
+  in a separate `mirror`, and the report still prints what the device itself answered. The
+  transport is not offered on such a card: a command sent to a member drives its own silent input,
+  not the group. The "no sound" flow follows the same rule: it reads the group's transport instead
+  of the member's own stopped one, and it stops asking a member for an output list it does not
+  have.
+
 ## [0.9.13] - 2026-11-10
 
 ### Added

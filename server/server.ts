@@ -13,6 +13,7 @@ import { type DeviceEvent, MAX_EVENTS, MAX_SAMPLES } from './device/status.ts'
 import { fetchCommand } from './device/transport.ts'
 import { discoverSsdp } from './discovery.ts'
 import { buildReport, findingsFor } from './findings.ts'
+import { reconcileGroups } from './groups.ts'
 import { guidesFor } from './guides.ts'
 import {
   type HostEntry,
@@ -93,7 +94,8 @@ const emptyState = (host: string): DeviceState => ({
   ssid: '',
   bssid: '',
   wmrmVersion: '',
-  group: { role: 'none', name: '', members: [], saved: false },
+  group: { role: 'none', name: '', members: [], saved: false, parent: null },
+  mirror: null,
   rssi: null,
   volume: null,
   status: '',
@@ -274,17 +276,25 @@ const pollAll = async (): Promise<void> => {
         state.upnp = hub.status(state.ip)
         ensureSubscription(state)
         refreshDiagnostics(state)
-        // The findings are cheap and read the state the poll just wrote, so they
-        // are evaluated every tick: a player that goes offline is then reported
-        // at once instead of at the next diagnostic pass. The notifier speaks
-        // only when a rule appears, which is why this call is not throttled.
-        notifier?.push({
-          host,
-          device: state.name,
-          findings: findingsFor({ state, diagnostics: state.diagnostics }),
-        })
       })
     )
+    // A group is a shared object: a member knows neither its name nor its
+    // members, only the master does. Joining the answers needs them all, so the
+    // pass runs once the polls have settled, before anything reads the state.
+    reconcileGroups(states.values())
+    // The findings are cheap and read the state the pass just completed, so they
+    // are evaluated every tick: a player that goes offline is then reported at
+    // once instead of at the next diagnostic pass. The notifier speaks only when
+    // a rule appears, which is why this call is not throttled.
+    for (const host of hosts) {
+      const state = states.get(host)
+      if (state === undefined) continue
+      notifier?.push({
+        host,
+        device: state.name,
+        findings: findingsFor({ state, diagnostics: state.diagnostics }),
+      })
+    }
   } finally {
     polling = false
   }

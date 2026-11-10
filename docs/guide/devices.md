@@ -94,8 +94,26 @@ flatten:
 - a saved group that is not running is reported as such, not as a running group;
 - a remembered member with no address reports an unknown state, not a fake offline one.
 
-No write control is rendered until a second unit can be measured: the group commands were never
-exercised against a real pair, and the hub does not offer a button it cannot verify.
+A member answers very little about its group: its own registry is empty, because the group is
+remembered on the speaker that drives it, and its transport reads `mode 99, stop` with no track,
+because the stream runs on the master. Read alone, such a speaker looks like a stopped player in no
+group. The hub polls the whole fleet, so it completes the picture from the master's own answer: the
+member card carries the group name, the member list and the speaker it follows, and it shows the
+track the master is playing, labelled with where that reading comes from. The member's own fields
+are left alone. The copy lives in a separate `mirror`, so the diagnostic view and the exported
+report still say what the device itself answered.
+
+The transport is not offered on a mirrored card. A command sent to a member drives its own silent
+input, not the group, and the hub does not write to another speaker on your behalf. Volume stays:
+it is the member's own, and the master reports it in its slave list.
+
+The "no sound" flow reads the group's transport for the same reason: asking a member why it is
+stopped would name a cause that does not exist while the room plays. The flow also drops the output
+check on such a speaker, because the sound does not leave through an output it chose.
+
+No multiroom write control is rendered: forming a group, adding a member and driving the group's
+transport from another speaker are the commands the hub does not offer, because a button it cannot
+verify is worse than no button.
 
 ## External inputs
 

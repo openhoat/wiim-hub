@@ -15,7 +15,8 @@ const device = (overrides: Partial<DeviceState> = {}): DeviceState => ({
   ssid: 'lab',
   bssid: 'aa:bb:cc:dd:ee:ff',
   wmrmVersion: '4.3',
-  group: { role: 'none', name: '', members: [], saved: false },
+  mirror: null,
+  group: { role: 'none', name: '', members: [], saved: false, parent: null },
   rssi: -53,
   volume: 30,
   status: 'play',
@@ -283,6 +284,62 @@ describe('buildReport', () => {
       '**alert** The player does not answer: 3 consecutive poll failure(s).'
     )
     expect(report.markdown).toContain('| Last seen | never |')
+  })
+
+  it('names the group a member follows, and says where its playback comes from', () => {
+    // The device answers `mode 99, stop` with no track: printed alone it reads as
+    // a silent speaker in no group, while the room is playing.
+    const state = device({
+      status: 'stop',
+      title: '',
+      artist: '',
+      album: '',
+      group: {
+        role: 'member',
+        name: 'Apartment',
+        members: [{ name: 'Kitchen', ip: '192.0.2.11', uuid: 'u1' }],
+        saved: false,
+        parent: { name: 'Living Room', ip: '192.0.2.10' },
+      },
+      mirror: {
+        from: { name: 'Living Room', ip: '192.0.2.10' },
+        group: 'Apartment',
+        status: 'play',
+        title: 'Track',
+        artist: 'Artist',
+        album: 'Album',
+        albumArt: '',
+        curposMs: 30_000,
+        totalMs: 200_000,
+        source: 'YouTubeMusic',
+        updatedAt: 1,
+      },
+    })
+    const report = buildReport({
+      state,
+      diagnostics: null,
+      findings: findingsFor({ state, diagnostics: null }),
+      hub,
+      now: 0,
+    })
+    expect(report.markdown).toContain('| Group | member, Apartment (follows Living Room) |')
+    expect(report.markdown).toContain(
+      '| Playback | stop, wifi, wifi, group playback from Living Room |'
+    )
+  })
+
+  it('says member rather than none when the fleet could not resolve the group', () => {
+    const state = device({
+      group: { role: 'member', name: '', members: [], saved: false, parent: null },
+    })
+    const report = buildReport({
+      state,
+      diagnostics: null,
+      findings: findingsFor({ state, diagnostics: null }),
+      hub,
+      now: 0,
+    })
+    expect(report.markdown).toContain('| Group | member |')
   })
 
   it('writes one sentence and its evidence per finding', () => {

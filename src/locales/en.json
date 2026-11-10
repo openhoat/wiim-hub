@@ -50,7 +50,9 @@
       "member": "This speaker follows the group."
     },
     "saved": "Saved group, not running.",
-    "unknown": "state unknown"
+    "unknown": "state unknown",
+    "follows": "Driven by {name}.",
+    "reflected": "The group's playback, driven by {name}."
   },
   "guides": {
     "title": "Guided checks",
@@ -87,6 +89,7 @@
       "transportUnknown": "The player did not report its transport state.",
       "stopped": "The transport is stopped: nothing is playing.",
       "paused": "The transport is paused.",
+      "groupTransport": "The group's transport reads {status}, driven by {name}.",
       "source": "The {input} input is playing.",
       "externalSilent": "The {input} input is selected and it is not playing: no signal reaches the player.",
       "output": "Output {active}; available: {available}.",
