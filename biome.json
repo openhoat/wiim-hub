@@ -84,7 +84,7 @@
   },
   "overrides": [
     {
-      "includes": ["server/**/*.ts", "scripts/**/*"],
+      "includes": ["server/**/*.ts", "mcp/**/*.ts", "scripts/**/*"],
       "linter": {
         "rules": {
           "suspicious": {

@@ -21,6 +21,7 @@
   "include": [
     "src",
     "server",
+    "mcp",
     "e2e",
     "playwright.config.ts",
     "vite.config.ts",

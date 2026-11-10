@@ -21,6 +21,11 @@ Releases are cut from `package.json`: the version in that file names the section
   silently ignored. A send is fire and forget with a five second budget, so a channel that is down
   is a log line, never a poll that waits or a channel that silences the other one. Nothing is
   retried and nothing is stored: a restart announces the open rules once, as a first start would.
+- An MCP server beside the hub exposes the read and write surface to an agent: the fleet state, one
+  diagnostic report, one settings sheet and one intent, over stdio. It is written as a client of the
+  HTTP API rather than a route inside the hub, so `server/` keeps no dependency beyond node built-ins
+  and the image is unchanged; the tool answers are the hub's own, errors included, and the security
+  boundary is the network the two sit on, since neither authenticates anybody.
 
 ## [0.9.11] - 2026-11-10
 

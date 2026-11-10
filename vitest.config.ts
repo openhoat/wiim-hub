@@ -9,7 +9,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['server/**/*.test.ts', 'src/**/*.test.ts'],
+    include: ['server/**/*.test.ts', 'src/**/*.test.ts', 'mcp/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       include: [
@@ -17,6 +17,8 @@ export default defineConfig({
         'server/findings.ts',
         'server/guides.ts',
         'server/hosts.ts',
+        'mcp/hub.ts',
+        'mcp/tools.ts',
         'server/inventory.ts',
         'server/notify.ts',
         'server/queue.ts',

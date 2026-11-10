@@ -22,12 +22,3 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 
 - [ ] Review every string in context, including the diagnostic findings and the guided flows
 - [ ] Localise numbers, dates and durations through `Intl`, with no concatenated sentences
-
-### #19 [ARCHITECTURE] Expose the hub over MCP (P3)
-
-- [ ] Mirror the HTTP surface as tools: reads on `/api/state` and `/api/settings`, writes on
-      `/api/command` with the same intent validation and the same error answers
-- [ ] Pick the shape before coding: a sidecar over the hub HTTP API keeps `server/` dependency
-      free, an endpoint inside the hub process avoids a second deployment
-- [ ] Develop and test the tools against the demo mode, as the e2e suite does, and state the
-      security boundary: no authentication of its own, it inherits the ingress
