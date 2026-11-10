@@ -14,10 +14,12 @@ DEVICE_HOSTS=192.168.1.10,living-room.local,kitchen
 An entry is either an address or a name:
 
 - **an address** is used as is. Give the speaker a DHCP reservation if you want it to stay.
-- **a name** is resolved on each poll cycle, in two steps: the system resolver first, then a
-  dependency-free mDNS query (`kitchen.local` answers on the LAN even when the host has no
-  avahi or systemd-resolved configured). If a re-resolution fails, the last known address is kept,
-  so a DHCP lease change is invisible rather than a device that disappears.
+- **a name** is resolved by a chain: the pairs in `DEVICE_STATIC_HOSTS`, then the lease file in
+  `DEVICE_LEASES_FILE` when the hub can read one, then the system resolver, then a dependency-free
+  mDNS query (`kitchen.local` answers on the LAN even when the host has no avahi or
+  systemd-resolved configured). If a re-resolution fails, the last known address is kept, so a DHCP
+  lease change is invisible rather than a device that disappears. The diagnostic report names the
+  source that answered. See [Configuration](/guide/configuration#names).
 
 Names are worth the extra step when your router hands out addresses freely: the hub follows the
 name, not the lease.

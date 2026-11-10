@@ -711,6 +711,8 @@ const demoInventory = (): Inventory =>
 const demoResolution = (state: DeviceState): Resolution => ({
   host: state.ip,
   ip: state.ip,
+  // The demo devices are addresses: no source had to explain them.
+  resolvedBy: null,
   transport: 'https',
 })
 

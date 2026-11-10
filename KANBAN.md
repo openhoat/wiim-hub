@@ -23,11 +23,6 @@ Fine grained work in progress goes to the gitignored `.scratch/<slug>/` director
 - [ ] Support a generic webhook and ntfy, with a per alert rule and a quiet period
 - [ ] Never send a notification twice for the same event, and log what was sent
 
-### #13 [ARCHITECTURE] Make name resolution pluggable (P3)
-
-- [ ] Keep mDNS, the last known address and a static map as interchangeable resolvers
-- [ ] Add an optional DHCP lease source for networks where mDNS does not cross the container boundary
-
 ### #14 [I18N] Complete the French copy and localise the formats (P3)
 
 - [ ] Review every string in context, including the diagnostic findings and the guided flows

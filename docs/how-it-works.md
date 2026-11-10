@@ -40,6 +40,26 @@ answer so a slow hub stretches the interval instead of stacking requests. The lo
 tab is hidden and reads immediately on return. `pollMs` travels in the answer, so the page and the
 hub never disagree on the cadence.
 
+## Names
+
+A host entry may be an address or a name. An address is used as is; a name goes through a chain of
+resolvers, in order, and the first answer wins: the operator's static pairs (`DEVICE_STATIC_HOSTS`),
+the router's lease table when the hub can read it (`DEVICE_LEASES_FILE`), the system resolver, then
+the built-in mDNS query in `server/mdns.ts`.
+
+The chain exists because no single source covers a home network: a container on a bridge does not
+see multicast, a container is often blind to the host resolver, and a router that handed the address
+out already knows it. Each source is optional, so the chain degrades to what the hub can see.
+
+Resolution never blocks a poll: `target()` answers with the last known address (the host itself
+before anything answered) and refreshes in the background. The timing is explicit in `resolve.ts`
+rather than guessed at each call site: an answer lives 30 s, a failure is retried after 60 s, two
+attempts are at least 5 s apart, and `forget()` (a device that stopped answering) drops the attempt
+without dropping the fallback. The lease file is read once a minute at most.
+
+The report names the source that answered, because an address that came from the lease table says
+mDNS never answered, and that is a different problem from an address mDNS got wrong.
+
 ## The write path
 
 A control sends an **intent**, never a raw device command:
@@ -102,8 +122,8 @@ shows; they do not run their own probes.
 Some controls exist on one model and not on another. The inventory probes the commands the hub
 knows (18 of them, cached for 60 s) and classifies each answer: supported, `unknown command`,
 `Failed`, empty, or unreachable when the device does not answer at all. It also records the path
-that worked (`host`, then address, then scheme), which is the first thing to check when a device is
-configured by name.
+that worked (`host`, address, the source that resolved the name, then scheme), which is the first
+thing to check when a device is configured by name.
 
 ## The streaming tiers
 
@@ -198,8 +218,8 @@ second one. Both rules come from
 ## Module map
 
 ```text
-server/device/       device client, one module per area: transport fallback, mDNS name
-                     resolution, payload readers, art relay, playback status, inputs and
+server/device/       device client, one module per area: transport fallback, the resolver
+                     chain for names, payload readers, art relay, playback status, inputs and
                      outputs, presets, equalizer, multiroom, diagnostics, settings, and the
                      probe cache; index.ts holds DeviceState and the two entry points.
 server/commands.ts   accepted intents, validation against the device state, command mapping

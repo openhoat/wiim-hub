@@ -8,7 +8,7 @@
 // Same split as the rest of the device client: classification, assembly and
 // rendering are pure, the transport and the cache stay in `readInventory`.
 import { eqQuery } from './device/acoustic.ts'
-import { resolveTarget } from './device/resolve.ts'
+import { resolutionSource, resolveTarget } from './device/resolve.ts'
 import { fetchCommand, type Scheme, transportOf } from './device/transport.ts'
 
 // What the hub needs from a player, by area. One line per command: the report
@@ -70,8 +70,15 @@ export type Inventory = {
 }
 
 // The path a request took: the configured host, the address it resolved to,
-// and the scheme that answered. `null` transport means nothing answered yet.
-export type Resolution = { host: string; ip: string; transport: Scheme | null }
+// the source that resolved it, and the scheme that answered. `null` transport
+// means nothing answered yet; `null` resolver means the host was an address to
+// begin with, which no source had to explain.
+export type Resolution = {
+  host: string
+  ip: string
+  resolvedBy: string | null
+  transport: Scheme | null
+}
 
 const collapsed = (raw: string): string => raw.replace(/\s+/g, ' ').trim()
 
@@ -134,7 +141,11 @@ const resolutionLine = (resolution: Resolution): string => {
     resolution.ip === resolution.host
       ? `\`${resolution.host}\``
       : `\`${resolution.host}\` → \`${resolution.ip}\``
-  return `Probe path: ${where} over ${scheme}.`
+  // The source is what a support thread needs first: an address that came from
+  // the lease table says mDNS never answered, and that is a different problem
+  // from an address that mDNS got wrong.
+  const source = resolution.resolvedBy === null ? '' : `, resolved by ${resolution.resolvedBy}`
+  return `Probe path: ${where}${source} over ${scheme}.`
 }
 
 const countsLine = (counts: Record<AnswerStatus, number>): string =>
@@ -181,7 +192,7 @@ const ago = (now: number, at: number): string => {
 
 export const resolutionFor = (host: string): Resolution => {
   const ip = resolveTarget(host)
-  return { host, ip, transport: transportOf(ip) }
+  return { host, ip, resolvedBy: resolutionSource(host), transport: transportOf(ip) }
 }
 
 // Probing costs eighteen requests and the answer changes when the firmware

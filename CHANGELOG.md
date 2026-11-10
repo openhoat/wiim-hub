@@ -10,6 +10,27 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- A name is resolved through a chain of sources instead of two fixed steps: the static pairs in
+  `DEVICE_STATIC_HOSTS`, then the router's dnsmasq lease table in `DEVICE_LEASES_FILE` when the hub
+  can read it, then the system resolver, then the built-in mDNS query. No single source covers a home
+  network (a bridged container sees no multicast, a container is often blind to the host resolver)
+  and the router that handed the address out already knows it. Each source is optional, so the chain
+  degrades to what it can see.
+- The diagnostic report names the source that answered a name:
+  `Probe path: kitchen → 192.168.1.10, resolved by dhcp leases over https.` An address that came from
+  the lease table says mDNS never answered, which is a different problem from an address mDNS got
+  wrong.
+
+### Changed
+
+- Resolution timing is stated once and tested with an injected clock: an answer is kept for 30 s, a
+  name that answered nothing is asked again after 60 s, two attempts are at least 5 s apart, and a
+  device that stops answering marks its attempt stale without losing the last known address. The
+  lease table is read at most once a minute, matched by full hostname then by first label, and an
+  expired lease is dropped.
+
 ## [0.9.10] - 2026-11-10
 
 ### Changed

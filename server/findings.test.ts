@@ -375,13 +375,20 @@ describe('buildReport', () => {
       findings: [],
       hub,
       inventory,
-      resolution: { host: 'wiim.local', ip: '192.0.2.150', transport: 'https' },
+      resolution: {
+        host: 'wiim.local',
+        ip: '192.0.2.150',
+        resolvedBy: 'dhcp leases',
+        transport: 'https',
+      },
       now: Date.UTC(2026, 10, 9, 12, 0, 0),
     })
     const section = report.markdown.indexOf('## Capability inventory')
     expect(section).toBeGreaterThan(report.markdown.indexOf('## Findings'))
     expect(section).toBeLessThan(report.markdown.indexOf('## Raw answers'))
-    expect(report.markdown).toContain('Probe path: `wiim.local` → `192.0.2.150` over https.')
+    expect(report.markdown).toContain(
+      'Probe path: `wiim.local` → `192.0.2.150`, resolved by dhcp leases over https.'
+    )
     expect(report.markdown).toContain('| `getModeRename` | inputs | failed | `Failed` |')
     expect(report.markdown).toContain(
       '1 supported, 0 unsupported, 1 failed, 0 empty, 0 unreachable.'

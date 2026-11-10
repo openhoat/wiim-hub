@@ -71,9 +71,10 @@ on desktop never updates `icons` on an installed app.
 - **Controls, without the app**: transport, seek, volume and mute, source, presets, sleep timer,
   output route, equalizer and device settings. Each write is validated by the hub and serialised per
   device, so a slider drag cannot race itself.
-- **Devices by address or by name**: `kitchen.local` is re-resolved on every cycle, system resolver
-  first then a dependency-free mDNS query, so a DHCP lease change stays invisible instead of making a
-  speaker disappear.
+- **Devices by address or by name**: `kitchen.local` is re-resolved in the background through a chain
+  of sources (static pairs, the router's lease table, the system resolver, then a built-in mDNS
+  query), so a DHCP lease change stays invisible instead of making a speaker disappear, and the
+  report says which source answered.
 - **A mixed fleet is the normal case**: transport, names and capabilities are probed per device,
   never assumed. Missing fields stay unknown instead of being guessed.
 - **Evidence over verdicts**: twelve rules turn the device's own counters into short facts, each with

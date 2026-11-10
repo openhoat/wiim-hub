@@ -130,13 +130,18 @@ describe('inventorySection', () => {
       ],
       at
     )
-  const resolution: Resolution = { host: 'wiim.local', ip: '192.0.2.150', transport: 'https' }
+  const resolution: Resolution = {
+    host: 'wiim.local',
+    ip: '192.0.2.150',
+    resolvedBy: 'mdns',
+    transport: 'https',
+  }
 
   it('states the probe path and the counts before the table', () => {
     const lines = inventorySection(inventory(), resolution, at + 120_000)
     const text = lines.join('\n')
     expect(lines[0]).toBe('## Capability inventory')
-    expect(text).toContain('Probe path: `wiim.local` → `192.0.2.150` over https.')
+    expect(text).toContain('Probe path: `wiim.local` → `192.0.2.150`, resolved by mdns over https.')
     expect(text).toContain('Probed 2026-11-09T15:00:00.000Z (2 min ago).')
     expect(text).toContain('1 supported, 1 unsupported, 0 failed, 0 empty, 1 unreachable.')
     expect(text).toContain('| Command | Area | Status | Answer |')
@@ -146,7 +151,12 @@ describe('inventorySection', () => {
   })
 
   it('says the probe was skipped when the player was offline', () => {
-    const offline: Resolution = { host: '192.0.2.150', ip: '192.0.2.150', transport: null }
+    const offline: Resolution = {
+      host: '192.0.2.150',
+      ip: '192.0.2.150',
+      resolvedBy: null,
+      transport: null,
+    }
     const text = inventorySection(null, offline, at).join('\n')
     // A host that is already an address is not repeated with an arrow.
     expect(text).toContain('Probe path: `192.0.2.150` over no successful call yet.')
@@ -178,6 +188,7 @@ describe('readInventory', () => {
     expect(resolutionFor('192.0.2.40')).toEqual({
       host: '192.0.2.40',
       ip: '192.0.2.40',
+      resolvedBy: null,
       transport: null,
     })
   })
