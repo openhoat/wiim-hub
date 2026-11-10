@@ -10,6 +10,15 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.19] - 2026-11-10
+
+### Changed
+
+- A group plays once: the card of the speaker that drives it keeps the cover and the track, and a
+  member card draws no player at all, naming the speaker it follows instead. Repeating the mirror on
+  every card showed the same cover once per speaker, so a three-speaker group drew three copies of
+  it; the member keeps its own volume, its group chip and its diagnostics.
+
 ## [0.9.18] - 2026-11-10
 
 ### Changed
@@ -608,7 +617,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.11...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.19...HEAD
+[0.9.19]: https://github.com/openhoat/wiim-hub/compare/v0.9.18...v0.9.19
 [0.9.18]: https://github.com/openhoat/wiim-hub/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/openhoat/wiim-hub/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/openhoat/wiim-hub/compare/v0.9.15...v0.9.16

@@ -134,21 +134,18 @@ const Cover = ({ art, offline }: Readonly<{ art: string | null; offline: boolean
 )
 
 // The track block: a headline that falls back to the source name on an external
-// input, then the metadata the player reported, then the source, the note that
-// says where a mirrored playback comes from, and the group.
+// input, then the metadata the player reported, then the source and the group.
 const TrackMeta = ({
   title,
   artist,
   album,
   source,
-  note,
   chip,
 }: Readonly<{
   title: string
   artist: string
   album: string
   source: string
-  note: string | null
   chip: { group: GroupState; open: boolean; onToggle: () => void; panelId: string } | null
 }>) => {
   const { t } = useSettings()
@@ -165,7 +162,6 @@ const TrackMeta = ({
       </p>
       <p className="mt-1 truncate text-sm text-muted-foreground">{artist || ' '}</p>
       <p className="truncate text-xs text-muted-foreground/70">{album || ' '}</p>
-      {note !== null && <p className="mt-1 truncate text-[11px] text-muted-foreground">{note}</p>}
       {(showSource || chip !== null) && (
         <div className="mt-2 flex flex-wrap items-center gap-1.5">
           {showSource && (
@@ -249,20 +245,24 @@ export const NowPlayingCard = ({
   // badge keeps the transport state without the "a track is playing" meter.
   const external = isExternalInput(live.input)
   const sourceName = external ? inputLabel(t, live.inputLabels, live.input) : ''
-  // A mirrored playback names the track; an external input names the source; a
-  // device with nothing to report keeps the empty headline the card words itself.
+  // A mirrored playback names the track on the master's card; an external input
+  // names the source; a device with nothing to report keeps the empty headline
+  // the card words itself.
   const ownHeadline = sourceName === '' ? live.title : sourceName
-  const headline = mirror === null ? ownHeadline : mirror.title
   const playing = live.online && (mirror?.status ?? live.status) === 'play'
   const group = live.group
   // An offline speaker keeps its last known group: showing it would claim a
   // membership nothing just confirmed.
   const showGroup = live.online && (group.role !== 'none' || group.saved)
   const groupPanelId = `group-panel-${device.ip}`
-  // The cover of a mirrored playback belongs to the master: the art route checks
-  // the uri against the answer of the speaker it is asked for.
-  const coverArt =
-    mirror === null ? artUrl(live) : artUrl({ ip: mirror.from.ip, albumArt: mirror.albumArt })
+  const chip = showGroup
+    ? {
+        group,
+        open: groupOpen,
+        onToggle: () => setGroupOpen(open => !open),
+        panelId: groupPanelId,
+      }
+    : null
 
   return (
     <Card
@@ -285,26 +285,37 @@ export const NowPlayingCard = ({
         </div>
       </div>
 
-      <div className="mt-5 flex gap-5">
-        <Cover art={coverArt} offline={!device.online} />
-        <TrackMeta
-          title={headline}
-          artist={mirror?.artist ?? live.artist}
-          album={mirror?.album ?? live.album}
-          source={mirror?.source ?? device.source}
-          note={mirror === null ? null : t('group.reflected', { name: mirror.from.name })}
-          chip={
-            showGroup
-              ? {
-                  group,
-                  open: groupOpen,
-                  onToggle: () => setGroupOpen(open => !open),
-                  panelId: groupPanelId,
-                }
-              : null
-          }
-        />
-      </div>
+      {mirror === null ? (
+        <div className="mt-5 flex gap-5">
+          <Cover art={artUrl(live)} offline={!device.online} />
+          <TrackMeta
+            title={ownHeadline}
+            artist={live.artist}
+            album={live.album}
+            source={device.source}
+            chip={chip}
+          />
+        </div>
+      ) : (
+        // A group plays once: the card of the speaker that drives it already
+        // shows the cover and names the track. Repeating them on every member
+        // card turned a three-speaker group into three copies of one cover, so
+        // a member keeps what is its own, the speaker it follows, its volume
+        // and its diagnostics, and draws no player at all.
+        <div className="mt-5 space-y-2">
+          <p className="text-[11px] text-muted-foreground">
+            {t('group.reflected', { name: mirror.from.name })}
+          </p>
+          {chip !== null && (
+            <GroupChip
+              group={chip.group}
+              open={chip.open}
+              onToggle={chip.onToggle}
+              panelId={chip.panelId}
+            />
+          )}
+        </div>
+      )}
 
       {showGroup && groupOpen && <GroupPanel group={group} id={groupPanelId} />}
 

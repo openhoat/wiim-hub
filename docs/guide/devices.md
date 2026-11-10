@@ -98,10 +98,11 @@ A member answers very little about its group: its own registry is empty, because
 remembered on the speaker that drives it, and its transport reads `mode 99, stop` with no track,
 because the stream runs on the master. Read alone, such a speaker looks like a stopped player in no
 group. The hub polls the whole fleet, so it completes the picture from the master's own answer: the
-member card carries the group name, the member list and the speaker it follows, and it shows the
-track the master is playing, labelled with where that reading comes from. The member's own fields
-are left alone. The copy lives in a separate `mirror`, so the diagnostic view and the exported
-report still say what the device itself answered.
+member card carries the group name, the member list and the speaker it follows, while the track and
+the cover stay on the master's card. A group plays once: the player is drawn on the speaker that
+drives it, and repeating it on every member card multiplied one cover by the number of speakers. The
+member's own fields are left alone. The copy lives in a separate `mirror`, so the diagnostic view
+and the exported report still say what the device itself answered.
 
 The transport is not offered on a mirrored card. A command sent to a member drives its own silent
 input, not the group, and the hub does not write to another speaker on your behalf. Volume stays:

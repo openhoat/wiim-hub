@@ -111,6 +111,72 @@ test('shows the group a speaker drives, and hides the one an offline speaker rem
   await expect(panel.getByText('state unknown')).toBeVisible()
 })
 
+// A group plays once. The card of the speaker that drives it keeps the cover and
+// the track, and a member draws no player: repeating the mirror on every card
+// turned a three-speaker group into three copies of one cover. The demo's own
+// pair is a saved group with an offline member, so the running pair is patched
+// into a real /api/state answer, the way the optical payload is.
+test('draws the group playback once, on the speaker that drives it', async ({ page }) => {
+  const state: { devices: Record<string, unknown>[] } = await (
+    await page.request.get('/api/state')
+  ).json()
+  const living = state.devices.find(device => device.name === 'Living Room')
+  const bedroom = state.devices.find(device => device.name === 'Bedroom')
+  if (living === undefined || bedroom === undefined) throw new Error('the demo fleet changed')
+  const track = String(living.title)
+  const member = {
+    ...bedroom,
+    online: true,
+    status: 'stop',
+    title: '',
+    artist: '',
+    album: '',
+    albumArt: '',
+    source: '',
+    curposMs: null,
+    totalMs: null,
+    group: {
+      role: 'member',
+      name: 'Apartment',
+      members: [],
+      saved: false,
+      parent: { name: living.name, ip: living.ip },
+    },
+    mirror: {
+      from: { name: living.name, ip: living.ip },
+      group: 'Apartment',
+      status: living.status,
+      title: living.title,
+      artist: living.artist,
+      album: living.album,
+      albumArt: living.albumArt,
+      curposMs: living.curposMs,
+      totalMs: living.totalMs,
+      source: living.source,
+      updatedAt: living.updatedAt,
+    },
+  }
+  await page.route('**/api/state', route =>
+    route.fulfill({ json: { ...state, devices: [living, member] } })
+  )
+
+  await openHub(page)
+
+  // One cover for the whole group, and it belongs to the master.
+  await expect(page.locator('img[src^="/api/art"]')).toHaveCount(1)
+  const master = page.getByTestId('playing-192.0.2.21')
+  await expect(master.getByText(track, { exact: true })).toBeVisible()
+
+  // The member names the speaker that drives the group and keeps its own
+  // controls; it draws no cover, no track and no transport.
+  const follower = page.getByTestId('playing-192.0.2.22')
+  await expect(follower.getByText("The group's playback, driven by Living Room.")).toBeVisible()
+  await expect(follower.locator('img[src^="/api/art"]')).toHaveCount(0)
+  await expect(follower.getByText(track, { exact: true })).toHaveCount(0)
+  await expect(follower.getByRole('button', { name: 'Previous' })).toHaveCount(0)
+  await expect(follower.getByRole('button', { name: /Apartment/ })).toBeVisible()
+})
+
 test('opens the sound card on the curve, the presets and the stream quality', async ({ page }) => {
   await openHub(page)
 
