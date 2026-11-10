@@ -86,6 +86,9 @@ on desktop never updates `icons` on an installed app.
 - **An agent surface**: a small MCP server, beside the hub and a client of its HTTP API, gives an
   agent the fleet state, one diagnostic report, one settings sheet and one intent per call. It runs
   on demand over stdio, so the hub keeps its dependencies to node built-ins.
+- **Two doors**: a browser authenticates at the ingress and the hub reads the identity the forward
+  auth leaves on the request; an agent sends a key instead, `WIIM_HUB_TOKEN`, compared in constant
+  time. Unset, the hub keeps its LAN contract and asks for nothing.
 - **Evidence over verdicts**: twelve rules turn the device's own counters into short facts, each with
   its number and the command it came from, and the same content exports as a Markdown report to
   paste into a support thread.

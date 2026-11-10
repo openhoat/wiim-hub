@@ -29,16 +29,23 @@ command and `WIIM_HUB_URL`:
       "wiim": {
         "type": "local",
         "command": ["node", "/path/to/wiim-hub/mcp/index.ts"],
-        "environment": { "WIIM_HUB_URL": "http://192.168.1.10:8090" }
+        "environment": {
+          "WIIM_HUB_URL": "http://192.168.1.10:8090",
+          "WIIM_HUB_TOKEN": "the key the hub was given"
+        }
       }
     }
   }
 }
 ```
 
-`WIIM_HUB_TOKEN` is optional and is sent as `authorization: Bearer …`: the hub has no
-authentication of its own, so that header only matters when an ingress in front of it accepts one.
-The server writes MCP on stdout, so its own messages go to stderr: that is where the startup line
+`WIIM_HUB_TOKEN` is optional and is sent as `authorization: Bearer …`. It is the agent's way
+in: set on the hub, it makes every `/api/*` route refuse a request that carries neither that
+key nor the identity a forward auth left, so an agent never needs the browser session that
+would die with its cookie. Left unset, the hub keeps its old contract, the trust of the network
+it sits on. Keep the key in this per-server environment rather than in a shell profile: a hub
+started on the same machine would inherit it, and its page would start asking for a key. The
+server writes MCP on stdout, so its own messages go to stderr: that is where the startup line
 `wiim-hub mcp: 4 tools, hub at …` lands.
 
 ## The tools
@@ -71,11 +78,15 @@ the real answer survived.
 
 ## The security boundary
 
-- The hub authenticates nobody and the MCP adds nothing. The trust is the network they sit on.
-- Whoever can run the MCP process holds the hub's write access: it can play a URL, rename a
-  speaker, change the volume of every managed device.
-- Behind an ingress, the ingress stays the gate. `WIIM_HUB_TOKEN` is only useful when that gate
-  accepts a bearer token; a session cookie belongs to a browser, not to a long-lived agent.
+- A browser gets in through the ingress, an agent through `WIIM_HUB_TOKEN`. The hub knows no
+  user: it reads the identity header its forward auth writes, and the key it was given.
+- Whoever holds the key holds the hub's write access: it can play a URL, rename a speaker,
+  change the volume of every managed device. Treat it as a device credential, and rotate it in
+  the hub's environment when it leaks: a comma separated list lets the old and new key answer
+  at the same time.
+- Give the agent its own way in, on its own hostname or route, and strip the `X-Auth-Request-*`
+  headers there. They prove a session only when the forward auth wrote them; a route that lets a
+  client set them hands out an identity, and the hub would believe it.
 - Do not put the hub on the internet, and the MCP in a shared agent, and call it covered.
 
 ## How it is tested

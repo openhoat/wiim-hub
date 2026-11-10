@@ -10,6 +10,17 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The API can ask for a key: `WIIM_HUB_TOKEN` makes every `/api/*` route require either that key
+  as a bearer or the identity a forward auth left on the request
+  (`X-Auth-Request-Preferred-Username`, as oauth2-proxy writes it). A browser keeps its session and
+  an agent stops needing one, which is what an MCP client could not have. The key is compared in
+  constant time over hashed values, several comma separated values answer at once so a rotation
+  needs no downtime, and a refusal is a `401` with `WWW-Authenticate: Bearer`. Unset, the hub keeps
+  its old contract, the trust of the network it sits on: the static shell, the manifest, the worker
+  and `/health` stay open either way.
+
 ## [0.9.12] - 2026-11-10
 
 ### Added

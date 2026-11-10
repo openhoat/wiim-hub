@@ -4,25 +4,26 @@ The server reads `.env` from the working directory when it exists (`start` and `
 inside Docker the variables come from the compose file or from `docker run -e`. A variable set in
 the environment wins over the file.
 
-| Variable              | Default           | Meaning                                                                                         |
-| --------------------- | ----------------- | ----------------------------------------------------------------------------------------------- |
-| `PORT`                | `8090`            | HTTP port of the hub                                                                            |
-| `POLL_MS`             | `3000`            | Polling period, floor 1000 ms                                                                   |
-| `SLOW_POLL_MS`        | `15000`           | Polling period while every device pushes its events, floor `POLL_MS`                            |
-| `UPNP_CALLBACK`       | empty             | Base URL the players can reach the hub on, e.g. `http://192.168.1.10:8091`; enables UPnP events |
-| `UPNP_PORT`           | `8091`            | Port of the event callback listener, separate from `PORT`                                       |
-| `DEVICE_HOSTS`        | empty             | Comma separated device addresses or names, the seed list; one entry per speaker                 |
-| `DEVICE_STATIC_HOSTS` | empty             | Fixed `name=address` pairs, asked first when a name is resolved                                 |
-| `DEVICE_LEASES_FILE`  | empty             | dnsmasq lease file the hub may read, asked second when a name is resolved                       |
-| `HOSTS_FILE`          | `data/hosts.json` | Where the hosts added from the page are written; `DEVICE_HOSTS` stays read only                 |
-| `NOTIFY_WEBHOOK`      | empty             | URL that receives one JSON object per alert; enables the webhook channel                        |
-| `NOTIFY_NTFY`         | empty             | ntfy topic URL, posted as text with a title and a priority; enables the ntfy channel            |
-| `NOTIFY_NTFY_TOKEN`   | empty             | Bearer token for a protected ntfy topic                                                         |
-| `NOTIFY_RULES`        | empty             | Comma separated rule ids to send, empty meaning all of them                                     |
-| `NOTIFY_MIN_SEVERITY` | `warn`            | Lowest severity sent, `info`, `warn` or `alert`                                                 |
-| `NOTIFY_QUIET_MS`     | `3600000`         | How long a rule that cleared stays silent before it may speak again                             |
-| `DISCOVERY`           | `1`               | SSDP discovery, best effort, set `0` to disable                                                 |
-| `HUB_VERSION`         | `dev`             | Version string written in the diagnostic report; the image carries no `package.json` at runtime |
+| Variable              | Default           | Meaning                                                                                                    |
+| --------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------- |
+| `PORT`                | `8090`            | HTTP port of the hub                                                                                       |
+| `POLL_MS`             | `3000`            | Polling period, floor 1000 ms                                                                              |
+| `SLOW_POLL_MS`        | `15000`           | Polling period while every device pushes its events, floor `POLL_MS`                                       |
+| `UPNP_CALLBACK`       | empty             | Base URL the players can reach the hub on, e.g. `http://192.168.1.10:8091`; enables UPnP events            |
+| `UPNP_PORT`           | `8091`            | Port of the event callback listener, separate from `PORT`                                                  |
+| `DEVICE_HOSTS`        | empty             | Comma separated device addresses or names, the seed list; one entry per speaker                            |
+| `DEVICE_STATIC_HOSTS` | empty             | Fixed `name=address` pairs, asked first when a name is resolved                                            |
+| `DEVICE_LEASES_FILE`  | empty             | dnsmasq lease file the hub may read, asked second when a name is resolved                                  |
+| `HOSTS_FILE`          | `data/hosts.json` | Where the hosts added from the page are written; `DEVICE_HOSTS` stays read only                            |
+| `NOTIFY_WEBHOOK`      | empty             | URL that receives one JSON object per alert; enables the webhook channel                                   |
+| `NOTIFY_NTFY`         | empty             | ntfy topic URL, posted as text with a title and a priority; enables the ntfy channel                       |
+| `NOTIFY_NTFY_TOKEN`   | empty             | Bearer token for a protected ntfy topic                                                                    |
+| `NOTIFY_RULES`        | empty             | Comma separated rule ids to send, empty meaning all of them                                                |
+| `NOTIFY_MIN_SEVERITY` | `warn`            | Lowest severity sent, `info`, `warn` or `alert`                                                            |
+| `NOTIFY_QUIET_MS`     | `3600000`         | How long a rule that cleared stays silent before it may speak again                                        |
+| `DISCOVERY`           | `1`               | SSDP discovery, best effort, set `0` to disable                                                            |
+| `HUB_VERSION`         | `dev`             | Version string written in the diagnostic report; the image carries no `package.json` at runtime            |
+| `WIIM_HUB_TOKEN`      | empty             | Bearer token(s) the API accepts, comma separated; unset leaves the hub open (see _Behind a reverse proxy_) |
 
 ## The four that matter
 
@@ -84,13 +85,25 @@ rule that appears, never the same one twice while it stays, subject to a quiet p
 
 ## Behind a reverse proxy
 
-The hub has **no built-in authentication, by design**: identity belongs to the ingress. Run it on a
-private network, or put a forward-auth proxy in front of it, such as oauth2-proxy or Authelia.
+A browser authenticates at the ingress, and the hub reads what the forward auth leaves behind:
+with oauth2-proxy (`--set-xauthrequest`) and Traefik, the `X-Auth-Request-Preferred-Username`
+header that `authResponseHeaders` copies. An agent has no session to give, so it sends
+`WIIM_HUB_TOKEN` as `Authorization: Bearer …` instead.
 
-Two rules come with that:
+Set `WIIM_HUB_TOKEN` and every `/api/*` route requires one of the two. The static shell, the
+manifest, the worker and `/health` stay open, because a PWA has to install and a probe has to
+answer before any session exists. Leave it empty and the hub keeps its old contract: the trust
+of the network it sits on. A refusal is a `401` with `WWW-Authenticate: Bearer`, so an agent can
+tell a missing key from a broken hub. The key is compared in constant time over hashed values,
+and several comma separated values are accepted, so a rotation needs no downtime.
 
+Three rules come with that:
+
+- Give the agent its own way in, on its own hostname or route, and strip the `X-Auth-Request-*`
+  headers there. Those headers only prove a session when the forward auth wrote them; a route
+  that lets a client set them hands out an identity.
 - Keep `/health` reachable without a session if your probe or your orchestrator needs it. It
-  answers `ok` and nothing else, and it is the only route that reads no device.
+  answers `ok` and a device count, and it reads no device.
 - The control routes write to the speaker. A hub exposed without an authentication layer is not a
   supported configuration.
 

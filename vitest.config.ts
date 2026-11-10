@@ -13,6 +13,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: [
+        'server/auth.ts',
         'server/commands.ts',
         'server/findings.ts',
         'server/guides.ts',

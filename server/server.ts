@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
+import { authFromEnv, authorized, isProtected } from './auth.ts'
 import { commandFor, parseAction } from './commands.ts'
 import { fetchAlbumArt } from './device/art.ts'
 import { readDiagnostics } from './device/diagnostics.ts'
@@ -38,6 +39,10 @@ const callbackBase = (process.env.UPNP_CALLBACK ?? '').trim()
 const upnpPort = Number.parseInt(process.env.UPNP_PORT ?? '8091', 10)
 const eventsEnabled = callbackBase !== ''
 const upnpRetryMs = 60_000
+// The API needs no credential until a token exists: the hub is a LAN tool, and
+// an ingress that authenticates the browser is the normal front door. An agent
+// has no session, so it sends this one instead.
+const auth = authFromEnv(process.env.WIIM_HUB_TOKEN)
 // The diagnostic counters move over hours, so they are read on their own slow
 // cadence instead of on every poll.
 const diagnosticsMs = 60_000
@@ -480,10 +485,16 @@ const removeHostRoute = async (url: URL, res: ServerResponse): Promise<void> => 
   sendHosts(res)
 }
 
-const sendJson = (res: ServerResponse, status: number, body: unknown): void => {
+const sendJson = (
+  res: ServerResponse,
+  status: number,
+  body: unknown,
+  headers: Record<string, string> = {}
+): void => {
   res.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
+    ...headers,
   })
   res.end(JSON.stringify(body))
 }
@@ -785,6 +796,12 @@ const servePage = async (pathname: string, res: ServerResponse): Promise<void> =
 
 const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
   const url = new URL(req.url ?? '/', 'http://localhost')
+  if (isProtected(url.pathname) && !authorized(req.headers, auth)) {
+    // A refusal says what to send, so a client retries with a key instead of
+    // parsing a login page it cannot read.
+    sendJson(res, 401, { error: 'unauthorized' }, { 'www-authenticate': 'Bearer' })
+    return
+  }
   const route = Object.hasOwn(routes, url.pathname) ? routes[url.pathname] : null
   if (route !== null && (await route(url, req, res))) return
   if (url.pathname.startsWith('/api/')) {
@@ -832,6 +849,11 @@ const main = async (): Promise<void> => {
   } else {
     console.log('wiim-hub: UPnP events off (UPNP_CALLBACK is empty)')
   }
+  console.log(
+    auth === null
+      ? 'wiim-hub: auth off (WIIM_HUB_TOKEN is empty)'
+      : `wiim-hub: auth on (${auth.tokens.length} token(s), SSO identity accepted)`
+  )
   if (notifier === null) {
     console.log('wiim-hub: notifications off (NOTIFY_WEBHOOK and NOTIFY_NTFY are empty)')
   } else {
