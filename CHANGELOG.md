@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.11] - 2026-11-10
+
 ### Added
 
 - A name is resolved through a chain of sources instead of two fixed steps: the static pairs in
@@ -27,7 +29,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 - Resolution timing is stated once and tested with an injected clock: an answer is kept for 30 s, a
   name that answered nothing is asked again after 60 s, two attempts are at least 5 s apart, and a
-  device that stops answering marks its attempt stale without losing the last known address. The
+  device that stops answering drops the known answer so the next poll resolves again, while the
+  failed attempt throttles the polls that follow. The last known address stays as the fallback. The
   lease table is read at most once a minute, matched by full hostname then by first label, and an
   expired lease is dropped.
 
@@ -491,7 +494,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.9...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.11...HEAD
+[0.9.11]: https://github.com/openhoat/wiim-hub/compare/v0.9.10...v0.9.11
 [0.9.10]: https://github.com/openhoat/wiim-hub/compare/v0.9.9...v0.9.10
 [0.9.9]: https://github.com/openhoat/wiim-hub/compare/v0.9.8...v0.9.9
 [0.9.8]: https://github.com/openhoat/wiim-hub/compare/v0.9.7...v0.9.8
