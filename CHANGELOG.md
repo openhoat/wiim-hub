@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.20] - 2026-11-10
+
 ### Changed
 
 - A running group is drawn as one card, the way the vendor app shows it: the group's name heads the
@@ -631,6 +633,7 @@ Releases are cut from `package.json`: the version in that file names the section
 - English and French labels, picked from the browser, with an English fallback.
 
 [Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.19...HEAD
+[0.9.20]: https://github.com/openhoat/wiim-hub/compare/v0.9.19...v0.9.20
 [0.9.19]: https://github.com/openhoat/wiim-hub/compare/v0.9.18...v0.9.19
 [0.9.18]: https://github.com/openhoat/wiim-hub/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/openhoat/wiim-hub/compare/v0.9.16...v0.9.17
