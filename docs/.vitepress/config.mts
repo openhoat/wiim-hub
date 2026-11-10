@@ -26,6 +26,7 @@ export default withMermaid(
     themeConfig: {
       logo: '/logo.svg',
       nav: [
+        { text: 'Features', link: '/features' },
         { text: 'Guide', link: '/guide/quick-start' },
         { text: 'How it works', link: '/how-it-works' },
         { text: 'Reference', link: '/reference/http-api' },
@@ -35,6 +36,7 @@ export default withMermaid(
         {
           text: 'Guide',
           items: [
+            { text: 'Features', link: '/features' },
             { text: 'Quick start', link: '/guide/quick-start' },
             { text: 'Configuration', link: '/guide/configuration' },
             { text: 'Devices', link: '/guide/devices' },

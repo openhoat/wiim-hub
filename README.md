@@ -15,6 +15,7 @@ own state and its own write queue, so a mixed fleet (Pro, Mini, Amp, Ultra, OEM 
 the normal case.
 
 **[Documentation](https://openhoat.github.io/wiim-hub/)** ·
+[Features](https://openhoat.github.io/wiim-hub/features) ·
 [Quick start](https://openhoat.github.io/wiim-hub/guide/quick-start) ·
 [Configuration](https://openhoat.github.io/wiim-hub/guide/configuration) ·
 [How it works](https://openhoat.github.io/wiim-hub/how-it-works)

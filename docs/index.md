@@ -26,6 +26,16 @@ features:
     details: Transport, volume, seek, presets, sleep timer, audio route, stream URL and device settings, each written through one queue per speaker so a slider drag cannot race itself.
   - title: A mixed fleet is the normal case
     details: Pro, Mini, Amp, Ultra and OEM LinkPlay players side by side. Transport, name resolution and capabilities are probed per device, never assumed.
+  - title: A group member reads as a member
+    details: A speaker that follows another no longer looks stopped and alone. Its card names the group, the speaker it follows and the track the group is playing, and says where that reading comes from.
+  - title: Facts with their numbers
+    details: Every finding quotes the field it read, and the same report is served as English Markdown, raw answers included, for the support thread that asks for proof.
+  - title: Alerts that reach you
+    details: A webhook or an ntfy topic, one message when a rule appears, then silence for an hour. Nothing is retried or stored behind your back.
+  - title: Installed like an app
+    details: The page installs on a phone or a desktop, opens without a network, keeps the last state it received, and stops its clock at the moment that state was taken.
+  - title: Yours, on your network
+    details: A bearer key for scripts and agents, or the identity your reverse proxy already leaves. The hub calls no vendor cloud, and ships no vendor code.
   - title: No speaker, no problem
     details: A demo mode serves the same interface over two simulated players. The end-to-end suite runs against it, so the project is testable without hardware.
 ---
@@ -52,6 +62,7 @@ stack one per screen and nothing needs a zoom.
 
 ## Where to go next
 
+- [Features](/features): everything the hub does, in one page, with the page that explains each part.
 - [Quick start](/guide/quick-start): run the published image, or build from sources.
 - [Configuration](/guide/configuration): the environment variables, and what has to stay reachable.
 - [Devices](/guide/devices): an explicit list, discovery, or names kept in sync by mDNS.

@@ -10,6 +10,13 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- A Features page on the documentation site lists everything the hub ships today, grouped by what
+  you would go looking for, each row linking to the page that explains it. It claims nothing that
+  is not released, and the behaviours measured on a real player still point at the feature
+  research. The home page carries nine feature cards instead of four.
+
 ## [0.9.16] - 2026-11-10
 
 ### Fixed
