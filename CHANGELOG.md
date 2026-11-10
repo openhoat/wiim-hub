@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.18] - 2026-11-10
+
 ### Changed
 
 - Saved presets leave the player card for a Browse sheet, opened from the controls row: cover,
@@ -607,6 +609,7 @@ Releases are cut from `package.json`: the version in that file names the section
 - English and French labels, picked from the browser, with an English fallback.
 
 [Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.11...HEAD
+[0.9.18]: https://github.com/openhoat/wiim-hub/compare/v0.9.17...v0.9.18
 [0.9.17]: https://github.com/openhoat/wiim-hub/compare/v0.9.16...v0.9.17
 [0.9.16]: https://github.com/openhoat/wiim-hub/compare/v0.9.15...v0.9.16
 [0.9.15]: https://github.com/openhoat/wiim-hub/compare/v0.9.14...v0.9.15
