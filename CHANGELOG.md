@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.21] - 2026-11-10
+
 ### Added
 
 - The hub drives a multiroom group instead of only reading one: `POST /api/group` takes a volume
@@ -673,7 +675,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.19...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.21...HEAD
+[0.9.21]: https://github.com/openhoat/wiim-hub/compare/v0.9.20...v0.9.21
 [0.9.20]: https://github.com/openhoat/wiim-hub/compare/v0.9.19...v0.9.20
 [0.9.19]: https://github.com/openhoat/wiim-hub/compare/v0.9.18...v0.9.19
 [0.9.18]: https://github.com/openhoat/wiim-hub/compare/v0.9.17...v0.9.18
