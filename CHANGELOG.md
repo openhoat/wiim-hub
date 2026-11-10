@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.13] - 2026-11-10
+
 ### Added
 
 - The API can ask for a key: `WIIM_HUB_TOKEN` makes every `/api/*` route require either that key
@@ -541,6 +543,7 @@ Releases are cut from `package.json`: the version in that file names the section
 - English and French labels, picked from the browser, with an English fallback.
 
 [Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.11...HEAD
+[0.9.13]: https://github.com/openhoat/wiim-hub/compare/v0.9.12...v0.9.13
 [0.9.12]: https://github.com/openhoat/wiim-hub/compare/v0.9.11...v0.9.12
 [0.9.11]: https://github.com/openhoat/wiim-hub/compare/v0.9.10...v0.9.11
 [0.9.10]: https://github.com/openhoat/wiim-hub/compare/v0.9.9...v0.9.10
