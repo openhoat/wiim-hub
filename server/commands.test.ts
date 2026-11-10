@@ -34,7 +34,7 @@ const device = (overrides: Partial<DeviceState> = {}): DeviceState => ({
   inputLabels: { wifi: 'Wi-Fi', optical: 'Optical' },
   outputs: [{ hardware: 1, name: 'Optical' }],
   outputHardware: 1,
-  presets: [{ number: 1, name: 'Radio', artwork: '' }],
+  presets: [{ number: 1, name: 'Radio', artwork: '', source: '' }],
   eq: { enabled: true, name: 'Rock', source: 'wifi', bands: [], presets: ['Rock'], roomFit: false },
   quality: { sampleRate: 48000, bitDepth: 16, bitRate: 128 },
   updatedAt: 1,

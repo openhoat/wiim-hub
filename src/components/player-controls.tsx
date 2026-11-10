@@ -324,25 +324,45 @@ export const PlayerControls = ({
             <Layers className="size-3" />
             {t('controls.presets')}
           </span>
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3">
+          {/* What the app saved, in the player's own slot order. A slot is not
+              always a playlist: radios and saved configurations share the list,
+              so the cover and the name come from the payload and the service it
+              was saved from is printed as the firmware spells it. */}
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {device.presets.map(preset => {
               const art = presetArtUrl(device, preset.artwork)
+              const detail =
+                preset.source === '' ? preset.name : `${preset.name} · ${preset.source}`
               return (
                 <button
                   key={preset.number}
                   type="button"
                   disabled={!online || busy}
                   onClick={() => void controls.run({ action: 'preset', slot: preset.number })}
-                  className="flex min-w-0 items-center gap-2 rounded-lg border border-border p-1.5 text-left text-xs transition-colors hover:bg-muted disabled:opacity-50"
+                  title={detail}
+                  aria-label={detail}
+                  className="group min-w-0 text-left disabled:opacity-50"
                 >
-                  <span className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-md bg-muted text-[10px] tabular-nums text-muted-foreground">
-                    {art !== null ? (
-                      <img src={art} alt="" loading="lazy" className="size-full object-cover" />
+                  <span className="relative block aspect-square overflow-hidden rounded-lg border border-border bg-muted transition-colors group-hover:border-foreground/40">
+                    {art === null ? (
+                      <span className="grid size-full place-items-center text-xs tabular-nums text-muted-foreground">
+                        {preset.number}
+                      </span>
                     ) : (
-                      preset.number
+                      <>
+                        <img src={art} alt="" loading="lazy" className="size-full object-cover" />
+                        <span className="absolute left-1 top-1 rounded bg-background/80 px-1 text-[10px] tabular-nums text-muted-foreground">
+                          {preset.number}
+                        </span>
+                      </>
                     )}
                   </span>
-                  <span className="min-w-0 truncate">{preset.name}</span>
+                  <span className="mt-1 block truncate text-[11px]">{preset.name}</span>
+                  {preset.source !== '' && (
+                    <span className="block truncate text-[10px] text-muted-foreground">
+                      {preset.source}
+                    </span>
+                  )}
                 </button>
               )
             })}

@@ -296,8 +296,18 @@ const livingRoom = (): DeviceState => {
     ],
     outputHardware: 1,
     presets: [
-      { number: 1, name: 'Morning Radio', artwork: 'demo://cover/morning-radio' },
-      { number: 3, name: 'Sunday Jazz', artwork: 'demo://cover/sunday-jazz' },
+      {
+        number: 1,
+        name: 'Morning Radio',
+        artwork: 'demo://cover/morning-radio',
+        source: 'vTuner',
+      },
+      {
+        number: 3,
+        name: 'Sunday Jazz',
+        artwork: 'demo://cover/sunday-jazz',
+        source: 'YouTubeMusic',
+      },
     ],
     eq: {
       enabled: true,

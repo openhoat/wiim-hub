@@ -8,7 +8,7 @@ export type Sample = {
 
 export type EventKind = 'online' | 'offline' | 'status' | 'track'
 
-export type Preset = { number: number; name: string; artwork: string }
+export type Preset = { number: number; name: string; artwork: string; source: string }
 
 export type OutputOption = { hardware: number; name: string }
 

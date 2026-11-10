@@ -48,6 +48,10 @@ intent to the firmware command. The body is JSON.
 | `maxVolume`                                       | `level`                |
 | `url`                                             | `url`, http or https   |
 
+A `preset` intent names a slot the player holds; it carries no content. A slot saved from a
+streaming service usually stores no stream URL either, and the player resolves what to play itself,
+so the hub only ever sends the slot number and the device's own answer decides the rest.
+
 Validation happens against the last known state, and a refused intent answers with the reason
 instead of reaching the speaker:
 

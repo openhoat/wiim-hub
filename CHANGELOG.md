@@ -12,6 +12,13 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ### Added
 
+- Saved presets are shown as a cover grid instead of a line of text: the cover the service
+  gave, the name, the slot number, and the service the slot was saved from, printed as the
+  firmware spells it. A slot is not always a playlist, since the app saves radios and
+  configurations in the same list, so the source is displayed rather than guessed at. On the
+  measured player a YouTube Music slot carries no stream URL and the player resolves the stream
+  itself, so one tap starts the playlist with no app in the loop.
+
 - A Features page on the documentation site lists everything the hub ships today, grouped by what
   you would go looking for, each row linking to the page that explains it. It claims nothing that
   is not released, and the behaviours measured on a real player still point at the feature
