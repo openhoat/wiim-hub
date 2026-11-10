@@ -249,7 +249,10 @@ export const NowPlayingCard = ({
   // badge keeps the transport state without the "a track is playing" meter.
   const external = isExternalInput(live.input)
   const sourceName = external ? inputLabel(t, live.inputLabels, live.input) : ''
-  const headline = mirror !== null ? mirror.title : sourceName === '' ? live.title : sourceName
+  // A mirrored playback names the track; an external input names the source; a
+  // device with nothing to report keeps the empty headline the card words itself.
+  const ownHeadline = sourceName === '' ? live.title : sourceName
+  const headline = mirror === null ? ownHeadline : mirror.title
   const playing = live.online && (mirror?.status ?? live.status) === 'play'
   const group = live.group
   // An offline speaker keeps its last known group: showing it would claim a
