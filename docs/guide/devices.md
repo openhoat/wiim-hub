@@ -103,10 +103,11 @@ remembered on the speaker that drives it, and its transport reads `mode 99, stop
 because the stream runs on the master. Read alone, such a speaker looks like a stopped player in no
 group. The hub polls the whole fleet, so it completes the picture from the master's own answer, and
 draws the group as one card: the group's name heads it, the speaker that drives it sits under it,
-and the speakers that follow are rows with their own volume. A member that plays something of its
-own keeps its own card, because its answer wins over the group it is supposed to follow. The copy
-lives in a separate `mirror`, so the diagnostic view and the exported report still say what the
-device itself answered.
+and every speaker is a row with its own volume, the master included — the slider at the top of the
+card is the group's level, fanned out, so the room that drives the group needs a level of its own.
+A member that plays something of its own keeps its own card, because its answer wins over the group
+it is supposed to follow. The copy lives in a separate `mirror`, so the diagnostic view and the
+exported report still say what the device itself answered.
 
 The transport is not offered on a member. A command sent to a member drives its own silent input,
 not the group, and the hub does not write to another speaker on your behalf. Volume stays: it is the
@@ -132,9 +133,11 @@ gestures do not take the same path. Both follow the measurements in
   `setPlayerCmd:slave_vol` does no better. The hub sends the master its own level and one
   `multiroom:SlaveVolume` per member, each in its own queue family, so a drag leaves one pending
   value per speaker instead of one per step. There is no level the group knows: the line under the
-  slider says so, and a speaker can still be moved on its own from its row.
+  slider says so, and the row of the master sets that room alone, the same measured write without
+  the fan-out.
 - **Mute is one write.** The master's own mute reaches the members and the list it keeps, so one
-  command silences the group, and one command restores it.
+  command silences the group, and one command restores it. The master's row therefore carries no
+  mute button: it names one room, and the write would silence every room.
 
 ### Forming and breaking a group
 

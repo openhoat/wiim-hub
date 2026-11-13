@@ -48,7 +48,8 @@ export const VolumeControl = ({
   controls,
   label,
   speaker,
-}: Readonly<{ controls: Controls; label?: string; speaker?: string }>) => {
+  withMute = true,
+}: Readonly<{ controls: Controls; label?: string; speaker?: string; withMute?: boolean }>) => {
   const { t } = useSettings()
   const device = controls.device
   const ceiling = ceilingOf(device.maxVolume)
@@ -84,16 +85,25 @@ export const VolumeControl = ({
   return (
     <div className="min-w-0 flex-1">
       <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          disabled={!device.online}
-          aria-label={muteLabel}
-          aria-pressed={muted}
-          onClick={() => void controls.run({ action: 'mute', muted: !muted })}
-        >
-          {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-        </Button>
+        {/* A row can drop the button and keep the slider: on the speaker that
+            drives a group, this mute is the group's, since the master's own
+            mute propagates to the members (measured). Drawing it here would
+            silence the whole group from a row that names one room. The empty
+            slot keeps the sliders of the list aligned. */}
+        {withMute ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            disabled={!device.online}
+            aria-label={muteLabel}
+            aria-pressed={muted}
+            onClick={() => void controls.run({ action: 'mute', muted: !muted })}
+          >
+            {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+          </Button>
+        ) : (
+          <span className="size-8 shrink-0" aria-hidden="true" />
+        )}
         <input
           type="range"
           min={0}

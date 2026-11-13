@@ -404,36 +404,56 @@ const MoveButtons = ({
 // because the group card answers "what is playing, and where" and a row of two
 // sliders per speaker would compete with that on a phone.
 //
-// The volume and the mute here are the member's own device writes: measured on a
-// real group, `setPlayerCmd:vol` and `setPlayerCmd:mute` sent to a member move
-// that member alone and the master's list follows. That is the same path the
-// hub shipped in 0.9.20, and the measurements kept it valid.
-const MemberRow = ({
-  member,
+// The volume here is the speaker's own device write, the master's included:
+// measured on a real group, `setPlayerCmd:vol` sent to a member moves that member
+// alone, and the same command sent to the master moves the master alone (the
+// group level is a fan-out, never a value the firmware holds). The master row is
+// what the card was missing: the big slider above it fans the group out, so
+// without this row the room that drives the group had no level of its own, which
+// the vendor app does offer.
+//
+// The mute button stays out of the master row: its mute reaches the whole group
+// (measured), and a row naming one room must not silence three.
+const SpeakerRow = ({
+  device,
   master,
+  driver = false,
   now,
   onChanged,
-}: Readonly<{ member: Device; master: Device; now: number; onChanged?: () => void }>) => {
+}: Readonly<{
+  device: Device
+  master: Device
+  driver?: boolean
+  now: number
+  onChanged?: () => void
+}>) => {
   const { t, resolvedLang } = useSettings()
-  const controls = useControls(member)
+  const controls = useControls(device)
   const live = controls.device
-  const label = t('group.volumeOf', { name: member.name })
+  const label = t('group.volumeOf', { name: device.name })
+  const role = driver ? t('group.driver') : ''
+  const state = live.online
+    ? [live.model || live.ip, role].filter(part => part !== '').join(' · ')
+    : `${t('offline')} · ${agoLabel(t, resolvedLang, live.lastSeen, now)}`
 
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-2 py-2.5 sm:flex-nowrap">
       <div className="min-w-0 flex-1">
         <p className={cn('truncate text-xs font-medium', !live.online && 'text-muted-foreground')}>
-          {member.name}
+          {device.name}
         </p>
-        <p className="truncate text-[11px] text-muted-foreground">
-          {live.online
-            ? live.model || live.ip
-            : `${t('offline')} · ${agoLabel(t, resolvedLang, live.lastSeen, now)}`}
-        </p>
+        <p className="truncate text-[11px] text-muted-foreground">{state}</p>
       </div>
       <div className="flex min-w-0 basis-full items-center gap-1.5 sm:basis-auto sm:w-56">
-        <VolumeControl controls={controls} label={label} speaker={member.name} />
-        <MemberSheet device={member} master={master} onChanged={onChanged} />
+        <VolumeControl controls={controls} label={label} speaker={device.name} withMute={!driver} />
+        {/* The sheet carries the equalizer and the settings of a member; for the
+            master the card header already opens those, so the slot stays empty
+            and both rows keep the same slider width. */}
+        {driver ? (
+          <span className="size-8 shrink-0" aria-hidden="true" />
+        ) : (
+          <MemberSheet device={device} master={master} onChanged={onChanged} />
+        )}
       </div>
     </li>
   )
@@ -452,11 +472,16 @@ const AbsentRow = ({ member }: Readonly<{ member: GroupMember }>) => {
   )
 }
 
+// The speakers of a group, the one that drives it included: the reader settles a
+// room at a time, and the card's own slider stays the group's level, fanned out
+// to every speaker. The master comes first because it is the reference the
+// others follow, which is also the order the diagnostic view sorts by.
 const MemberList = ({
   card,
   now,
+  driven,
   onChanged,
-}: Readonly<{ card: FleetCard; now: number; onChanged?: () => void }>) => {
+}: Readonly<{ card: FleetCard; now: number; driven: boolean; onChanged?: () => void }>) => {
   const { t } = useSettings()
   if (card.members.length === 0 && card.absent.length === 0) return null
   return (
@@ -465,10 +490,20 @@ const MemberList = ({
         {t('group.speakers')}
       </p>
       <ul className="mt-1 divide-y divide-border/60 rounded-xl border border-border/60 px-3">
+        {driven && (
+          <SpeakerRow
+            key={card.master.ip}
+            device={card.master}
+            master={card.master}
+            driver
+            now={now}
+            onChanged={onChanged}
+          />
+        )}
         {card.members.map(member => (
-          <MemberRow
+          <SpeakerRow
             key={member.ip}
-            member={member}
+            device={member}
             master={card.master}
             now={now}
             onChanged={onChanged}
@@ -584,7 +619,9 @@ export const NowPlayingCard = ({
 
       {/* One slider for the whole group is a fan-out, not a group volume the
           device knows: saying so once, where the reader meets it, is cheaper
-          than a support question about why the two rooms drift apart. */}
+          than a support question about why the two rooms drift apart. The row of
+          the speaker that drives the group, below, is how a room is settled on
+          its own. */}
       {driven && <p className="mt-2 text-[11px] text-muted-foreground">{t('group.volumeHint')}</p>}
 
       <p
@@ -595,7 +632,7 @@ export const NowPlayingCard = ({
         {controlErrorLabel(t, groupRun.error)}
       </p>
 
-      <MemberList card={card} now={now} onChanged={onGroupChanged} />
+      <MemberList card={card} now={now} driven={driven} onChanged={onGroupChanged} />
 
       {canJoin && <JoinGroup device={live} fleet={fleet} onChanged={onGroupChanged} />}
 

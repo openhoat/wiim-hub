@@ -143,12 +143,19 @@ test('draws a running group as one card, with its members as rows', async ({ pag
   await expect(group.getByRole('button', { name: 'Previous' })).toBeVisible()
 
   // The members are rows of that card: one the fleet polls, with its own
-  // volume, and one the master remembers and nothing confirms.
+  // volume, and one the master remembers and nothing confirms. The speaker that
+  // drives the group is a row too, and comes first: it is the room the others
+  // follow, and the slider at the top of the card is the group's level, not its.
   await expect(group.getByText('Speakers', { exact: true })).toBeVisible()
+  await expect(group.getByRole('slider', { name: 'Volume of Living Room' })).toHaveValue('44')
+  await expect(group.getByText('WiiM Pro · drives the group')).toBeVisible()
   await expect(group.getByText('Hallway')).toBeVisible()
   await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
   await expect(group.getByText('Bathroom')).toBeVisible()
   await expect(group.getByText('state unknown')).toBeVisible()
+  // Its mute reaches every speaker (measured), so the row that names one room
+  // carries no mute button: the group's own is on the player above.
+  await expect(group.getByRole('button', { name: 'Mute of Living Room' })).toHaveCount(0)
 
   // The offline speaker keeps its own card and draws no row of the group.
   const bedroom = page.getByTestId('playing-192.0.2.22')
@@ -497,6 +504,28 @@ test('writes the volume of a group member from its row', async ({ page }) => {
   expect(state.devices.find(device => device.name === 'Living Room')?.volume).not.toBe(36)
 })
 
+// The speaker that drives the group has a level of its own, and it is a device
+// write like any other: measured, `setPlayerCmd:vol` on the master does not
+// reach the members. That is what lets a reader settle one room while the group
+// runs, which the vendor app offers and the group slider alone could not.
+test('writes the volume of the group master without moving the group', async ({ page }) => {
+  await openHub(page)
+
+  const card = page.getByTestId('playing-192.0.2.21')
+  const volume = card.getByRole('slider', { name: 'Volume of Living Room' })
+  await expect(volume).toHaveValue('44')
+  await volume.press('ArrowRight')
+  await expect(volume).toHaveValue('45')
+  await page.waitForTimeout(4000)
+  await expect(volume).toHaveValue('45')
+
+  const response = await page.request.get('/api/state')
+  const state: { devices: { name: string; volume: number | null }[] } = await response.json()
+  expect(state.devices.find(device => device.name === 'Living Room')?.volume).toBe(45)
+  // The group did not move with it.
+  expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(35)
+})
+
 test('remembers the view, the language and the theme', async ({ page }) => {
   await openHub(page)
 
@@ -733,9 +762,12 @@ test.describe('multiroom', () => {
 
     const group = page.getByTestId('playing-192.0.2.21')
     // A group volume is a fan-out, not a level the device knows: the card says
-    // so where the reader meets the slider.
+    // so where the reader meets the slider, and points at the row that settles
+    // one room on its own.
     await expect(
-      group.getByText('Group volume sets every speaker in the group to the same level.')
+      group.getByText(
+        'Group volume sets every speaker to the same level; the row of the speaker that drives the group sets that speaker alone.'
+      )
     ).toBeVisible()
 
     const volume = group.getByRole('slider', { name: 'Volume', exact: true })

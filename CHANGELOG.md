@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- A running group's card lists the speaker that drives it as a row, like the speakers that follow
+  it, so one room can be settled without moving the group. Its slider is a plain device write:
+  measured, `setPlayerCmd:vol` sent to the master moves the master alone, while the group slider
+  above it fans the level out to every speaker. The row carries no mute button, because the master's
+  own mute reaches the whole group.
+
 ## [0.9.22] - 2026-11-13
 
 ### Fixed

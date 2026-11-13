@@ -26,7 +26,7 @@ and the behaviours measured on a real player are recorded in the
 | [Manage from the page](/guide/devices#adding-a-host-from-the-page) | Add, rename or remove a saved host; an address that came from the environment stays read only                 |
 | [Names resolved in a stated order](/guide/configuration#names)     | Static pairs, the router's lease file, the system resolver, then mDNS, and the report says which one answered |
 | [A mixed fleet is the normal case](/guide/devices#a-mixed-fleet)   | Pro, Mini, Amp, Ultra and OEM players side by side, each probed for what it supports                          |
-| [A running group is one card](/guide/devices#multiroom-read-only)  | The group's name, the speaker that drives it, and its members as rows with their own volume                   |
+| [A running group is one card](/guide/devices#multiroom-read-only)  | The group's name, the speaker that drives it, and every speaker as a row with its own volume                  |
 | [External inputs](/guide/devices#external-inputs)                  | A player on optical, line or coax is shown playing that input, with no track invented                         |
 
 ## Control
