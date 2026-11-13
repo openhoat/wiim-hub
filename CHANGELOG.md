@@ -10,6 +10,24 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.22] - 2026-11-13
+
+### Fixed
+
+- A member no longer drops out of its group card and comes back a few seconds later. The master's
+  slave list answers empty for a single poll now and then while it streams (measured: seven gaps in
+  two minutes), which dissolved the group for one tick. The fleet pass now prefers the master the
+  member names in its own `getStatusEx` (`master_ip`, steady on every one of those polls) and holds
+  the last real slave list for twelve seconds, so a silent poll reuses what the master said rather
+  than inventing a membership. The role, the name and the members always come from a real answer,
+  timestamped; a group that really ends is still dropped as soon as the device stops reporting it.
+- The demo runs the same pass without the hold: a fixture gesture shows on the next frame.
+
+### Changed
+
+- The test suite names its cases with `test` rather than `it`. Nothing else changes: same runner,
+  same files, same count.
+
 ## [0.9.21] - 2026-11-10
 
 ### Added
