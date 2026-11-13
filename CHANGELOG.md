@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.25] - 2026-11-13
+
 ### Fixed
 
 - A running group no longer splits into two cards while a speaker of the fleet is offline. The poll
@@ -723,7 +725,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.24...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.25...HEAD
+[0.9.25]: https://github.com/openhoat/wiim-hub/compare/v0.9.24...v0.9.25
 [0.9.24]: https://github.com/openhoat/wiim-hub/compare/v0.9.23...v0.9.24
 [0.9.23]: https://github.com/openhoat/wiim-hub/compare/v0.9.22...v0.9.23
 [0.9.22]: https://github.com/openhoat/wiim-hub/compare/v0.9.21...v0.9.22
