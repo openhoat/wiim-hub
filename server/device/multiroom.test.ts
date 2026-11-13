@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { savedGroups } from '../fixtures/wiim-pro.ts'
-import { parseGroup, parseRegistry, type Registry } from './multiroom.ts'
+import { parseGroup, parseRegistry, type Registry, readMaster } from './multiroom.ts'
 
 // The registry the group bookkeeping reads: a saved group is what the vendor
 // app remembers, a running group is what the device reports now.
@@ -12,7 +12,7 @@ const registry = (overrides: Partial<Registry> = {}): Registry => ({
 })
 
 describe('parseGroup', () => {
-  it('reports no group when the device reports nothing', () => {
+  test('reports no group when the device reports nothing', () => {
     expect(parseGroup(null, '0', registry())).toEqual({
       role: 'none',
       name: '',
@@ -22,7 +22,7 @@ describe('parseGroup', () => {
     })
   })
 
-  it('reports a master and its members from the reported slave list', () => {
+  test('reports a master and its members from the reported slave list', () => {
     const raw = {
       Slave_list: [
         { name: 'Bedroom', ip: '192.0.2.11', uuid: 'uuid-1' },
@@ -41,7 +41,7 @@ describe('parseGroup', () => {
     })
   })
 
-  it('reads the member list under its three spellings', () => {
+  test('reads the member list under its three spellings', () => {
     for (const key of ['Slave_list', 'slavelist', 'slave_list']) {
       const parsed = parseGroup({ [key]: [{ name: 'Bedroom', uuid: 'uuid-1' }] }, '0', registry())
       expect(parsed.role).toBe('master')
@@ -49,27 +49,45 @@ describe('parseGroup', () => {
     }
   })
 
-  it('falls back to the uuid when a member has no name', () => {
+  test('falls back to the uuid when a member has no name', () => {
     const parsed = parseGroup({ Slave_list: [{ uuid: 'uuid-1' }] }, '0', registry())
     expect(parsed.members).toEqual([{ name: 'uuid-1', ip: '', uuid: 'uuid-1' }])
   })
 
-  it('reports a master from the slave count alone', () => {
+  test('reports a master from the slave count alone', () => {
     expect(parseGroup({ Slaves: '2' }, '0', registry())).toMatchObject({
       role: 'master',
       members: [],
     })
   })
 
-  it('reports a member when its status carries a group id', () => {
+  test('reports a member when its status carries a group id', () => {
     expect(parseGroup(null, 'group-1', registry())).toMatchObject({ role: 'member' })
   })
 
-  it('does not take the zero group id for a membership', () => {
+  test('gives a member the master it names itself', () => {
+    // The member's own answer, and the steadier of the two sources: the master's
+    // slave list drops out for a poll now and then while it streams, this does
+    // not. The name is the fleet's job, so the address comes alone.
+    expect(parseGroup(null, 'group-1', registry(), '192.0.2.10')).toMatchObject({
+      role: 'member',
+      parent: { name: '', ip: '192.0.2.10' },
+    })
+  })
+
+  test('gives no parent to a speaker that drives the group', () => {
+    const raw = { Slave_list: [{ name: 'Bedroom', ip: '192.0.2.11', uuid: 'uuid-1' }] }
+    expect(parseGroup(raw, '0', registry(), '192.0.2.10')).toMatchObject({
+      role: 'master',
+      parent: null,
+    })
+  })
+
+  test('does not take the zero group id for a membership', () => {
     expect(parseGroup(null, '0', registry())).toMatchObject({ role: 'none' })
   })
 
-  it('exposes the saved group of the registry, with no member online', () => {
+  test('exposes the saved group of the registry, with no member online', () => {
     const saved = {
       id: 'group-1',
       name: 'Apartment',
@@ -84,7 +102,7 @@ describe('parseGroup', () => {
     })
   })
 
-  it('keeps the reported members when the saved group is also running', () => {
+  test('keeps the reported members when the saved group is also running', () => {
     const saved = {
       id: 'group-1',
       name: 'Apartment',
@@ -104,7 +122,7 @@ describe('parseGroup', () => {
     })
   })
 
-  it('ignores a saved group the device does not point at', () => {
+  test('ignores a saved group the device does not point at', () => {
     const saved = { id: 'group-1', name: 'Apartment', members: [] }
     expect(parseGroup(null, '0', registry({ groups: [saved], current: 'group-2' }))).toEqual({
       role: 'none',
@@ -115,15 +133,28 @@ describe('parseGroup', () => {
     })
   })
 
-  it('ignores a malformed reported member instead of inventing one', () => {
+  test('ignores a malformed reported member instead of inventing one', () => {
     const parsed = parseGroup({ Slaves: '2', Slave_list: [null, 'Bedroom', 3] }, '0', registry())
     expect(parsed.role).toBe('master')
     expect(parsed.members).toEqual([])
   })
 })
 
+describe('readMaster', () => {
+  test('reads the address a member publishes for its master', () => {
+    expect(readMaster({ master_ip: '192.0.2.10' })).toBe('192.0.2.10')
+  })
+
+  test('answers nothing when the build does not publish the field', () => {
+    // The older build answers the same `getStatusEx` without it: an empty string
+    // sends the fleet back to the master's slave list.
+    expect(readMaster({ group: '1' })).toBe('')
+    expect(readMaster(null)).toBe('')
+  })
+})
+
 describe('parseRegistry', () => {
-  it('reads the saved group and its offline member', () => {
+  test('reads the saved group and its offline member', () => {
     expect(parseRegistry(savedGroups)).toEqual({
       groups: [
         {
@@ -136,14 +167,14 @@ describe('parseRegistry', () => {
     })
   })
 
-  it('separates an unreadable answer from an empty registry', () => {
+  test('separates an unreadable answer from an empty registry', () => {
     // `null` means "keep what you knew"; an empty registry is a real answer.
     expect(parseRegistry('unknown command')).toBeNull()
     expect(parseRegistry(null)).toBeNull()
     expect(parseRegistry('{ "grouplist": [] }')).toEqual({ groups: [], current: '' })
   })
 
-  it('skips a group without an id instead of inventing one', () => {
+  test('skips a group without an id instead of inventing one', () => {
     const raw = JSON.stringify({
       grouplist: [
         { group_name: 'No id', slavelist: [{ name: 'Bedroom' }] },

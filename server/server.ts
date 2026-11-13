@@ -14,7 +14,7 @@ import { fetchCommand } from './device/transport.ts'
 import { discoverSsdp } from './discovery.ts'
 import { buildReport, findingsFor } from './findings.ts'
 import { type FleetUnit, groupPlanFor, parseGroupIntent } from './group-commands.ts'
-import { reconcileGroups } from './groups.ts'
+import { createGroupReconciler } from './groups.ts'
 import { guidesFor } from './guides.ts'
 import {
   type HostEntry,
@@ -76,6 +76,10 @@ const hosts = new Set(envHosts)
 const hostsFile =
   (process.env.HOSTS_FILE ?? '').trim() || resolve(import.meta.dirname, '..', 'data', 'hosts.json')
 const states = new Map<string, DeviceState>()
+// One reconciler for the life of the process: it is what remembers the last
+// truthful group answer, so a hollow poll can reuse it instead of dissolving a
+// group that still runs.
+const reconcileGroups = createGroupReconciler()
 // Read before the server listens, so the startup line and the first poll already
 // count what the page kept. Top-level await is available here: this module is
 // the process entry point.
@@ -284,6 +288,9 @@ const pollAll = async (): Promise<void> => {
     // A group is a shared object: a member knows neither its name nor its
     // members, only the master does. Joining the answers needs them all, so the
     // pass runs once the polls have settled, before anything reads the state.
+    // The reconciler holds the last real answer for a few polls, which is what
+    // keeps a group from vanishing on the single empty answer this firmware
+    // gives now and then.
     reconcileGroups(states.values())
     // The findings are cheap and read the state the pass just completed, so they
     // are evaluated every tick: a player that goes offline is then reported at

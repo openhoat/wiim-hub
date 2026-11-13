@@ -12,7 +12,7 @@ import type { Diagnostics } from './diagnostics.ts'
 import { type Capability, capabilityCache, capabilityFor, emptyCapability } from './inputs.ts'
 import { cachedModel, modelFor } from './model.ts'
 import type { GroupParent, GroupState, Registry } from './multiroom.ts'
-import { emptyRegistry, groupCache, groupsFor, parseGroup } from './multiroom.ts'
+import { emptyRegistry, groupCache, groupsFor, parseGroup, readMaster } from './multiroom.ts'
 import type { OutputOption } from './outputs.ts'
 import {
   artUri,
@@ -182,7 +182,7 @@ export const parseDevice = (input: {
     bssid: text(status?.BSSID),
     wmrmVersion: text(status?.wmrm_version),
     uuid: deviceUuid(status?.uuid, status?.upnp_uuid),
-    group: parseGroup(slaves, text(status?.group), registry),
+    group: parseGroup(slaves, text(status?.group), registry, readMaster(status)),
     rssi: readRssi(status),
     volume: num(player?.vol),
     status: text(player?.status),

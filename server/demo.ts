@@ -43,7 +43,7 @@ import {
   groupPlanFor,
   parseGroupIntent,
 } from './group-commands.ts'
-import { reconcileGroups } from './groups.ts'
+import { createGroupReconciler } from './groups.ts'
 import { guidesFor } from './guides.ts'
 import { buildInventory, type Inventory, type Resolution } from './inventory.ts'
 import { parseServicesCapability } from './services.ts'
@@ -494,6 +494,11 @@ const states = new Map<string, DeviceState>([
   ['192.0.2.22', bedroom()],
   ['192.0.2.23', hallway()],
 ])
+
+// The demo is a fixture: a gesture must show on the next frame, so the group
+// pass runs without the hold the hub keeps for a real speaker that answers an
+// empty list for one poll.
+const reconcileGroups = createGroupReconciler(0)
 
 const settings = new Map<string, DeviceSettings>([
   [

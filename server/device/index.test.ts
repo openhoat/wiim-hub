@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import {
   acousticCapability,
   eqBands,
@@ -91,7 +91,7 @@ const device = (overrides: Partial<DeviceInput> = {}): DeviceInput => ({
 })
 
 describe('parseDevice', () => {
-  it('turns the recorded answers into one device patch', () => {
+  test('turns the recorded answers into one device patch', () => {
     expect(parseDevice(device())).toEqual({
       ip: '192.0.2.150',
       online: true,
@@ -168,7 +168,7 @@ describe('parseDevice', () => {
     })
   })
 
-  it('keeps what the caches knew when the player stops answering', () => {
+  test('keeps what the caches knew when the player stops answering', () => {
     const parsed = parseDevice(device({ status: null, slaves: null }))
     expect(parsed).toMatchObject({
       online: false,
@@ -198,14 +198,25 @@ describe('parseDevice', () => {
     expect(parsed.outputs).toHaveLength(3)
   })
 
-  it('reads the signal under either spelling, and the documented key first', () => {
+  test('takes the master a member names from its own status', () => {
+    // `master_ip` is the member's own answer, and the steadiest one: it lets the
+    // fleet parent the member even on a poll where the master listed nothing.
+    const parsed = parseDevice(
+      device({ status: { group: '1', master_ip: '192.0.2.150', master_uuid: 'FF9700' } })
+    )
+    expect(parsed.group.role).toBe('member')
+    // The fleet names it: an address alone is not a card.
+    expect(parsed.group.parent).toEqual({ name: '', ip: '192.0.2.150' })
+  })
+
+  test('reads the signal under either spelling, and the documented key first', () => {
     expect(parseDevice(device({ status: { rssi: -62 } })).rssi).toBe(-62)
     expect(parseDevice(device({ status: { RSSI: '-51', rssi: -62 } })).rssi).toBe(-51)
     // A counter sent as a number instead of a string is still a counter.
     expect(parseDevice(device({ status: { wlanSnr: 41 } })).link.snr).toBe(41)
   })
 
-  it('falls back to the raw hex track when the metadata is missing', () => {
+  test('falls back to the raw hex track when the metadata is missing', () => {
     const parsed = parseDevice(device({ meta: null }))
     expect(parsed.title).toBe('Gogol')
     expect(parsed.album).toBe('Solo Piano')
@@ -213,7 +224,7 @@ describe('parseDevice', () => {
     expect(parsed.artist).toBe('')
   })
 
-  it('drops the idle placeholders the firmware sends', () => {
+  test('drops the idle placeholders the firmware sends', () => {
     const parsed = parseDevice(
       device({
         meta: json(
@@ -228,7 +239,7 @@ describe('parseDevice', () => {
     expect(parsed.albumArt).toBe('')
   })
 
-  it('reports no position on an external input', () => {
+  test('reports no position on an external input', () => {
     const parsed = parseDevice(device({ player: { ...json(playerStatusEx), mode: '43' } }))
     expect(parsed.input).toBe('optical')
     // The firmware keeps replaying the position of the last stream it played.
@@ -238,7 +249,7 @@ describe('parseDevice', () => {
     expect(parsed.status).toBe('stop')
   })
 
-  it('scales a streaming position the firmware reports in microseconds', () => {
+  test('scales a streaming position the firmware reports in microseconds', () => {
     const parsed = parseDevice(
       device({
         player: { ...json(playerStatusEx), mode: '10', curpos: '60000000', totlen: '180000000' },
@@ -248,7 +259,7 @@ describe('parseDevice', () => {
     expect(parsed.totalMs).toBe(180_000)
   })
 
-  it('keeps a zero duration, which is how a live stream announces itself', () => {
+  test('keeps a zero duration, which is how a live stream announces itself', () => {
     // Measured on the reference player: a pushed stream reports a growing
     // position and no duration at all.
     const parsed = parseDevice(
@@ -264,7 +275,7 @@ describe('parseDevice', () => {
     expect(parsed.totalMs).toBe(0)
   })
 
-  it('reads a master from the reported member list', () => {
+  test('reads a master from the reported member list', () => {
     const parsed = parseDevice(
       device({
         slaves: json(
@@ -282,7 +293,7 @@ describe('parseDevice', () => {
     })
   })
 
-  it('answers an unknown command or an empty body with an empty equalizer', () => {
+  test('answers an unknown command or an empty body with an empty equalizer', () => {
     for (const eqRaw of ['unknown command', '', null]) {
       const parsed = parseDevice(device({ eqRaw, sleepRaw: eqRaw }))
       expect(parsed.eq).toEqual({
@@ -298,7 +309,7 @@ describe('parseDevice', () => {
     }
   })
 
-  it('sorts the bands and skips the ones it cannot read', () => {
+  test('sorts the bands and skips the ones it cannot read', () => {
     const parsed = parseDevice(
       device({
         eqRaw: JSON.stringify({
@@ -325,17 +336,17 @@ describe('parseDevice', () => {
 })
 
 describe('parseDevice, model and identity', () => {
-  it('prefers the name the device publishes over the internal project string', () => {
+  test('prefers the name the device publishes over the internal project string', () => {
     // Measured: the Mini says `project: "Muzo_Mini"` and calls itself "WiiM Mini
     // Receiver" in its UPnP description, so the description wins.
     expect(parseDevice(device({ modelName: 'WiiM Mini' })).model).toBe('WiiM Mini')
   })
 
-  it('falls back to the project string when the description did not answer', () => {
+  test('falls back to the project string when the description did not answer', () => {
     expect(parseDevice(device({ modelName: '' })).model).toBe('WiiM Pro')
   })
 
-  it('reads the group identity from either spelling of the status', () => {
+  test('reads the group identity from either spelling of the status', () => {
     expect(parseDevice(device()).uuid).toBe('A1B2C3D4E5F60718293A4B5C')
     const status = {
       ...json(statusEx),

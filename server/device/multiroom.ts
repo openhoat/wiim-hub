@@ -6,10 +6,19 @@ import { probeCommand } from './probes.ts'
 // firmware assigned, which is not the MAC on every model.
 export type GroupMember = { name: string; ip: string; uuid: string }
 
-// The speaker that drives the group a member follows. A member cannot answer
-// this itself: it keeps no registry and its status only says `group: "1"`, so
-// the hub names the master from its own fleet (`server/groups.ts`).
+// The speaker that drives the group a member follows. A member keeps no
+// registry, but this firmware does name its master in `getStatusEx`
+// (`master_ip`), which is the steadiest answer there is: measured at 15/15
+// samples while the master's own slave list answered empty 3 times. The name is
+// left to the fleet pass (`server/groups.ts`), the only place that knows what
+// the address is called.
 export type GroupParent = { name: string; ip: string }
+
+// The master a member names in its own status. Empty when the build does not
+// publish the field, which is why the master's slave list is still read as the
+// second source.
+export const readMaster = (status: Record<string, unknown> | null): string =>
+  text(status?.master_ip)
 
 // Multiroom, read only for now. `role` is what this speaker does in the group,
 // `members` is what the device lists right now, and `saved` says a persistent
@@ -21,7 +30,9 @@ export type GroupState = {
   name: string
   members: GroupMember[]
   saved: boolean
-  // Null unless the fleet pass found the master this member follows.
+  // The speaker this member follows: the one it names itself when the build
+  // publishes `master_ip`, otherwise the one whose slave list carries it. Named
+  // by the fleet pass, which resolves the address to a card.
   parent: GroupParent | null
 }
 
@@ -107,7 +118,10 @@ const groupRole = (drives: boolean, follows: boolean): GroupState['role'] => {
 export const parseGroup = (
   raw: Record<string, unknown> | null,
   statusGroup: string,
-  registry: Registry
+  registry: Registry,
+  // The address a member reports for its own master (`readMaster`), empty when
+  // the build does not say. The fleet pass names it and confirms the speaker.
+  masterIp = ''
 ): GroupState => {
   const reported = readMembers(raw?.Slave_list ?? raw?.slavelist ?? raw?.slave_list)
   const count = num(raw?.Slaves) ?? num(raw?.slaves) ?? reported.length
@@ -119,7 +133,8 @@ export const parseGroup = (
     name: saved?.name ?? '',
     members: role === 'none' ? (saved?.members ?? []) : reported,
     saved: saved !== null,
-    // Only the fleet pass can answer this: a member's own registry is empty.
-    parent: null,
+    // A master names no parent, and a member that says nothing keeps the list of
+    // its own master as its only lead: both are answered here, never guessed.
+    parent: role === 'member' && masterIp !== '' ? { name: '', ip: masterIp } : null,
   }
 }
