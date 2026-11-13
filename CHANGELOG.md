@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.24] - 2026-11-13
+
 ### Fixed
 
 - An open window is told when a new release is deployed. The banner and the reload existed, but the
@@ -711,7 +713,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.23...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.24...HEAD
+[0.9.24]: https://github.com/openhoat/wiim-hub/compare/v0.9.23...v0.9.24
 [0.9.23]: https://github.com/openhoat/wiim-hub/compare/v0.9.22...v0.9.23
 [0.9.22]: https://github.com/openhoat/wiim-hub/compare/v0.9.21...v0.9.22
 [0.9.21]: https://github.com/openhoat/wiim-hub/compare/v0.9.20...v0.9.21
