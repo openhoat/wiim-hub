@@ -641,6 +641,18 @@ test('opens on the cached shell when the network is gone', async ({ page, contex
   await expect(page.getByText(/Last state received/)).toBeVisible()
 })
 
+// The browser looks for a new worker by comparing the script it already has with
+// the one served, byte for byte. `public/sw.js` is the same file at every
+// release, so the build stamps the release into it: without that, the check
+// would answer "same script" and an open window would keep the bundle it loaded,
+// with no banner to say otherwise.
+test('serves the worker stamped with the release it was built from', () => {
+  const worker = readFileSync(resolve('dist/app/sw.js'), 'utf8')
+  const manifest: { version: string } = JSON.parse(readFileSync(resolve('package.json'), 'utf8'))
+  expect(worker).toContain(`wiim-hub-shell-${manifest.version}`)
+  expect(worker).not.toContain('__HUB_VERSION__')
+})
+
 test('offers a new version to a window that stayed open, instead of a reinstall', async ({
   page,
 }) => {

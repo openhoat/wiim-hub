@@ -97,6 +97,7 @@
       "files": [
         "src/**/*.{ts,tsx,css,json}",
         "index.html",
+        "package.json",
         "public/**/*",
         "vite.config.ts",
         "tsconfig.json"

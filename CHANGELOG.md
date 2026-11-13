@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- An open window is told when a new release is deployed. The banner and the reload existed, but the
+  browser looks for a new service worker by comparing the script it already has with the one served,
+  byte for byte, and `public/sw.js` was the same file at every release: the check answered "same
+  script", so the banner could never appear. The build now stamps the release into the worker's
+  cache name, which also drops the previous shell when the new worker activates.
+
 ## [0.9.23] - 2026-11-13
 
 ### Added

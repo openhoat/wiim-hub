@@ -8,7 +8,13 @@
 // those requests go straight to the network and their failure stays visible. The
 // page then dates the state it renders, which is the whole point.
 
-const CACHE = 'wiim-hub-shell-v1'
+// The release this worker belongs to, stamped at build time from `package.json`
+// (`vite.config.ts`). The browser looks for a new worker by comparing the script
+// it already has with the one the server sends, byte for byte: a worker that
+// never changes is a deploy nobody is told about, and a window left open keeps
+// the old bundle until it is reloaded by hand. The cache carries the same
+// release, so the previous shell is dropped on activation.
+const CACHE = 'wiim-hub-shell-__HUB_VERSION__'
 
 // Install metadata and icons are read by the browser itself, at launch, to
 // decide what the app looks like. Served from the cache they would answer last

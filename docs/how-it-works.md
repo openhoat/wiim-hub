@@ -218,6 +218,12 @@ first install does not reload anything). Nothing is swapped under the pointer, a
 language and the last state survive the reload. A check runs when the app returns to the foreground
 and every 30 min.
 
+That check is only worth something if the script it fetches differs: the browser compares `/sw.js`
+byte for byte, and `public/sw.js` is the same file at every release. The build therefore stamps the
+release into the worker's cache name (`vite.config.ts`), so each release serves a different script,
+the browser installs it in the background, and an open window is told. Without the stamp the check
+would answer "same script" forever, which is a deploy nobody hears about.
+
 The manifest and the icons are the one cached group served **network first**: the browser reads them
 at launch to decide what the app is called and how it looks, and a cache-first answer would describe
 the release that was installed rather than the one running.

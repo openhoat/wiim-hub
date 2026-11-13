@@ -772,7 +772,9 @@ loaded. The release closes that gap:
   visit for nothing;
 - a check runs when the app comes back to the foreground (`visibilitychange`) and every 30 min.
   An installed app is launched and closed rather than reloaded, and the check is one conditional
-  request on `/sw.js`.
+  request on `/sw.js`. The browser compares that script byte for byte, so the build stamps the
+  release into it (`vite.config.ts`, the worker's cache name): an identical script is no update at
+  all, and the banner would never appear.
 
 **The install metadata is the browser's.** Chrome checks the manifest when the app is launched, at
 most once in 24 h, and applies what changed once every window is closed. Only these fields take
