@@ -26,6 +26,7 @@ export default defineConfig({
         'server/notify.ts',
         'server/queue.ts',
         'server/services.ts',
+        'server/tick.ts',
         'server/upnp.ts',
         'src/lib/group.ts',
         'src/lib/i18n.ts',

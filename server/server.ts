@@ -28,6 +28,7 @@ import { findDevice } from './lookup.ts'
 import { notifierFromEnv } from './notify.ts'
 import { createWriteQueue } from './queue.ts'
 import { readServices } from './services.ts'
+import { settlePolls } from './tick.ts'
 import { createEventHub, type EventPatch } from './upnp.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
@@ -269,12 +270,21 @@ const pollAll = async (): Promise<void> => {
   if (polling) return
   polling = true
   try {
-    await Promise.allSettled(
+    // The answers are collected while the polls run, and applied afterwards, all
+    // of them right before the group pass: a reader served mid-tick would
+    // otherwise see one speaker patched and the pass that makes sense of it not
+    // yet run. `settlePolls` carries the measurements behind that ordering.
+    const polls = await Promise.allSettled(
       [...hosts].map(async host => {
         const state = states.get(host) ?? emptyState(host)
         states.set(host, state)
         const patch = await pollDevice(host)
-        const missed = contradicts(state, patch)
+        return { state, patch, missed: contradicts(state, patch) }
+      })
+    )
+    settlePolls(
+      polls,
+      ({ state, patch, missed }) => {
         applyPatch(state, patch)
         if (patch.online && hub.isSubscribed(state.ip)) {
           if (missed) hub.markMiss(state.ip)
@@ -283,15 +293,15 @@ const pollAll = async (): Promise<void> => {
         state.upnp = hub.status(state.ip)
         ensureSubscription(state)
         refreshDiagnostics(state)
-      })
+      },
+      // A group is a shared object: a member knows neither its name nor its
+      // members, only the master does. Joining the answers needs them all, so the
+      // pass runs once the polls have settled, before anything reads the state.
+      // The reconciler holds the last real answer for a few polls, which is what
+      // keeps a group from vanishing on the single empty answer this firmware
+      // gives now and then.
+      () => reconcileGroups(states.values())
     )
-    // A group is a shared object: a member knows neither its name nor its
-    // members, only the master does. Joining the answers needs them all, so the
-    // pass runs once the polls have settled, before anything reads the state.
-    // The reconciler holds the last real answer for a few polls, which is what
-    // keeps a group from vanishing on the single empty answer this firmware
-    // gives now and then.
-    reconcileGroups(states.values())
     // The findings are cheap and read the state the pass just completed, so they
     // are evaluated every tick: a player that goes offline is then reported at
     // once instead of at the next diagnostic pass. The notifier speaks only when

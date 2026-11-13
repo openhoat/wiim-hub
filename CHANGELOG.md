@@ -10,6 +10,16 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- A running group no longer splits into two cards while a speaker of the fleet is offline. The poll
+  loop applied each answer as it arrived and ran the group pass only once the slowest speaker had
+  timed out, so a page served in between read a master patched as a speaker that drives no group
+  next to a member that names it as its master: measured at one read in five, and for most of the
+  tick on a fleet that holds an offline speaker. The answers are now collected, applied together and
+  followed by the pass in a single synchronous step (`server/tick.ts`), so a reader sees the fleet as
+  of the end of the previous pass or of the one that just completed, never half of a tick.
+
 ## [0.9.24] - 2026-11-13
 
 ### Fixed

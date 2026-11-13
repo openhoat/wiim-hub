@@ -35,6 +35,13 @@ A failed poll does not delete the device: the card stays, marked offline, with t
 failures and the last known values. That is the difference between "the speaker stopped answering"
 and "the hub forgot it".
 
+The answers are applied together, once every poll of the tick has settled, and the group pass runs
+immediately after in the same synchronous step (`server/tick.ts`). Applying them as they arrive
+would let a page served mid-tick read a speaker patched and the pass that makes sense of it not yet
+run: with an offline speaker in the fleet, that is most of the tick, and a master whose slave list
+answered hollow in that window is drawn as a speaker that drives no group until the next pass, which
+splits the card in two.
+
 The page polls `/api/state` on the same period, one request at a time, chained from the previous
 answer so a slow hub stretches the interval instead of stacking requests. The loop stops while the
 tab is hidden and reads immediately on return. `pollMs` travels in the answer, so the page and the
@@ -250,6 +257,7 @@ server/findings.ts   diagnostic rules and the Markdown report
 server/guides.ts     the four guided flows
 server/inventory.ts  capability probing and its cache
 server/services.ts   streaming services and the tiers the firmware publishes
+server/tick.ts       one polling tick: every answer applied, then the group pass
 server/server.ts     polling loop, ring buffers, HTTP routes, static bundle
 server/demo.ts       the same routes over simulated speakers
 src/                 React UI: components, settings and i18n provider, formatting helpers
