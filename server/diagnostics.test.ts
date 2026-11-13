@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { parseDiagnostics } from './device/diagnostics.ts'
 
 // The payloads below are the reference player's own answers, trimmed to the
@@ -54,7 +54,7 @@ const hardware = JSON.stringify({
 const unknown = 'unknown command'
 
 describe('parseDiagnostics', () => {
-  it('reads the counters the device sends as numbers', () => {
+  test('reads the counters the device sends as numbers', () => {
     const parsed = parseDiagnostics({ health, debug, hardware }, 1)
     expect(parsed?.at).toBe(1)
     expect(parsed?.health).toEqual({
@@ -78,7 +78,7 @@ describe('parseDiagnostics', () => {
     })
   })
 
-  it('reads the counters the same build sends as strings', () => {
+  test('reads the counters the same build sends as strings', () => {
     // `power_ticks` and the UPnP action counters are quoted on this firmware,
     // and the absent slots report nothing rather than zero: a sum over the
     // known slots must not read the missing ones as a loss.
@@ -91,7 +91,7 @@ describe('parseDiagnostics', () => {
     })
   })
 
-  it('turns a hardware flag into a fault', () => {
+  test('turns a hardware flag into a fault', () => {
     const flagged = JSON.stringify({ ethError: 1, badBlockNum: 40, totalBlockNum: 2000 })
     expect(parseDiagnostics({ health, debug, hardware: flagged }, 1)?.hardware?.ethError).toBe(true)
     const soundCard = JSON.stringify({ soundCardHwError: { pcm5121: 1 } })
@@ -100,18 +100,18 @@ describe('parseDiagnostics', () => {
     ).toBe(true)
   })
 
-  it('keeps the sources that answered when one of them is unsupported', () => {
+  test('keeps the sources that answered when one of them is unsupported', () => {
     const parsed = parseDiagnostics({ health, debug, hardware: unknown }, 1)
     expect(parsed?.hardware).toBeNull()
     expect(parsed?.health?.disconnected).toBe(2)
     expect(parsed?.debug?.uptimeTicks).toBe(57_792_324)
   })
 
-  it('reports nothing at all when none of the three answers', () => {
+  test('reports nothing at all when none of the three answers', () => {
     expect(parseDiagnostics({ health: unknown, debug: '', hardware: unknown })).toBeNull()
   })
 
-  it('keeps an unknown counter null instead of turning it into zero', () => {
+  test('keeps an unknown counter null instead of turning it into zero', () => {
     const partial = JSON.stringify({ disconnectedCount: 0 })
     const parsed = parseDiagnostics({ health: partial, debug: unknown, hardware: unknown }, 1)
     expect(parsed?.health?.disconnected).toBe(0)

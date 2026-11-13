@@ -4,7 +4,7 @@
 // uuid on the guest. These tests hold those three shapes, and the refusals that
 // keep the hub from sending a command the device would accept while doing
 // nothing.
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import type { DeviceState } from './device/index.ts'
 import type { GroupMember } from './device/multiroom.ts'
 import { type FleetUnit, groupPlanFor, parseGroupIntent } from './group-commands.ts'
@@ -92,7 +92,7 @@ const standalone = (): FleetUnit => ({
 const fleet = (): FleetUnit[] => [master(), follower(), standalone()]
 
 describe('parseGroupIntent', () => {
-  it('reads every intent the route accepts', () => {
+  test('reads every intent the route accepts', () => {
     expect(parseGroupIntent({ intent: 'leave' })).toEqual({ intent: { intent: 'leave' } })
     expect(parseGroupIntent({ intent: 'ungroup' })).toEqual({ intent: { intent: 'ungroup' } })
     expect(parseGroupIntent({ intent: 'volume', level: 42 })).toEqual({
@@ -106,13 +106,13 @@ describe('parseGroupIntent', () => {
     })
   })
 
-  it('refuses a body that is not one of them', () => {
+  test('refuses a body that is not one of them', () => {
     for (const body of [null, 'volume', [], { intent: 'nope' }, {}, { intent: 42 }]) {
       expect(parseGroupIntent(body)).toHaveProperty('error')
     }
   })
 
-  it('refuses a level or a flag outside its range', () => {
+  test('refuses a level or a flag outside its range', () => {
     for (const body of [
       { intent: 'volume', level: -1 },
       { intent: 'volume', level: 101 },
@@ -128,13 +128,13 @@ describe('parseGroupIntent', () => {
     }
   })
 
-  it('does not read an inherited property as an intent', () => {
+  test('does not read an inherited property as an intent', () => {
     expect(parseGroupIntent({ intent: 'toString' })).toHaveProperty('error')
   })
 })
 
 describe('groupPlanFor, volume', () => {
-  it('fans the level out to the master and to every member', () => {
+  test('fans the level out to the master and to every member', () => {
     const plan = groupPlanFor({ intent: 'volume', level: 35 }, master(), fleet())
     expect(plan).toEqual({
       writes: [
@@ -149,21 +149,21 @@ describe('groupPlanFor, volume', () => {
     })
   })
 
-  it('gives each member its own coalescing family, and skips a member with no address', () => {
+  test('gives each member its own coalescing family, and skips a member with no address', () => {
     const two = master([member('Bedroom', '192.0.2.20'), member('Saved', '')])
     const plan = groupPlanFor({ intent: 'volume', level: 20 }, two, [two, follower()])
     if ('error' in plan) throw new Error(plan.error)
     expect(plan.writes.map(write => write.family)).toEqual(['volume', 'volume:192.0.2.20'])
   })
 
-  it('refuses a level above the ceiling of any speaker it would reach', () => {
+  test('refuses a level above the ceiling of any speaker it would reach', () => {
     const quiet = master([member('Bedroom', '192.0.2.20')])
     quiet.state.maxVolume = 80
     const plan = groupPlanFor({ intent: 'volume', level: 90 }, quiet, [quiet, follower()])
     expect(plan).toEqual({ error: 'volume above the device ceiling (80)' })
   })
 
-  it('refuses on a speaker that drives no group', () => {
+  test('refuses on a speaker that drives no group', () => {
     expect(groupPlanFor({ intent: 'volume', level: 30 }, standalone(), fleet())).toEqual({
       error: 'this speaker does not drive a group',
     })
@@ -171,7 +171,7 @@ describe('groupPlanFor, volume', () => {
 })
 
 describe('groupPlanFor, mute', () => {
-  it('writes once on the master, which is what propagates', () => {
+  test('writes once on the master, which is what propagates', () => {
     expect(groupPlanFor({ intent: 'mute', muted: true }, master(), fleet())).toEqual({
       writes: [{ key: '192.0.2.10', command: 'setPlayerCmd:mute:1', family: null }],
     })
@@ -182,7 +182,7 @@ describe('groupPlanFor, mute', () => {
 })
 
 describe('groupPlanFor, one member', () => {
-  it('addresses a member the master lists', () => {
+  test('addresses a member the master lists', () => {
     expect(
       groupPlanFor({ intent: 'memberVolume', member: '192.0.2.20', level: 25 }, master(), fleet())
     ).toEqual({
@@ -201,14 +201,14 @@ describe('groupPlanFor, one member', () => {
     })
   })
 
-  it('refuses a member the master does not list', () => {
+  test('refuses a member the master does not list', () => {
     // A page rendered before the group changed sends an address that is gone.
     expect(
       groupPlanFor({ intent: 'memberVolume', member: '192.0.2.99', level: 25 }, master(), fleet())
     ).toEqual({ error: 'unknown group member: 192.0.2.99' })
   })
 
-  it('refuses a level above the ceiling of that member', () => {
+  test('refuses a level above the ceiling of that member', () => {
     const quiet = follower()
     quiet.state.maxVolume = 50
     expect(
@@ -221,7 +221,7 @@ describe('groupPlanFor, one member', () => {
 })
 
 describe('groupPlanFor, membership', () => {
-  it('sends the join to the guest, naming the master and its uuid', () => {
+  test('sends the join to the guest, naming the master and its uuid', () => {
     const plan = groupPlanFor({ intent: 'join', master: '192.0.2.10' }, standalone(), fleet())
     expect(plan).toEqual({
       writes: [
@@ -234,7 +234,7 @@ describe('groupPlanFor, membership', () => {
     })
   })
 
-  it('refuses a join the device would accept while grouping nothing', () => {
+  test('refuses a join the device would accept while grouping nothing', () => {
     // Each case is written out: a table keyed on a fleet that already contains
     // the unit it claims is unknown pins nothing but its own mistake.
     const noUuid = master()
@@ -272,7 +272,7 @@ describe('groupPlanFor, membership', () => {
     })
   })
 
-  it('sends the kick and the ungroup to the master', () => {
+  test('sends the kick and the ungroup to the master', () => {
     expect(groupPlanFor({ intent: 'kick', member: '192.0.2.20' }, master(), fleet())).toEqual({
       writes: [{ key: '192.0.2.10', command: 'multiroom:SlaveKickout:192.0.2.20', family: null }],
     })
@@ -281,7 +281,7 @@ describe('groupPlanFor, membership', () => {
     })
   })
 
-  it('sends the leave to the member, and only from a member', () => {
+  test('sends the leave to the member, and only from a member', () => {
     expect(groupPlanFor({ intent: 'leave' }, follower(), fleet())).toEqual({
       writes: [{ key: '192.0.2.20', command: 'multiroom:LeaveGroup', family: null }],
     })
@@ -290,7 +290,7 @@ describe('groupPlanFor, membership', () => {
     })
   })
 
-  it('refuses a kick on a member the master does not list', () => {
+  test('refuses a kick on a member the master does not list', () => {
     expect(groupPlanFor({ intent: 'kick', member: '192.0.2.99' }, master(), fleet())).toEqual({
       error: 'unknown group member: 192.0.2.99',
     })

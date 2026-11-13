@@ -2,7 +2,7 @@
 // by the name it reports. The name is the one a person types, so these tests pin
 // when it is accepted, and the two cases where the hub declines it: a name two
 // speakers share, and an address that resolves to nobody.
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import type { DeviceState } from './device/index.ts'
 import { findDevice } from './lookup.ts'
 
@@ -56,26 +56,26 @@ const states = (entries: DeviceState[]): Map<string, DeviceState> =>
   new Map(entries.map(state => [state.ip, state]))
 
 describe('findDevice', () => {
-  it('answers the key it was given when that key is polled', () => {
+  test('answers the key it was given when that key is polled', () => {
     const kitchen = device({ ip: '192.0.2.11', name: 'Kitchen' })
     const entry = findDevice(states([kitchen]), '192.0.2.11')
     expect(entry).toEqual({ key: '192.0.2.11', state: kitchen })
   })
 
-  it('answers a device by the address it currently answers on', () => {
+  test('answers a device by the address it currently answers on', () => {
     // The key is the address it was configured with; the device has moved since.
     const kitchen = device({ ip: '192.0.2.11', name: 'Kitchen' })
     const entry = findDevice(new Map([['kitchen.local', kitchen]]), '192.0.2.11')
     expect(entry).toEqual({ key: 'kitchen.local', state: kitchen })
   })
 
-  it('answers a device by the name it reports', () => {
+  test('answers a device by the name it reports', () => {
     const kitchen = device({ ip: '192.0.2.11', name: 'Kitchen' })
     const entry = findDevice(states([device(), kitchen]), 'Kitchen')
     expect(entry).toEqual({ key: '192.0.2.11', state: kitchen })
   })
 
-  it('refuses a name two speakers share, and asks for an address instead', () => {
+  test('refuses a name two speakers share, and asks for an address instead', () => {
     // Two units of the same model out of the box report the same name: picking
     // one would send a command to a machine the caller did not mean.
     const left = device({ ip: '192.0.2.20', name: 'WiiM Mini' })
@@ -87,12 +87,12 @@ describe('findDevice', () => {
     })
   })
 
-  it('refuses an empty host rather than answering the first device', () => {
+  test('refuses an empty host rather than answering the first device', () => {
     const unnamed = device({ name: '' })
     expect(findDevice(states([unnamed]), '')).toBeNull()
   })
 
-  it('answers nothing for a name no device carries', () => {
+  test('answers nothing for a name no device carries', () => {
     expect(findDevice(states([device()]), 'Garage')).toBeNull()
   })
 })

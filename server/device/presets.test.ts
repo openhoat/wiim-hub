@@ -1,19 +1,19 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { presetInfo } from '../fixtures/wiim-pro.ts'
 import { parsePresets } from './presets.ts'
 
 describe('parsePresets', () => {
-  it('reads an empty slot list as an empty list, not as a failure', () => {
+  test('reads an empty slot list as an empty list, not as a failure', () => {
     expect(parsePresets(presetInfo)).toEqual([])
   })
 
-  it('answers null when the player does not know the command', () => {
+  test('answers null when the player does not know the command', () => {
     expect(parsePresets('unknown command')).toBeNull()
     expect(parsePresets('')).toBeNull()
     expect(parsePresets(null)).toBeNull()
   })
 
-  it('orders the slots, names them and skips the unusable ones', () => {
+  test('orders the slots, names them and skips the unusable ones', () => {
     const raw = JSON.stringify({
       preset_num: 4,
       preset_list: [
@@ -35,7 +35,7 @@ describe('parsePresets', () => {
   // Recorded on the reference player on 10/11/2026, after a playlist was saved
   // in the vendor app: the slot carries the service and a cover, and no stream
   // URL, because the player resolves the stream itself when the slot is played.
-  it('keeps the service a slot was saved from', () => {
+  test('keeps the service a slot was saved from', () => {
     const raw = JSON.stringify({
       preset_num: 1,
       preset_list: [

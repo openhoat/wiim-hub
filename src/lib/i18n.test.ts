@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import en from '../locales/en.json'
 import fr from '../locales/fr.json'
 import { pickLang, renderTemplate, translate } from './i18n'
@@ -38,7 +38,7 @@ const entries = (tree: Record<string, unknown>, prefix = ''): [string, string][]
 }
 
 describe('dictionaries', () => {
-  it('carries the same keys in both languages', () => {
+  test('carries the same keys in both languages', () => {
     const sorted = (values: string[]): string[] => {
       values.sort((a, b) => a.localeCompare(b))
       return values
@@ -46,11 +46,11 @@ describe('dictionaries', () => {
     expect(sorted(flatten(fr))).toEqual(sorted(flatten(en)))
   })
 
-  it('leaves no "(s)" behind: a plural is a plural, in both languages', () => {
+  test('leaves no "(s)" behind: a plural is a plural, in both languages', () => {
     for (const value of [...valuesOf(en), ...valuesOf(fr)]) expect(value).not.toContain('(s)')
   })
 
-  it('renders every entry in both languages with nothing left to fill', () => {
+  test('renders every entry in both languages with nothing left to fill', () => {
     // Every variable gets 2: a plural takes its `other` branch, and a template
     // this test cannot fill would show the brace it forgot.
     for (const locale of ['en', 'fr'] as const) {
@@ -66,12 +66,12 @@ describe('dictionaries', () => {
 })
 
 describe('variables', () => {
-  it('interpolates a string and a number', () => {
+  test('interpolates a string and a number', () => {
     expect(translate('en', 'rssi', { value: -55 })).toBe('-55 dBm')
     expect(translate('en', 'hosts.failed', { reason: 'clash' })).toBe('The hub refused: clash')
   })
 
-  it('formats a number the way the locale writes it', () => {
+  test('formats a number the way the locale writes it', () => {
     expect(translate('en', 'findings.checked.flash', { bad: 1234, total: 8192 })).toBe(
       'flash 1,234/8,192 bad blocks'
     )
@@ -81,63 +81,63 @@ describe('variables', () => {
     )
   })
 
-  it('prints a missing variable as nothing rather than as a brace', () => {
+  test('prints a missing variable as nothing rather than as a brace', () => {
     expect(renderTemplate('a {one} b {two}', 'en', { one: 'x' })).toBe('a x b ')
   })
 
-  it('falls back to English, then to the key itself', () => {
+  test('falls back to English, then to the key itself', () => {
     expect(translate('fr', 'title')).toBe('WiiM Hub')
     expect(translate('fr', 'no.such.key')).toBe('no.such.key')
   })
 })
 
 describe('plurals', () => {
-  it('picks the English branch the count asks for', () => {
+  test('picks the English branch the count asks for', () => {
     expect(translate('en', 'added', { count: 1 })).toBe('1 device found')
     expect(translate('en', 'added', { count: 3 })).toBe('3 devices found')
     expect(translate('en', 'group.members', { n: 2 })).toBe('2 speakers')
   })
 
-  it('follows the French rule, where zero is singular too', () => {
+  test('follows the French rule, where zero is singular too', () => {
     expect(translate('fr', 'added', { count: 0 })).toBe('0 appareil trouvé')
     expect(translate('fr', 'added', { count: 1 })).toBe('1 appareil trouvé')
     expect(translate('fr', 'added', { count: 2 })).toBe('2 appareils trouvés')
   })
 
-  it('falls back to `other` when the category has no branch', () => {
+  test('falls back to `other` when the category has no branch', () => {
     // A million selects `many` in French, and neither locale carries that branch.
     expect(translate('fr', 'added', { count: 1_000_000 })).toBe(
       '1\u00a0000\u00a0000 appareils trouvés'
     )
   })
 
-  it('lets an exact selector win over the category', () => {
+  test('lets an exact selector win over the category', () => {
     const template = '{n, plural, =0 {none} one {# one} other {# many}}'
     expect(renderTemplate(template, 'en', { n: 0 })).toBe('none')
     expect(renderTemplate(template, 'en', { n: 1 })).toBe('1 one')
     expect(renderTemplate(template, 'en', { n: 5 })).toBe('5 many')
   })
 
-  it('renders a nested argument inside a branch', () => {
+  test('renders a nested argument inside a branch', () => {
     const template = '{n, plural, one {# {unit}} other {# {unit}s}}'
     expect(renderTemplate(template, 'en', { n: 1, unit: 'speaker' })).toBe('1 speaker')
     expect(renderTemplate(template, 'en', { n: 4, unit: 'speaker' })).toBe('4 speakers')
   })
 
-  it('formats a value the template asks for as a number', () => {
+  test('formats a value the template asks for as a number', () => {
     expect(renderTemplate('{n, number} units', 'fr', { n: 1234.5 })).toBe('1\u00a0234,5 units')
     // A string where a number was announced is not worth a crash.
     expect(renderTemplate('{n, number} units', 'en', { n: 'many' })).toBe(' units')
   })
 
-  it('leaves a plural whose count is not a number alone', () => {
+  test('leaves a plural whose count is not a number alone', () => {
     expect(renderTemplate('{n, plural, one {# item} other {# items}}', 'en', { n: 'some' })).toBe(
       'some'
     )
     expect(renderTemplate('{n, plural, one {# item} other {# items}}', 'en')).toBe('')
   })
 
-  it('composes the whole sentence, verb included', () => {
+  test('composes the whole sentence, verb included', () => {
     expect(translate('en', 'findings.crashCounters', { count: 1 })).toBe(
       '1 crash counter is non zero: the firmware restarted.'
     )
@@ -151,12 +151,12 @@ describe('plurals', () => {
 })
 
 describe('parser guards', () => {
-  it('prints an argument it does not know as it came', () => {
+  test('prints an argument it does not know as it came', () => {
     expect(renderTemplate('a {n, fancy} b', 'en', { n: 2 })).toBe('a {n, fancy} b')
     expect(renderTemplate('a { } b', 'en')).toBe('a { } b')
   })
 
-  it('tolerates the spacing around an argument, and one that is only spaces', () => {
+  test('tolerates the spacing around an argument, and one that is only spaces', () => {
     expect(renderTemplate('{  n  }', 'en', { n: 3 })).toBe('3')
     expect(renderTemplate('{n , plural , one {# item} other {# items} }', 'en', { n: 2 })).toBe(
       '2 items'
@@ -167,7 +167,7 @@ describe('parser guards', () => {
     expect(renderTemplate(`{${spaces}}`, 'en')).toBe(`{${spaces}}`)
   })
 
-  it('refuses the shapes that are not an argument, and prints them as they came', () => {
+  test('refuses the shapes that are not an argument, and prints them as they came', () => {
     // Nothing where the comma belongs, nothing where the kind belongs, nothing
     // where the body begins: each one is a typo in a dictionary, not a sentence.
     expect(renderTemplate('a {n x} b', 'en', { n: 2 })).toBe('a {n x} b')
@@ -175,18 +175,18 @@ describe('parser guards', () => {
     expect(renderTemplate('a {n, plural x} b', 'en', { n: 2 })).toBe('a {n, plural x} b')
   })
 
-  it('keeps the rest of an unbalanced template instead of throwing', () => {
+  test('keeps the rest of an unbalanced template instead of throwing', () => {
     expect(renderTemplate('a {n b', 'en', { n: 1 })).toBe('a {n b')
   })
 
-  it('numbers a `#` only inside a plural branch', () => {
+  test('numbers a `#` only inside a plural branch', () => {
     expect(renderTemplate('# is not a count here', 'en')).toBe('# is not a count here')
     expect(renderTemplate('{n, plural, other {#}}', 'en', { n: 1234 })).toBe('1,234')
   })
 })
 
 describe('pickLang', () => {
-  it('takes the first tag the page speaks', () => {
+  test('takes the first tag the page speaks', () => {
     expect(pickLang(['fr-CA', 'en'])).toBe('fr')
     expect(pickLang(['de-DE', 'en-GB'])).toBe('en')
     expect(pickLang(['de-DE', 'it'])).toBe('en')

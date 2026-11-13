@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { acousticCapability, eqList } from '../fixtures/wiim-pro.ts'
 import { parseAcoustic } from './acoustic.ts'
 
 describe('parseAcoustic', () => {
-  it('reads the factory curves and the room-correction capability', () => {
+  test('reads the factory curves and the room-correction capability', () => {
     const parsed = parseAcoustic({ presets: eqList, capability: acousticCapability }, null)
     expect(parsed.roomFit).toBe(true)
     expect(parsed.presets).toHaveLength(24)
@@ -11,7 +11,7 @@ describe('parseAcoustic', () => {
     expect(parsed.presets).toContain('Small Speakers')
   })
 
-  it('keeps each field the last good probe knew when an answer is unreadable', () => {
+  test('keeps each field the last good probe knew when an answer is unreadable', () => {
     const cached = { presets: ['Rock'], roomFit: true }
     expect(
       parseAcoustic({ presets: 'unknown command', capability: 'unknown command' }, cached)
@@ -27,7 +27,7 @@ describe('parseAcoustic', () => {
     )
   })
 
-  it('starts empty when nothing was ever probed', () => {
+  test('starts empty when nothing was ever probed', () => {
     expect(parseAcoustic({ presets: null, capability: null }, null)).toEqual({
       presets: [],
       roomFit: false,

@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage, type Server } from 'node:http'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import { createHub, errorText, okText } from './hub.ts'
 
 // The client is exercised on the wire, against a socket, rather than against a
@@ -50,7 +50,7 @@ afterEach(async () => {
 })
 
 describe('createHub', () => {
-  it('builds the path with the query and keeps the answer', async () => {
+  test('builds the path with the query and keeps the answer', async () => {
     const received: Received[] = []
     const baseUrl = await listen(json(200, { devices: [] }), { received })
     const hub = createHub({ baseUrl, token: 'secret' })
@@ -64,7 +64,7 @@ describe('createHub', () => {
     expect(received[0].headers.authorization).not.toBeUndefined()
   })
 
-  it('strips the slashes a base url may end on, and refuses a url with no scheme', async () => {
+  test('strips the slashes a base url may end on, and refuses a url with no scheme', async () => {
     const received: Received[] = []
     const baseUrl = await listen(json(200, {}), { received })
     await createHub({ baseUrl: `${baseUrl}///` }).get('/api/state')
@@ -72,20 +72,20 @@ describe('createHub', () => {
     expect(() => createHub({ baseUrl: 'hub.local:8090' })).toThrow(/http/)
   })
 
-  it('sends no authorization header without a token', async () => {
+  test('sends no authorization header without a token', async () => {
     const received: Received[] = []
     const baseUrl = await listen(json(200, {}), { received })
     await createHub({ baseUrl }).get('/api/state')
     expect(received[0].headers).not.toHaveProperty('authorization')
   })
 
-  it('keeps a refusal as an answer, status and body included', async () => {
+  test('keeps a refusal as an answer, status and body included', async () => {
     const baseUrl = await listen(json(404, { error: 'unknown device' }))
     const entry = await createHub({ baseUrl }).get('/api/report', { host: 'nope' })
     expect(entry).toEqual({ status: 404, ok: false, body: { error: 'unknown device' } })
   })
 
-  it('turns a proxy page into a short error rather than a parse failure', async () => {
+  test('turns a proxy page into a short error rather than a parse failure', async () => {
     const baseUrl = await listen((_req, res) => {
       res.writeHead(401, { 'content-type': 'text/html' })
       res.end('<html>\n  <body>Please sign in to continue</body>\n</html>')
@@ -98,7 +98,7 @@ describe('createHub', () => {
     })
   })
 
-  it('reads an empty answer as null', async () => {
+  test('reads an empty answer as null', async () => {
     const baseUrl = await listen((_req, res) => {
       res.writeHead(204)
       res.end()
@@ -107,7 +107,7 @@ describe('createHub', () => {
     expect(entry).toEqual({ status: 204, ok: true, body: null })
   })
 
-  it('posts the intent as JSON', async () => {
+  test('posts the intent as JSON', async () => {
     const received: Received[] = []
     const baseUrl = await listen(json(200, { ok: true, command: 'setPlayerCmd:resume' }), {
       received,
@@ -125,7 +125,7 @@ describe('createHub', () => {
     expect(JSON.parse(received[0].body)).toEqual({ action: 'volume', level: 30 })
   })
 
-  it('answers a refused port instead of throwing', async () => {
+  test('answers a refused port instead of throwing', async () => {
     // Bound then closed: the port is known to be free, and connecting to it is
     // refused rather than hanging.
     const server = createServer()
@@ -143,7 +143,7 @@ describe('createHub', () => {
     expect(JSON.stringify(entry.body)).toContain('hub unreachable')
   })
 
-  it('gives up on a hub that never answers', async () => {
+  test('gives up on a hub that never answers', async () => {
     const baseUrl = await listen(() => {
       // Never writes: the socket stays open until the client aborts.
     })
@@ -152,17 +152,17 @@ describe('createHub', () => {
     expect(JSON.stringify(entry.body)).toContain('timed out')
   })
 
-  it('refuses a URL without a scheme', () => {
+  test('refuses a URL without a scheme', () => {
     expect(() => createHub({ baseUrl: '192.168.1.10:8090' })).toThrow(/must start with http/)
   })
 })
 
 describe('answer rendering', () => {
-  it('passes a successful body through unchanged', () => {
+  test('passes a successful body through unchanged', () => {
     expect(okText({ status: 200, ok: true, body: { a: 1 } })).toBe('{\n  "a": 1\n}')
   })
 
-  it('adds the status to a hub error and leaves the rest alone', () => {
+  test('adds the status to a hub error and leaves the rest alone', () => {
     expect(errorText({ status: 409, ok: false, body: { error: 'device offline' } })).toBe(
       '{\n  "status": 409,\n  "error": "device offline"\n}'
     )

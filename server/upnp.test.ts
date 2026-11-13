@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { createServer, type Server } from 'node:http'
 import { type AddressInfo, createServer as createNetServer } from 'node:net'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import {
   createEventHub,
   type EventPatch,
@@ -183,7 +183,7 @@ const waitFor = async (condition: () => boolean, timeoutMs = 2000): Promise<void
 }
 
 describe('parseDuration', () => {
-  it('reads the measured HH:MM:SS form, with an optional fraction', () => {
+  test('reads the measured HH:MM:SS form, with an optional fraction', () => {
     expect(parseDuration('00:00:00')).toBe(0)
     expect(parseDuration('00:05:37')).toBe(337_000)
     expect(parseDuration('01:02:03')).toBe(3_723_000)
@@ -191,7 +191,7 @@ describe('parseDuration', () => {
     expect(parseDuration('  00:00:42  ')).toBe(42_000)
   })
 
-  it('refuses anything else instead of guessing', () => {
+  test('refuses anything else instead of guessing', () => {
     expect(parseDuration('')).toBeNull()
     expect(parseDuration('NOT_IMPLEMENTED')).toBeNull()
     expect(parseDuration('00:99:00')).toBeNull()
@@ -200,7 +200,7 @@ describe('parseDuration', () => {
 })
 
 describe('transportStatus', () => {
-  it('maps the UPnP wording onto the hub tokens', () => {
+  test('maps the UPnP wording onto the hub tokens', () => {
     expect(transportStatus('PLAYING')).toBe('play')
     expect(transportStatus('PAUSED_PLAYBACK')).toBe('pause')
     expect(transportStatus('PAUSED_RECORDING')).toBe('pause')
@@ -209,14 +209,14 @@ describe('transportStatus', () => {
     expect(transportStatus(' playing ')).toBe('play')
   })
 
-  it('leaves a transient state to the next poll', () => {
+  test('leaves a transient state to the next poll', () => {
     expect(transportStatus('TRANSITIONING')).toBeNull()
     expect(transportStatus('')).toBeNull()
   })
 })
 
 describe('parseLastChange', () => {
-  it('reads volume and mute from a rendering notification', () => {
+  test('reads volume and mute from a rendering notification', () => {
     expect(parseLastChange(renderingBody({ volume: 82, mute: false }))).toEqual({
       volume: 82,
       mute: false,
@@ -227,7 +227,7 @@ describe('parseLastChange', () => {
     })
   })
 
-  it('reads the transport state, the duration and the track metadata', () => {
+  test('reads the transport state, the duration and the track metadata', () => {
     const patch = parseLastChange(
       avTransportBody({
         state: 'PLAYING',
@@ -248,7 +248,7 @@ describe('parseLastChange', () => {
     })
   })
 
-  it('drops what the device leaves empty and keeps the rest of the patch', () => {
+  test('drops what the device leaves empty and keeps the rest of the patch', () => {
     // An input with no media: the player still sends a transport state and a
     // zero duration, and `CurrentTrackMetaData` carries nothing usable.
     const body = propertySet(
@@ -259,14 +259,14 @@ describe('parseLastChange', () => {
     expect(parseLastChange(body)).toEqual({ status: 'stop', totalMs: 0 })
   })
 
-  it('returns nothing when the notification carries no known field', () => {
+  test('returns nothing when the notification carries no known field', () => {
     expect(parseLastChange(propertySet('<Event><InstanceID val="0"/></Event>'))).toEqual({})
     expect(parseLastChange('not xml at all')).toEqual({})
   })
 })
 
 describe('eventState', () => {
-  it('reports off, subscribed and degraded', () => {
+  test('reports off, subscribed and degraded', () => {
     expect(eventState({ subscribed: false, misses: 0 })).toBe('off')
     expect(eventState({ subscribed: true, misses: 0 })).toBe('subscribed')
     expect(eventState({ subscribed: true, misses: 1 })).toBe('subscribed')
@@ -286,7 +286,7 @@ describe('createEventHub', () => {
     device = null
   })
 
-  it('subscribes to both services, applies a notification and releases the subscription', async () => {
+  test('subscribes to both services, applies a notification and releases the subscription', async () => {
     device = await startFakeDevice()
     const port = await freePort()
     const patches: Array<{ ip: string; patch: EventPatch }> = []
@@ -339,7 +339,7 @@ describe('createEventHub', () => {
     await waitFor(() => device?.calls.filter(call => call.method === 'UNSUBSCRIBE').length === 2)
   })
 
-  it('renews on the same SID before the granted timeout expires', async () => {
+  test('renews on the same SID before the granted timeout expires', async () => {
     device = await startFakeDevice()
     const port = await freePort()
     hub = createEventHub({
@@ -364,7 +364,7 @@ describe('createEventHub', () => {
     expect(hub.isSubscribed('127.0.0.1')).toBe(true)
   })
 
-  it('falls back to polling when the device refuses the subscription', async () => {
+  test('falls back to polling when the device refuses the subscription', async () => {
     device = await startFakeDevice({ refuseSubscribe: true })
     const port = await freePort()
     hub = createEventHub({
@@ -380,7 +380,7 @@ describe('createEventHub', () => {
     expect(hub.status('127.0.0.1').state).toBe('off')
   })
 
-  it('falls back to polling when the subscription connection breaks', async () => {
+  test('falls back to polling when the subscription connection breaks', async () => {
     // A device that answers the description and then drops the SUBSCRIBE: the
     // hub must not keep a half-open entry it would renew forever.
     device = await startFakeDevice({ crashSubscribe: true })
@@ -398,7 +398,7 @@ describe('createEventHub', () => {
     expect(hub.status('127.0.0.1')).toMatchObject({ state: 'off', misses: 0 })
   })
 
-  it('degrades when the device refuses to renew the subscription', async () => {
+  test('degrades when the device refuses to renew the subscription', async () => {
     device = await startFakeDevice({ refuseRenew: true })
     const port = await freePort()
     hub = createEventHub({
@@ -420,7 +420,7 @@ describe('createEventHub', () => {
     expect(hub.status('127.0.0.1').misses).toBe(2)
   })
 
-  it('reads the event paths the device advertises instead of the measured defaults', async () => {
+  test('reads the event paths the device advertises instead of the measured defaults', async () => {
     // A firmware that moves its endpoints: the description is the contract.
     device = await startFakeDevice({
       paths: { transport: '/evt/transport', control: '/evt/control' },
@@ -440,7 +440,7 @@ describe('createEventHub', () => {
     )
   })
 
-  it('degrades after two contradicting polls and comes back on a new subscription', async () => {
+  test('degrades after two contradicting polls and comes back on a new subscription', async () => {
     device = await startFakeDevice()
     const port = await freePort()
     hub = createEventHub({
@@ -468,7 +468,7 @@ describe('createEventHub', () => {
     expect(hub.status('127.0.0.1')).toMatchObject({ state: 'subscribed', misses: 0 })
   })
 
-  it('answers every notification it cannot attribute with a 404', async () => {
+  test('answers every notification it cannot attribute with a 404', async () => {
     device = await startFakeDevice()
     const port = await freePort()
     const patches: EventPatch[] = []
@@ -494,7 +494,7 @@ describe('createEventHub', () => {
     expect(probe.status).toBe(404)
   })
 
-  it('refuses a notification that carries no SID', async () => {
+  test('refuses a notification that carries no SID', async () => {
     device = await startFakeDevice()
     const port = await freePort()
     const patches: EventPatch[] = []
@@ -518,7 +518,7 @@ describe('createEventHub', () => {
     expect(patches).toHaveLength(0)
   })
 
-  it('drops a notification larger than the limit instead of buffering it', async () => {
+  test('drops a notification larger than the limit instead of buffering it', async () => {
     device = await startFakeDevice()
     const port = await freePort()
     const patches: EventPatch[] = []
@@ -550,7 +550,7 @@ describe('createEventHub', () => {
     expect(patches).toHaveLength(0)
   })
 
-  it('closes twice, because a shutdown can reach it twice', async () => {
+  test('closes twice, because a shutdown can reach it twice', async () => {
     device = await startFakeDevice()
     const port = await freePort()
     hub = createEventHub({

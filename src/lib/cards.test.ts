@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { cardTitle, fleetCards, sameMember } from './cards.ts'
 import type { Device, GroupState } from './types'
 
@@ -80,13 +80,13 @@ const follower = (ip: string, name: string, overrides: Partial<Device> = {}): De
   })
 
 describe('sameMember', () => {
-  it('matches on the address the master published', () => {
+  test('matches on the address the master published', () => {
     const entry = { name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }
     expect(sameMember(entry, device('192.0.2.23', 'Whatever'))).toBe(true)
     expect(sameMember(entry, device('192.0.2.24', 'Hallway'))).toBe(false)
   })
 
-  it('falls back to the name when the group carries no address', () => {
+  test('falls back to the name when the group carries no address', () => {
     const entry = { name: 'Bathroom', ip: '', uuid: 'AB' }
     expect(sameMember(entry, device('192.0.2.99', ' bathroom '))).toBe(true)
     expect(sameMember(entry, device('192.0.2.99', 'Hallway'))).toBe(false)
@@ -95,13 +95,13 @@ describe('sameMember', () => {
 })
 
 describe('fleetCards', () => {
-  it('draws one card per speaker when nothing is grouped', () => {
+  test('draws one card per speaker when nothing is grouped', () => {
     const cards = fleetCards([device('192.0.2.21', 'Living Room'), device('192.0.2.22', 'Bedroom')])
     expect(cards.map(card => card.ip)).toEqual(['192.0.2.21', '192.0.2.22'])
     expect(cards.every(card => card.members.length === 0 && card.absent.length === 0)).toBe(true)
   })
 
-  it('folds a confirmed member into the card of the speaker that drives it', () => {
+  test('folds a confirmed member into the card of the speaker that drives it', () => {
     const cards = fleetCards([
       master([{ name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }]),
       follower('192.0.2.23', 'Hallway'),
@@ -112,7 +112,7 @@ describe('fleetCards', () => {
     expect(cards[0].absent).toEqual([])
   })
 
-  it('keeps the order the master named, and appends a follower it forgot', () => {
+  test('keeps the order the master named, and appends a follower it forgot', () => {
     const cards = fleetCards([
       master([
         { name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' },
@@ -126,7 +126,7 @@ describe('fleetCards', () => {
     expect(cards[0].members.map(member => member.name)).toEqual(['Hallway', 'Kitchen', 'Study'])
   })
 
-  it('leaves a member that plays its own track on its own card', () => {
+  test('leaves a member that plays its own track on its own card', () => {
     const cards = fleetCards([
       master([{ name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }]),
       follower('192.0.2.23', 'Hallway', { status: 'play', title: 'Local Radio' }),
@@ -137,12 +137,12 @@ describe('fleetCards', () => {
     expect(cards[0].absent).toEqual([])
   })
 
-  it('gives a member its own card when the master is not in the fleet', () => {
+  test('gives a member its own card when the master is not in the fleet', () => {
     const cards = fleetCards([follower('192.0.2.23', 'Hallway')])
     expect(cards.map(card => card.ip)).toEqual(['192.0.2.23'])
   })
 
-  it('keeps a member apart when the master stopped answering', () => {
+  test('keeps a member apart when the master stopped answering', () => {
     const cards = fleetCards([
       {
         ...master([{ name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }]),
@@ -153,7 +153,7 @@ describe('fleetCards', () => {
     expect(cards.map(card => card.ip)).toEqual(['192.0.2.21', '192.0.2.23'])
   })
 
-  it('folds a member that stopped answering while the group runs', () => {
+  test('folds a member that stopped answering while the group runs', () => {
     const cards = fleetCards([
       master([{ name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }]),
       { ...follower('192.0.2.23', 'Hallway'), online: false },
@@ -162,7 +162,7 @@ describe('fleetCards', () => {
     expect(cards[0].members.map(member => member.name)).toEqual(['Hallway'])
   })
 
-  it('refuses to fold a card into a speaker the fleet does not call a master', () => {
+  test('refuses to fold a card into a speaker the fleet does not call a master', () => {
     const cards = fleetCards([
       device('192.0.2.21', 'Living Room', { group: grouped({ role: 'member' }) }),
       follower('192.0.2.23', 'Hallway'),
@@ -170,7 +170,7 @@ describe('fleetCards', () => {
     expect(cards.map(card => card.ip)).toEqual(['192.0.2.21', '192.0.2.23'])
   })
 
-  it('keeps a member the master names and the fleet does not poll', () => {
+  test('keeps a member the master names and the fleet does not poll', () => {
     const cards = fleetCards([master([{ name: 'Bathroom', ip: '', uuid: 'EF' }])])
     expect(cards).toHaveLength(1)
     expect(cards[0].members).toEqual([])
@@ -179,7 +179,7 @@ describe('fleetCards', () => {
 })
 
 describe('cardTitle', () => {
-  it('announces the group a speaker drives', () => {
+  test('announces the group a speaker drives', () => {
     const cards = fleetCards([
       master([{ name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }]),
       follower('192.0.2.23', 'Hallway'),
@@ -187,7 +187,7 @@ describe('cardTitle', () => {
     expect(cardTitle(cards[0])).toBe('Apartment')
   })
 
-  it('falls back to the speaker name when the group has no name or no member', () => {
+  test('falls back to the speaker name when the group has no name or no member', () => {
     const unnamed = fleetCards([
       master([{ name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }], ''),
       follower('192.0.2.23', 'Hallway'),

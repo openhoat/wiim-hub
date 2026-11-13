@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { inputCapability, inputEnable, modeRename, outputList } from '../fixtures/wiim-pro.ts'
 import { parseCapability } from './inputs.ts'
 
 describe('parseCapability', () => {
-  it('reads the inputs, the labels and the outputs of the recorded answers', () => {
+  test('reads the inputs, the labels and the outputs of the recorded answers', () => {
     expect(
       parseCapability({
         inputs: inputCapability,
@@ -23,7 +23,7 @@ describe('parseCapability', () => {
     })
   })
 
-  it('adds an input the user enabled but the capability list missed', () => {
+  test('adds an input the user enabled but the capability list missed', () => {
     const parsed = parseCapability({
       inputs: JSON.stringify({ audioInput: [{ mode: 'wifi' }] }),
       enable: JSON.stringify({
@@ -43,7 +43,7 @@ describe('parseCapability', () => {
     })
   })
 
-  it('answers nothing rather than an empty panel when no answer is readable', () => {
+  test('answers nothing rather than an empty panel when no answer is readable', () => {
     expect(
       parseCapability({ inputs: 'unknown command', enable: null, rename: '', outputs: '' })
     ).toBeNull()

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import {
   createResolution,
   leaseResolver,
@@ -28,25 +28,25 @@ const fake = (
 }
 
 describe('parseStaticMap', () => {
-  it('reads the pairs on one line or on several', () => {
+  test('reads the pairs on one line or on several', () => {
     const table = parseStaticMap('kitchen=192.0.2.10\nBedroom.local = 192.0.2.11,')
     expect(table.get('kitchen')).toBe('192.0.2.10')
     expect(table.get('bedroom.local')).toBe('192.0.2.11')
     expect(table.size).toBe(2)
   })
 
-  it('drops an entry without a name or with an address that is not one', () => {
+  test('drops an entry without a name or with an address that is not one', () => {
     const table = parseStaticMap('=192.0.2.10,kitchen=,bedroom=kitchen,studio=192.0.2.12')
     expect([...table.entries()]).toEqual([['studio', '192.0.2.12']])
   })
 
-  it('ignores an empty setting instead of throwing', () => {
+  test('ignores an empty setting instead of throwing', () => {
     expect(parseStaticMap('').size).toBe(0)
   })
 })
 
 describe('staticResolver', () => {
-  it('answers the hosts the operator wrote down, in any case', async () => {
+  test('answers the hosts the operator wrote down, in any case', async () => {
     const resolver = staticResolver('Kitchen=192.0.2.10')
     expect(await resolver.resolve('kitchen')).toBe('192.0.2.10')
     expect(await resolver.resolve('bedroom')).toBeNull()
@@ -59,7 +59,7 @@ describe('parseLeases', () => {
   // clock the parser reads: a hardcoded stamp would quietly expire one day.
   const at = Math.floor(now / 1000)
 
-  it('reads a dnsmasq lease table, with the infinite lease and the lower case', () => {
+  test('reads a dnsmasq lease table, with the infinite lease and the lower case', () => {
     const raw = [
       `${at + 3600} aa:bb:cc:dd:ee:01 192.0.2.10 Kitchen 01:aa:bb`,
       '0 aa:bb:cc:dd:ee:02 192.0.2.11 bedroom *',
@@ -71,7 +71,7 @@ describe('parseLeases', () => {
     ])
   })
 
-  it('drops an expired lease and keeps the address of a renewing one', () => {
+  test('drops an expired lease and keeps the address of a renewing one', () => {
     const raw = [
       `${at - 100} aa:bb:cc:dd:ee:01 192.0.2.10 kitchen 01:aa:bb`,
       `${at + 100} aa:bb:cc:dd:ee:02 192.0.2.11 bedroom 01:aa:cc`,
@@ -79,14 +79,14 @@ describe('parseLeases', () => {
     expect([...parseLeases(raw, now).entries()]).toEqual([['bedroom', '192.0.2.11']])
   })
 
-  it('skips a line the hub cannot read rather than half of it', () => {
+  test('skips a line the hub cannot read rather than half of it', () => {
     const raw = ['# comment', 'garbage', '0 aa:bb 192.0.2.10', '0 mac not-an-address kitchen'].join(
       '\n'
     )
     expect(parseLeases(raw, now).size).toBe(0)
   })
 
-  it('drops a lease whose expiry it cannot read instead of trusting the address', () => {
+  test('drops a lease whose expiry it cannot read instead of trusting the address', () => {
     const raw = 'soon aa:bb:cc:dd:ee:01 192.0.2.10 kitchen 01:aa:bb'
     expect(parseLeases(raw, now).size).toBe(0)
   })
@@ -95,14 +95,14 @@ describe('parseLeases', () => {
 describe('leaseResolver', () => {
   const raw = '0 aa:bb:cc:dd:ee:01 192.0.2.10 kitchen 01:aa:bb'
 
-  it('matches the first label of a .local name against the lease hostname', async () => {
+  test('matches the first label of a .local name against the lease hostname', async () => {
     const resolver = leaseResolver({ path: '/leases', readFile: async () => raw })
     expect(await resolver.resolve('kitchen.local')).toBe('192.0.2.10')
     expect(await resolver.resolve('kitchen')).toBe('192.0.2.10')
     expect(await resolver.resolve('bedroom.local')).toBeNull()
   })
 
-  it('reads the file once per window, not once per name', async () => {
+  test('reads the file once per window, not once per name', async () => {
     const readFile = vi.fn(async () => raw)
     let at = 1000
     const resolver = leaseResolver({ path: '/leases', readFile, now: () => at, ttlMs: 5000 })
@@ -114,7 +114,7 @@ describe('leaseResolver', () => {
     expect(readFile).toHaveBeenCalledTimes(2)
   })
 
-  it('says nothing when the file is unreadable, so the chain keeps going', async () => {
+  test('says nothing when the file is unreadable, so the chain keeps going', async () => {
     const resolver = leaseResolver({
       path: '/missing',
       readFile: async () => {
@@ -126,7 +126,7 @@ describe('leaseResolver', () => {
 })
 
 describe('createResolution', () => {
-  it('returns the host itself until a source answers', async () => {
+  test('returns the host itself until a source answers', async () => {
     const first = fake('static map', {})
     const resolution = createResolution([first])
     expect(resolution.target('kitchen.local')).toBe('kitchen.local')
@@ -138,7 +138,7 @@ describe('createResolution', () => {
     expect(resolution.source('kitchen.local')).toBeNull()
   })
 
-  it('asks the chain in order and keeps the source of the first answer', async () => {
+  test('asks the chain in order and keeps the source of the first answer', async () => {
     const empty = fake('static map', {})
     const leases = fake('dhcp leases', { 'kitchen.local': '192.0.2.10' })
     const mdns = fake('mdns', { 'kitchen.local': '192.0.2.99' })
@@ -151,7 +151,7 @@ describe('createResolution', () => {
     expect(mdns.calls).toEqual([])
   })
 
-  it('leaves an address literal alone and never asks', async () => {
+  test('leaves an address literal alone and never asks', async () => {
     const first = fake('static map', {})
     const resolution = createResolution([first])
     expect(resolution.target('192.0.2.10')).toBe('192.0.2.10')
@@ -159,7 +159,7 @@ describe('createResolution', () => {
     expect(first.calls).toEqual([])
   })
 
-  it('keeps an answer for its window and asks again after it', async () => {
+  test('keeps an answer for its window and asks again after it', async () => {
     let at = 0
     const first = fake('static map', { kitchen: '192.0.2.10' })
     const resolution = createResolution([first], { now: () => at })
@@ -175,7 +175,7 @@ describe('createResolution', () => {
     expect(first.calls).toHaveLength(2)
   })
 
-  it('waits longer after a failure, and never two queries back to back', async () => {
+  test('waits longer after a failure, and never two queries back to back', async () => {
     let at = 0
     const first = fake('static map', {})
     const resolution = createResolution([first], { now: () => at })
@@ -197,7 +197,7 @@ describe('createResolution', () => {
     expect(first.calls).toHaveLength(2)
   })
 
-  it('resolves again after forget, and keeps the last address meanwhile', async () => {
+  test('resolves again after forget, and keeps the last address meanwhile', async () => {
     const at = 10_000
     const answers: Record<string, string | null> = { kitchen: '192.0.2.10' }
     const first = fake('static map', answers)
@@ -214,7 +214,7 @@ describe('createResolution', () => {
     expect(first.calls).toHaveLength(2)
   })
 
-  it('stops querying on every offline poll once an attempt has failed', async () => {
+  test('stops querying on every offline poll once an attempt has failed', async () => {
     const answers: Record<string, string | null> = { kitchen: '192.0.2.10' }
     const first = fake('static map', answers)
     let at = 10_000
@@ -237,7 +237,7 @@ describe('createResolution', () => {
     expect(first.calls).toHaveLength(2)
   })
 
-  it('keeps the previous source when a later attempt fails', async () => {
+  test('keeps the previous source when a later attempt fails', async () => {
     const answers: Record<string, string | null> = { kitchen: '192.0.2.10' }
     const first = fake('dhcp leases', answers)
     let at = 0

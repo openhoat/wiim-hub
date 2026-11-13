@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { groupActionFor, groupFailure, joinTargets } from './group'
 import type { Device } from './types'
 
@@ -51,12 +51,12 @@ const device = (overrides: Partial<Device> = {}): Device => ({
 })
 
 describe('groupActionFor', () => {
-  it('turns the card gestures into the group ones', () => {
+  test('turns the card gestures into the group ones', () => {
     expect(groupActionFor({ action: 'volume', level: 30 })).toEqual({ intent: 'volume', level: 30 })
     expect(groupActionFor({ action: 'mute', muted: true })).toEqual({ intent: 'mute', muted: true })
   })
 
-  it('leaves every other gesture on the device path', () => {
+  test('leaves every other gesture on the device path', () => {
     for (const action of [
       { action: 'play' },
       { action: 'next' },
@@ -69,7 +69,7 @@ describe('groupActionFor', () => {
 })
 
 describe('groupFailure', () => {
-  it('answers null when every write landed', () => {
+  test('answers null when every write landed', () => {
     expect(groupFailure([])).toBeNull()
     expect(
       groupFailure([
@@ -84,7 +84,7 @@ describe('groupFailure', () => {
     ).toBeNull()
   })
 
-  it('names the command and keeps the body of the first refusal', () => {
+  test('names the command and keeps the body of the first refusal', () => {
     // A member that refused is the interesting case: the master said OK.
     expect(
       groupFailure([
@@ -99,7 +99,7 @@ describe('groupFailure', () => {
     ).toBe('multiroom:SlaveVolume:192.0.2.20:30: unknown command')
   })
 
-  it('falls back to the command when the device said nothing', () => {
+  test('falls back to the command when the device said nothing', () => {
     expect(
       groupFailure([{ ok: false, unsupported: false, command: 'multiroom:Ungroup', body: '' }])
     ).toBe('multiroom:Ungroup')
@@ -125,7 +125,7 @@ describe('joinTargets', () => {
   const silent = device({ ip: '192.0.2.40', uuid: '' })
   const offline = device({ ip: '192.0.2.50', online: false })
 
-  it('offers the speakers a join could name, never itself', () => {
+  test('offers the speakers a join could name, never itself', () => {
     expect(joinTargets([self, master, follower, silent, offline], self)).toEqual([master])
   })
 })

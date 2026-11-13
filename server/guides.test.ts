@@ -1,7 +1,7 @@
 // The flows are the part of the diagnostic view that claims an order, so the
 // order itself is what these tests pin: what runs first, where the flow stops,
 // and what "could not read" looks like compared with "everything is fine".
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import type { Diagnostics } from './device/diagnostics.ts'
 import type { DeviceState } from './device/index.ts'
 import { type Guide, guideOrder, guideSection, guidesFor } from './guides.ts'
@@ -99,25 +99,25 @@ const guideOf = (guides: Guide[], id: Guide['id']): Guide => {
 const ids = (guide: Guide): string[] => guide.checks.map(check => check.id)
 
 describe('guidesFor', () => {
-  it('always answers the four flows, in the order the page lists them', () => {
+  test('always answers the four flows, in the order the page lists them', () => {
     expect(run(device()).map(guide => guide.id)).toEqual([...guideOrder])
     expect(guideOrder).toEqual(['no-sound', 'drops', 'wrong-output', 'cannot-join-group'])
   })
 
-  it('reads a healthy player as no anomaly on every flow', () => {
+  test('reads a healthy player as no anomaly on every flow', () => {
     const guides = run(device(), diagnostics())
     expect(guides.map(guide => guide.verdict)).toEqual([null, null, null, null])
     expect(guides.every(guide => guide.settled)).toBe(true)
   })
 
-  it('stops the "no sound" flow at the first anomaly, mute before volume', () => {
+  test('stops the "no sound" flow at the first anomaly, mute before volume', () => {
     const guide = guideOf(run(device({ mute: true, volume: 0 })), 'no-sound')
     expect(ids(guide)).toEqual(['online', 'muted'])
     expect(guide.verdict?.id).toBe('muted')
     expect(guide.verdict?.values).toEqual({})
   })
 
-  it('ranks a silent volume as a failure and a low one as a warning', () => {
+  test('ranks a silent volume as a failure and a low one as a warning', () => {
     expect(guideOf(run(device({ volume: 0 })), 'no-sound').verdict?.id).toBe('noVolume')
     const low = guideOf(run(device({ volume: 3 })), 'no-sound')
     expect(low.verdict?.id).toBe('lowVolume')
@@ -125,13 +125,13 @@ describe('guidesFor', () => {
     expect(low.verdict?.values).toEqual({ volume: 3 })
   })
 
-  it('keeps the checks that passed in front of the anomaly', () => {
+  test('keeps the checks that passed in front of the anomaly', () => {
     const guide = guideOf(run(device({ status: 'stop' })), 'no-sound')
     expect(ids(guide)).toEqual(['online', 'unmuted', 'volume', 'sleepTimer', 'stopped'])
     expect(guide.verdict?.id).toBe('stopped')
   })
 
-  it('reads the "no sound" flow on the group a member follows, not on its own silence', () => {
+  test('reads the "no sound" flow on the group a member follows, not on its own silence', () => {
     // The device answers `stop` with no track: read alone it fails the flow while
     // the room is playing, and asks for an output list it does not have.
     const mirror = {
@@ -191,7 +191,7 @@ describe('guidesFor', () => {
     expect(paused.verdict?.status).toBe('warn')
   })
 
-  it('blames the selected input when an external one carries no signal', () => {
+  test('blames the selected input when an external one carries no signal', () => {
     const inputLabels = { wifi: 'Wi-Fi', optical: 'Optical', 'line-in': 'Line In' }
 
     const playing = guideOf(run(device({ input: 'optical', mode: '43', inputLabels })), 'no-sound')
@@ -214,13 +214,13 @@ describe('guidesFor', () => {
     expect(loading.verdict?.id).toBe('externalSilent')
   })
 
-  it('names the active route and the routes the player reports', () => {
+  test('names the active route and the routes the player reports', () => {
     const output = guideOf(run(device()), 'wrong-output').checks.at(-1)
     expect(output?.id).toBe('output')
     expect(output?.values).toEqual({ active: 'Line Out', available: 'Optical Out, Line Out' })
   })
 
-  it('fails on an output the player does not list, and stops when it lists none', () => {
+  test('fails on an output the player does not list, and stops when it lists none', () => {
     const unlisted = guideOf(run(device({ outputHardware: 9 })), 'wrong-output')
     expect(unlisted.verdict?.id).toBe('outputUnlisted')
     expect(unlisted.verdict?.values).toEqual({ hardware: 9 })
@@ -230,7 +230,7 @@ describe('guidesFor', () => {
     expect(none.settled).toBe(false)
   })
 
-  it('separates a network drop from a reboot or a crash', () => {
+  test('separates a network drop from a reboot or a crash', () => {
     const drops = guideOf(
       run(
         device(),
@@ -264,20 +264,20 @@ describe('guidesFor', () => {
     expect(crash.verdict?.status).toBe('fail')
   })
 
-  it('stops the "drops" flow when the counters are not read yet', () => {
+  test('stops the "drops" flow when the counters are not read yet', () => {
     const guide = guideOf(run(device(), null), 'drops')
     expect(ids(guide)).toEqual(['online', 'link', 'counters'])
     expect(guide.verdict?.id).toBe('counters')
     expect(guide.settled).toBe(false)
   })
 
-  it('reads the link before the counters, because the poll carries it', () => {
+  test('reads the link before the counters, because the poll carries it', () => {
     const guide = guideOf(run(device({ rssi: -74 }), null), 'drops')
     expect(ids(guide)).toEqual(['online', 'weakLink'])
     expect(guide.verdict?.id).toBe('weakLink')
   })
 
-  it('reads a saved group that keeps nothing running, and one that does', () => {
+  test('reads a saved group that keeps nothing running, and one that does', () => {
     const saved = guideOf(
       run(
         device({ group: { role: 'none', name: 'Appart', members: [], saved: true, parent: null } })
@@ -310,7 +310,7 @@ describe('guidesFor', () => {
     ])
   })
 
-  it('quotes the speaker a member follows, which the fleet resolved for it', () => {
+  test('quotes the speaker a member follows, which the fleet resolved for it', () => {
     const guide = guideOf(
       run(
         device({
@@ -331,14 +331,14 @@ describe('guidesFor', () => {
     expect(check?.evidence).toBe('getStatusEx.group member of Appart, driven by Salon')
   })
 
-  it('admits when this model cannot answer the group commands at all', () => {
+  test('admits when this model cannot answer the group commands at all', () => {
     const guide = guideOf(run(device({ wmrmVersion: '' })), 'cannot-join-group')
     expect(guide.verdict?.id).toBe('groupCommandsMissing')
     expect(guide.verdict?.status).toBe('unknown')
     expect(guide.settled).toBe(false)
   })
 
-  it('makes every flow an offline failure when the player does not answer', () => {
+  test('makes every flow an offline failure when the player does not answer', () => {
     const guides = run(device({ online: false, errors: 3 }))
     for (const guide of guides) {
       expect(guide.checks).toHaveLength(1)
@@ -488,7 +488,7 @@ describe('report wording', () => {
     },
   ]
 
-  it('has wording for every verdict the flows can produce', () => {
+  test('has wording for every verdict the flows can produce', () => {
     for (const entry of cases) {
       const probed = entry.diagnostics === undefined ? diagnostics() : entry.diagnostics
       const guide = guideOf(run(device(entry.state), probed), entry.flow)
@@ -499,13 +499,13 @@ describe('report wording', () => {
     }
   })
 
-  it('never quotes a pass row, because a pass is not a verdict', () => {
+  test('never quotes a pass row, because a pass is not a verdict', () => {
     const text = section(run(device(), diagnostics()))
     expect(text).not.toContain('The player answers.')
     expect(text).not.toContain('The radio link reads')
   })
 
-  it('falls back to the evidence when a check has no wording yet', () => {
+  test('falls back to the evidence when a check has no wording yet', () => {
     const check = { id: 'notWritten', status: 'warn' as const, values: {}, evidence: 'getFoo 1' }
     const fabricated: Guide = {
       id: 'drops',
@@ -520,14 +520,14 @@ describe('report wording', () => {
 describe('guideSection', () => {
   const section = (guides: Guide[]): string => guideSection(guides).join('\n')
 
-  it('writes one line per flow, and says when a flow found nothing', () => {
+  test('writes one line per flow, and says when a flow found nothing', () => {
     const text = section(run(device(), diagnostics()))
     expect(text).toContain('## Guided checks')
     expect(text).toContain('- **No sound**: all 6 check(s) passed.')
     expect(text).toContain('- **Wrong output**: all 2 check(s) passed.')
   })
 
-  it('writes the verdict with its field, so a reader can check the claim', () => {
+  test('writes the verdict with its field, so a reader can check the claim', () => {
     const text = section(run(device({ mute: true, volume: 0 }), diagnostics()))
     expect(text).toContain(
       '- **No sound**: fail at `muted`: The player is muted. (getPlayerStatusEx.mute 1)'
@@ -536,14 +536,14 @@ describe('guideSection', () => {
     expect(text).not.toContain('nothing audible')
   })
 
-  it('says "not read" where the device gave nothing to read', () => {
+  test('says "not read" where the device gave nothing to read', () => {
     const text = section(run(device(), null))
     expect(text).toContain(
       '- **It drops**: not read at `counters`: The network counters are not read yet.'
     )
   })
 
-  it('keeps the counts of a flow short enough to paste', () => {
+  test('keeps the counts of a flow short enough to paste', () => {
     const lines = guideSection(run(device({ rssi: -74, mute: true }), diagnostics()))
     expect(lines.filter(line => line.startsWith('- **'))).toHaveLength(4)
   })

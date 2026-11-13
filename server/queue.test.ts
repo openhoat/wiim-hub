@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { createWriteQueue } from './queue.ts'
 
 type Call = { key: string; command: string; answer: (body: string | null) => void }
@@ -15,7 +15,7 @@ const controlled = () => {
 }
 
 describe('createWriteQueue', () => {
-  it('sends one command at a time, in the order they were queued', async () => {
+  test('sends one command at a time, in the order they were queued', async () => {
     const { calls, queue } = controlled()
     const first = queue.enqueue('lab', 'setPlayerCmd:pause', null)
     const second = queue.enqueue('lab', 'setPlayerCmd:next', null)
@@ -39,7 +39,7 @@ describe('createWriteQueue', () => {
     })
   })
 
-  it('replaces a pending job of the same family and answers every caller once', async () => {
+  test('replaces a pending job of the same family and answers every caller once', async () => {
     const { calls, queue } = controlled()
     const first = queue.enqueue('lab', 'setPlayerCmd:vol:10', 'volume')
     const second = queue.enqueue('lab', 'setPlayerCmd:vol:20', 'volume')
@@ -57,7 +57,7 @@ describe('createWriteQueue', () => {
     await expect(Promise.all([second, third])).resolves.toEqual([expected, expected])
   })
 
-  it('never coalesces jobs of different families', async () => {
+  test('never coalesces jobs of different families', async () => {
     const { calls, queue } = controlled()
     const volume = queue.enqueue('lab', 'setPlayerCmd:vol:10', 'volume')
     const seek = queue.enqueue('lab', 'setPlayerCmd:seek:10', 'seek')
@@ -77,7 +77,7 @@ describe('createWriteQueue', () => {
     await balance
   })
 
-  it('never coalesces a command that carries no family', async () => {
+  test('never coalesces a command that carries no family', async () => {
     const { calls, queue } = controlled()
     const first = queue.enqueue('lab', 'setPlayerCmd:pause', null)
     const second = queue.enqueue('lab', 'setPlayerCmd:pause', null)
@@ -90,7 +90,7 @@ describe('createWriteQueue', () => {
     await second
   })
 
-  it('runs one writer per key, so two speakers write in parallel', () => {
+  test('runs one writer per key, so two speakers write in parallel', () => {
     const { calls, queue } = controlled()
     void queue.enqueue('lab', 'setPlayerCmd:pause', null)
     void queue.enqueue('kitchen', 'setPlayerCmd:pause', null)
@@ -98,7 +98,7 @@ describe('createWriteQueue', () => {
     expect(calls.map(call => call.key)).toEqual(['lab', 'kitchen'])
   })
 
-  it('reports an unreachable device as a failed write with an empty body', async () => {
+  test('reports an unreachable device as a failed write with an empty body', async () => {
     const { calls, queue } = controlled()
     const result = queue.enqueue('lab', 'setPlayerCmd:pause', null)
 
@@ -111,7 +111,7 @@ describe('createWriteQueue', () => {
     })
   })
 
-  it('restarts the writer once the queue drained', async () => {
+  test('restarts the writer once the queue drained', async () => {
     const { calls, queue } = controlled()
     const first = queue.enqueue('lab', 'setPlayerCmd:pause', null)
     calls[0].answer('OK')

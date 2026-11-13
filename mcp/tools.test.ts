@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import type { HubAnswer, HubClient, Query } from './hub.ts'
 import { type ToolContext, toolByName, tools } from './tools.ts'
 
@@ -32,13 +32,13 @@ const context = (answers: {
 }
 
 describe('tool registry', () => {
-  it('declares one name per tool, distinct', () => {
+  test('declares one name per tool, distinct', () => {
     const names = tools.map(tool => tool.name)
     expect(names).toEqual(['hub_state', 'device_report', 'device_settings', 'device_command'])
     expect(new Set(names).size).toBe(names.length)
   })
 
-  it('marks the three reads read only and the write not', () => {
+  test('marks the three reads read only and the write not', () => {
     for (const tool of tools) {
       expect(typeof tool.annotations.readOnlyHint).toBe('boolean')
       expect(tool.annotations.readOnlyHint).toBe(tool.name !== 'device_command')
@@ -46,14 +46,14 @@ describe('tool registry', () => {
     expect(toolByName('device_command')?.annotations.destructiveHint).toBe(true)
   })
 
-  it('finds a tool by name and answers null otherwise', () => {
+  test('finds a tool by name and answers null otherwise', () => {
     expect(toolByName('device_report')?.title).toBe('Diagnose one speaker')
     expect(toolByName('device_reprot')).toBeNull()
   })
 })
 
 describe('hub_state', () => {
-  it('reads the state and prints the payload as it came', async () => {
+  test('reads the state and prints the payload as it came', async () => {
     const payload = { ts: 1, pollMs: 3000, devices: [{ name: 'Kitchen' }] }
     const ctx = context({ get: { status: 200, ok: true, body: payload } })
     const result = await tools[0].run({}, ctx)
@@ -64,7 +64,7 @@ describe('hub_state', () => {
 })
 
 describe('device_report and device_settings', () => {
-  it('passes the host through as the hub spells it', async () => {
+  test('passes the host through as the hub spells it', async () => {
     const ctx = context({ get: { status: 200, ok: true, body: { host: '192.168.1.10' } } })
     await toolByName('device_report')?.run({ host: '192.168.1.10' }, ctx)
     await toolByName('device_settings')?.run({ host: 'kitchen' }, ctx)
@@ -74,7 +74,7 @@ describe('device_report and device_settings', () => {
     ])
   })
 
-  it('reports an unknown host as an error carrying the hub answer', async () => {
+  test('reports an unknown host as an error carrying the hub answer', async () => {
     const ctx = context({ get: { status: 404, ok: false, body: { error: 'unknown device' } } })
     const result = await toolByName('device_report')?.run({ host: 'nope' }, ctx)
     expect(result?.isError).toBe(true)
@@ -83,7 +83,7 @@ describe('device_report and device_settings', () => {
 })
 
 describe('device_command', () => {
-  it('forwards the intent untouched and returns the device answer', async () => {
+  test('forwards the intent untouched and returns the device answer', async () => {
     const answer = { status: 200, ok: true, body: { ok: true, command: 'setPlayerCmd:vol:30' } }
     const ctx = context({ post: answer })
     const result = await toolByName('device_command')?.run(
@@ -102,7 +102,7 @@ describe('device_command', () => {
     expect(JSON.parse(result?.text ?? '{}')).toEqual(answer.body)
   })
 
-  it('keeps the hub refusal, which is the authority on an intent', async () => {
+  test('keeps the hub refusal, which is the authority on an intent', async () => {
     const ctx = context({
       post: { status: 422, ok: false, body: { error: 'volume must be between 0 and 100' } },
     })
@@ -114,7 +114,7 @@ describe('device_command', () => {
     expect(JSON.parse(result?.text ?? '{}').status).toBe(422)
   })
 
-  it('refuses an argument the schema does not name', async () => {
+  test('refuses an argument the schema does not name', async () => {
     const tool = toolByName('device_command')
     if (tool === null) throw new Error('device_command is missing')
     // The handler re-validates: a client that filters unknown keys before
@@ -128,7 +128,7 @@ describe('device_command', () => {
 })
 
 describe('schema guards', () => {
-  it('refuses an unknown top level key on a read', async () => {
+  test('refuses an unknown top level key on a read', async () => {
     await expect(toolByName('hub_state')?.run({ verbose: true }, context({}))).rejects.toThrow()
     await expect(toolByName('device_report')?.run({ host: '' }, context({}))).rejects.toThrow()
   })

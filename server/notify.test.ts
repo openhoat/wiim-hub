@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import type { Finding } from './findings.ts'
 import {
   type Alert,
@@ -45,7 +45,7 @@ const recorder = (name = 'webhook'): AlertChannel & { sent: Alert[] } => {
 }
 
 describe('createNotifier', () => {
-  it('sends a rule when it appears, not on every poll', async () => {
+  test('sends a rule when it appears, not on every poll', async () => {
     const channel = recorder()
     let at = 0
     const notifier = createNotifier({ channels: [channel], now: () => at })
@@ -59,7 +59,7 @@ describe('createNotifier', () => {
     expect(notifier.channels).toEqual(['webhook'])
   })
 
-  it('keeps the info rules silent under the default floor', () => {
+  test('keeps the info rules silent under the default floor', () => {
     const channel = recorder()
     const notifier = createNotifier({ channels: [channel] })
     expect(
@@ -75,7 +75,7 @@ describe('createNotifier', () => {
     ).toHaveLength(1)
   })
 
-  it('narrows to the configured rules, an empty list meaning all of them', () => {
+  test('narrows to the configured rules, an empty list meaning all of them', () => {
     const channel = recorder()
     const notifier = createNotifier({ channels: [channel], rules: ['offline'] })
     const input = {
@@ -88,7 +88,7 @@ describe('createNotifier', () => {
     expect(all.push(input)).toHaveLength(2)
   })
 
-  it('holds a rule that cleared and came back inside the quiet period', () => {
+  test('holds a rule that cleared and came back inside the quiet period', () => {
     const channel = recorder()
     let at = 0
     const notifier = createNotifier({ channels: [channel], now: () => at, quietMs: 3_600_000 })
@@ -105,7 +105,7 @@ describe('createNotifier', () => {
     expect(notifier.push(raised)).toHaveLength(1)
   })
 
-  it('keeps the other channel and the log when one of them fails', async () => {
+  test('keeps the other channel and the log when one of them fails', async () => {
     const broken: AlertChannel = {
       name: 'webhook',
       send: async () => {
@@ -125,7 +125,7 @@ describe('createNotifier', () => {
 })
 
 describe('message shapes', () => {
-  it('flattens the event into the webhook body', () => {
+  test('flattens the event into the webhook body', () => {
     expect(webhookPayload(alert())).toEqual({
       at: '2026-11-10T12:00:00.000Z',
       device: 'Kitchen',
@@ -140,7 +140,7 @@ describe('message shapes', () => {
     expect(alertTitle({ ...alert(), device: '' })).toBe('192.0.2.10: Wi-Fi drops')
   })
 
-  it('writes the ntfy body as text, with the evidence and the rule', () => {
+  test('writes the ntfy body as text, with the evidence and the rule', () => {
     const body = ntfyBody(alert())
     expect(body).toContain('The Wi-Fi dropped 3 time(s)')
     expect(body).toContain('- getNetworkHealth: wifiDrops 3')
@@ -150,7 +150,7 @@ describe('message shapes', () => {
     expect(ntfyHeaders(alert('sleepTimer', 'info')).priority).toBe('low')
   })
 
-  it('posts the payload as JSON to the webhook', async () => {
+  test('posts the payload as JSON to the webhook', async () => {
     const calls: { url: string; body: string; headers: Record<string, string> }[] = []
     const channel = webhookChannel('https://hooks.example/wiim', async (url, body, headers) => {
       calls.push({ url, body, headers })
@@ -161,7 +161,7 @@ describe('message shapes', () => {
     expect(JSON.parse(calls[0].body)).toMatchObject({ rule: 'wifiDrops', severity: 'warn' })
   })
 
-  it('posts text and headers to the ntfy topic, with the token when there is one', async () => {
+  test('posts text and headers to the ntfy topic, with the token when there is one', async () => {
     const calls: { url: string; body: string; headers: Record<string, string> }[] = []
     const send = async (
       url: string,
@@ -183,7 +183,7 @@ describe('message shapes', () => {
 })
 
 describe('configuration', () => {
-  it('reads a rule list, deduplicated, and reports what it does not know', () => {
+  test('reads a rule list, deduplicated, and reports what it does not know', () => {
     expect(parseRules('offline, hardwareFault ,offline')).toEqual({
       rules: ['offline', 'hardwareFault'],
       unknown: [],
@@ -192,7 +192,7 @@ describe('configuration', () => {
     expect(parseRules('')).toEqual({ rules: [], unknown: [] })
   })
 
-  it('reads a severity and falls back rather than failing', () => {
+  test('reads a severity and falls back rather than failing', () => {
     expect(parseSeverity('ALERT')).toBe('alert')
     expect(parseSeverity(' info ')).toBe('info')
     expect(parseSeverity('loud')).toBe('warn')
@@ -200,11 +200,11 @@ describe('configuration', () => {
     expect(parseSeverity('loud', 'alert')).toBe('alert')
   })
 
-  it('is off until a channel is given an address', () => {
+  test('is off until a channel is given an address', () => {
     expect(notifierFromEnv({})).toBeNull()
   })
 
-  it('lists the configured channels and warns about an unknown rule', () => {
+  test('lists the configured channels and warns about an unknown rule', () => {
     const log = vi.spyOn(console, 'log').mockReturnValue(undefined)
     const notifier = notifierFromEnv({
       NOTIFY_WEBHOOK: 'https://hooks.example/wiim',

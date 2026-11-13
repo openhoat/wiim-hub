@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { streamServices } from './fixtures/wiim-pro.ts'
 import { parseServicesCapability, readServices } from './services.ts'
 
 describe('parseServicesCapability', () => {
-  it('reads the table the reference player sent', () => {
+  test('reads the table the reference player sent', () => {
     const services = parseServicesCapability(streamServices)
     expect(services).not.toBeNull()
     expect(services).toHaveLength(29)
@@ -18,7 +18,7 @@ describe('parseServicesCapability', () => {
     })
   })
 
-  it('keeps the levels in the order the device published them', () => {
+  test('keeps the levels in the order the device published them', () => {
     // The order is the only ranking the hub is allowed to use.
     const services = parseServicesCapability(streamServices) ?? []
     expect(services.find(service => service.id === 'Prime')?.levels).toEqual(['SD', 'HD', 'UHD'])
@@ -30,7 +30,7 @@ describe('parseServicesCapability', () => {
     ])
   })
 
-  it('keeps a family that publishes no level, and the endpoints the app drives', () => {
+  test('keeps a family that publishes no level, and the endpoints the app drives', () => {
     const services = parseServicesCapability(streamServices) ?? []
     expect(services.find(service => service.id === 'newTuneIn')).toMatchObject({ levels: [] })
     expect(services.find(service => service.id === 'SpotifyConnect')).toMatchObject({
@@ -40,7 +40,7 @@ describe('parseServicesCapability', () => {
     })
   })
 
-  it('refuses what is not a service list', () => {
+  test('refuses what is not a service list', () => {
     expect(parseServicesCapability(null)).toBeNull()
     expect(parseServicesCapability('')).toBeNull()
     expect(parseServicesCapability('unknown command')).toBeNull()
@@ -49,7 +49,7 @@ describe('parseServicesCapability', () => {
     expect(parseServicesCapability('{"streamServices":"nope"}')).toBeNull()
   })
 
-  it('survives a malformed entry instead of losing the table', () => {
+  test('survives a malformed entry instead of losing the table', () => {
     const services = parseServicesCapability(
       '{"streamServices":[null,{"id":""},{"version":"1"},{"id":"Solo","quality":["a","a",2,""]}]}'
     )
@@ -67,7 +67,7 @@ describe('parseServicesCapability', () => {
     ])
   })
 
-  it('reads the flags the device sends as numbers or booleans', () => {
+  test('reads the flags the device sends as numbers or booleans', () => {
     const services = parseServicesCapability(
       '{"streamServices":[{"id":"A","replayGain":true,"active":1,"configurable":"1"}]}'
     )
@@ -76,7 +76,7 @@ describe('parseServicesCapability', () => {
 })
 
 describe('readServices', () => {
-  it('probes once per window and keeps the answer', async () => {
+  test('probes once per window and keeps the answer', async () => {
     const calls: string[] = []
     const probe = async (_ip: string, command: string): Promise<string | null> => {
       calls.push(command)
@@ -88,7 +88,7 @@ describe('readServices', () => {
     expect(second).toEqual(first)
   })
 
-  it('keeps what the model published when a later probe fails', async () => {
+  test('keeps what the model published when a later probe fails', async () => {
     const answers = [streamServices, 'unknown command']
     const probe = async (): Promise<string | null> => answers.shift() ?? null
     await readServices('192.0.2.11', 1_000, probe)
@@ -98,7 +98,7 @@ describe('readServices', () => {
     expect(after).toHaveLength(29)
   })
 
-  it('answers an empty table for a device that never published one', async () => {
+  test('answers an empty table for a device that never published one', async () => {
     const probe = async (): Promise<string | null> => 'unknown command'
     expect(await readServices('192.0.2.12', 1_000, probe)).toEqual([])
   })

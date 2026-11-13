@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import type { Diagnostics } from './device/diagnostics.ts'
 import type { DeviceState } from './device/index.ts'
 import { buildReport, findingsFor } from './findings.ts'
@@ -85,11 +85,11 @@ const ids = (input: Parameters<typeof findingsFor>[0]): string[] =>
   findingsFor(input).map(finding => finding.id)
 
 describe('findingsFor', () => {
-  it('reports a clean device as no finding at all', () => {
+  test('reports a clean device as no finding at all', () => {
     expect(findingsFor({ state: device(), diagnostics: diagnostics() })).toEqual([])
   })
 
-  it('reports the offline state alone, not the counters behind it', () => {
+  test('reports the offline state alone, not the counters behind it', () => {
     const findings = findingsFor({
       state: device({ online: false, errors: 3, lastSeen: null, rssi: null }),
       diagnostics: diagnostics({ health: { ...diagnostics().health!, disconnected: 4 } }),
@@ -101,7 +101,7 @@ describe('findingsFor', () => {
     expect(findings[0].evidence[1]).toContain('never')
   })
 
-  it('flags a weak link from the RSSI alone', () => {
+  test('flags a weak link from the RSSI alone', () => {
     const findings = findingsFor({
       state: device({ rssi: -74 }),
       diagnostics: diagnostics(),
@@ -112,13 +112,13 @@ describe('findingsFor', () => {
     expect(findings[0].evidence[0]).toContain('getStatusEx.RSSI')
   })
 
-  it('flags a weak link from the SNR even when the RSSI looks fine', () => {
+  test('flags a weak link from the SNR even when the RSSI looks fine', () => {
     expect(
       ids({ state: device({ link: { ...device().link, snr: 12 } }), diagnostics: diagnostics() })
     ).toEqual(['weakLink'])
   })
 
-  it('does not flag a link that is only close to the threshold', () => {
+  test('does not flag a link that is only close to the threshold', () => {
     expect(
       ids({
         state: device({ rssi: -69, link: { ...device().link, snr: 21 } }),
@@ -127,7 +127,7 @@ describe('findingsFor', () => {
     ).toEqual([])
   })
 
-  it('reports each network counter with its source command', () => {
+  test('reports each network counter with its source command', () => {
     const findings = findingsFor({
       state: device(),
       diagnostics: diagnostics({
@@ -155,7 +155,7 @@ describe('findingsFor', () => {
     expect(findings[3].severity).toBe('alert')
   })
 
-  it('sums the crash counters instead of reporting four lines', () => {
+  test('sums the crash counters instead of reporting four lines', () => {
     const findings = findingsFor({
       state: device(),
       diagnostics: diagnostics({
@@ -171,7 +171,7 @@ describe('findingsFor', () => {
     expect(findings[0].evidence).toHaveLength(4)
   })
 
-  it('reports lost UPnP actions against their total', () => {
+  test('reports lost UPnP actions against their total', () => {
     const findings = findingsFor({
       state: device(),
       diagnostics: diagnostics({
@@ -182,7 +182,7 @@ describe('findingsFor', () => {
     expect(findings[0].values).toEqual({ lost: 7, total: 913 })
   })
 
-  it('flags flash wear only past the worn ratio', () => {
+  test('flags flash wear only past the worn ratio', () => {
     const worn = findingsFor({
       state: device(),
       diagnostics: diagnostics({
@@ -201,7 +201,7 @@ describe('findingsFor', () => {
     ).toEqual([])
   })
 
-  it('names every hardware field a probe reports', () => {
+  test('names every hardware field a probe reports', () => {
     const findings = findingsFor({
       state: device(),
       diagnostics: diagnostics({
@@ -221,7 +221,7 @@ describe('findingsFor', () => {
     expect(findings[0].evidence[0]).toContain('getHwErrorInfo')
   })
 
-  it('reports the push channel and a running sleep timer as info', () => {
+  test('reports the push channel and a running sleep timer as info', () => {
     const findings = findingsFor({
       state: device({
         upnp: { state: 'degraded', lastEventAt: 1, events: 4, misses: 2 },
@@ -234,7 +234,7 @@ describe('findingsFor', () => {
     expect(findings[1].values.minutes).toBe(10)
   })
 
-  it('stays silent when a probe source is missing, and still reads the link', () => {
+  test('stays silent when a probe source is missing, and still reads the link', () => {
     expect(ids({ state: device({ rssi: -80 }), diagnostics: null })).toEqual(['weakLink'])
     expect(
       ids({
@@ -244,7 +244,7 @@ describe('findingsFor', () => {
     ).toEqual(['weakLink'])
   })
 
-  it('reads the link from the RSSI when the SNR is missing', () => {
+  test('reads the link from the RSSI when the SNR is missing', () => {
     expect(
       ids({ state: device({ link: { ...device().link, snr: null } }), diagnostics: diagnostics() })
     ).toEqual([])
@@ -254,7 +254,7 @@ describe('findingsFor', () => {
 describe('buildReport', () => {
   const hub = { version: '0.7.0', pollMs: 3000, slowPollMs: 15_000, eventsEnabled: true }
 
-  it('says so explicitly when nothing is wrong, and still shows the values', () => {
+  test('says so explicitly when nothing is wrong, and still shows the values', () => {
     const state = device()
     const diagnosticsValue = diagnostics()
     const report = buildReport({
@@ -272,7 +272,7 @@ describe('buildReport', () => {
     expect(report.markdown).toContain('"badBlocks": 5')
   })
 
-  it('writes the offline sentence, which is the first line a support thread reads', () => {
+  test('writes the offline sentence, which is the first line a support thread reads', () => {
     const state = device({ online: false, errors: 3, lastSeen: null, rssi: null })
     const report = buildReport({
       state,
@@ -287,7 +287,7 @@ describe('buildReport', () => {
     expect(report.markdown).toContain('| Last seen | never |')
   })
 
-  it('names the group a member follows, and says where its playback comes from', () => {
+  test('names the group a member follows, and says where its playback comes from', () => {
     // The device answers `mode 99, stop` with no track: printed alone it reads as
     // a silent speaker in no group, while the room is playing.
     const state = device({
@@ -329,7 +329,7 @@ describe('buildReport', () => {
     )
   })
 
-  it('says member rather than none when the fleet could not resolve the group', () => {
+  test('says member rather than none when the fleet could not resolve the group', () => {
     const state = device({
       group: { role: 'member', name: '', members: [], saved: false, parent: null },
     })
@@ -343,7 +343,7 @@ describe('buildReport', () => {
     expect(report.markdown).toContain('| Group | member |')
   })
 
-  it('writes one sentence and its evidence per finding', () => {
+  test('writes one sentence and its evidence per finding', () => {
     const state = device({
       rssi: -74,
       sleepSeconds: 600,
@@ -419,7 +419,7 @@ describe('buildReport', () => {
     expect(report.markdown).not.toContain('No anomaly detected')
   })
 
-  it('puts the capability inventory between the findings and the raw answers', () => {
+  test('puts the capability inventory between the findings and the raw answers', () => {
     const inventory = buildInventory(
       [
         { command: 'getStatusEx', area: 'identity', raw: '{ "DeviceName": "Kitchen" }' },
@@ -453,7 +453,7 @@ describe('buildReport', () => {
     )
   })
 
-  it('says the inventory was skipped when the report has none', () => {
+  test('says the inventory was skipped when the report has none', () => {
     const report = buildReport({
       state: device({ online: false }),
       diagnostics: null,

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { optimisticFor, overrideLifetimeMs, withOverride } from './optimistic.ts'
 import type { Device } from './types'
 
@@ -63,7 +63,7 @@ const device = (overrides: Partial<Device> = {}): Device => ({
 })
 
 describe('optimisticFor', () => {
-  it('paints the transport state the button implies', () => {
+  test('paints the transport state the button implies', () => {
     expect(optimisticFor(device(), { action: 'play' })).toEqual({ status: 'play' })
     expect(optimisticFor(device(), { action: 'pause' })).toEqual({ status: 'pause' })
     expect(optimisticFor(device(), { action: 'stop' })).toEqual({ status: 'stop' })
@@ -73,12 +73,12 @@ describe('optimisticFor', () => {
     })
   })
 
-  it('restarts the position on a track change', () => {
+  test('restarts the position on a track change', () => {
     expect(optimisticFor(device(), { action: 'next' })).toEqual({ status: 'load', curposMs: 0 })
     expect(optimisticFor(device(), { action: 'prev' })).toEqual({ status: 'load', curposMs: 0 })
   })
 
-  it('never seeks past the end of a track the device measured', () => {
+  test('never seeks past the end of a track the device measured', () => {
     expect(optimisticFor(device(), { action: 'seek', seconds: 30 })).toEqual({ curposMs: 30_000 })
     // Seconds in, milliseconds out: the device takes seconds for a seek.
     expect(optimisticFor(device(), { action: 'seek', seconds: 300 })).toEqual({
@@ -86,7 +86,7 @@ describe('optimisticFor', () => {
     })
   })
 
-  it('lets a seek through when no duration is known', () => {
+  test('lets a seek through when no duration is known', () => {
     // A live stream reports no duration: clamping against a missing ceiling
     // would pin the thumb to zero.
     expect(optimisticFor(device({ totalMs: null }), { action: 'seek', seconds: 90 })).toEqual({
@@ -97,14 +97,14 @@ describe('optimisticFor', () => {
     })
   })
 
-  it('unmutes a volume write, because a user asking for sound expects sound', () => {
+  test('unmutes a volume write, because a user asking for sound expects sound', () => {
     expect(optimisticFor(device({ mute: true }), { action: 'volume', level: 55 })).toEqual({
       volume: 55,
       mute: false,
     })
   })
 
-  it('paints the scalar settings one at a time', () => {
+  test('paints the scalar settings one at a time', () => {
     expect(optimisticFor(device(), { action: 'mute', muted: true })).toEqual({ mute: true })
     expect(optimisticFor(device(), { action: 'source', input: 'optical' })).toEqual({
       input: 'optical',
@@ -117,7 +117,7 @@ describe('optimisticFor', () => {
     })
   })
 
-  it('paints the equalizer flag and the preset name without inventing a curve', () => {
+  test('paints the equalizer flag and the preset name without inventing a curve', () => {
     expect(optimisticFor(device(), { action: 'eq', enabled: true })).toEqual({
       eq: { enabled: true },
     })
@@ -126,7 +126,7 @@ describe('optimisticFor', () => {
     })
   })
 
-  it('moves one band and drops the factory name', () => {
+  test('moves one band and drops the factory name', () => {
     expect(optimisticFor(device(), { action: 'eqBand', band: 'band2khz', value: 4 })).toEqual({
       eq: {
         bands: [
@@ -138,7 +138,7 @@ describe('optimisticFor', () => {
     })
   })
 
-  it('paints nothing for an action the view already reads through the poll', () => {
+  test('paints nothing for an action the view already reads through the poll', () => {
     // Presets, name, LED, balance, URL: nothing to show before the answer lands.
     for (const action of [
       { action: 'preset', slot: 1 },
@@ -156,23 +156,23 @@ describe('optimisticFor', () => {
 })
 
 describe('withOverride', () => {
-  it('shows the painted value while the window is open', () => {
+  test('shows the painted value while the window is open', () => {
     const painted = { value: { volume: 55 }, at: 1_000 }
     expect(withOverride(device(), painted, 1_000 + overrideLifetimeMs - 1).volume).toBe(55)
   })
 
-  it('shows the device reading again once the window closed', () => {
+  test('shows the device reading again once the window closed', () => {
     const painted = { value: { volume: 55 }, at: 1_000 }
     expect(withOverride(device(), painted, 1_000 + overrideLifetimeMs).volume).toBe(40)
     expect(withOverride(device(), null, 1_000).volume).toBe(40)
   })
 
-  it('returns the same object when there is nothing to paint', () => {
+  test('returns the same object when there is nothing to paint', () => {
     const current = device()
     expect(withOverride(current, null, 5_000)).toBe(current)
   })
 
-  it('merges the equalizer instead of replacing it', () => {
+  test('merges the equalizer instead of replacing it', () => {
     // A painted flag must not wipe the curve, and a painted curve must not wipe
     // the flags: `eq` is nested, unlike every other painted field.
     const current = device()
@@ -193,7 +193,7 @@ describe('withOverride', () => {
     expect(bands.eq.presets).toEqual(['Flat', 'Rock'])
   })
 
-  it('leaves the equalizer alone when the action does not touch it', () => {
+  test('leaves the equalizer alone when the action does not touch it', () => {
     const current = device()
     const painted = withOverride(current, { value: { volume: 70 }, at: 0 }, 0)
     expect(painted.eq).toBe(current.eq)

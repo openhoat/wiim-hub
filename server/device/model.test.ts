@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { cachedModel, modelCache, modelFor, parseModelName } from './model.ts'
 
 // Measured on a WiiM Mini (10/11/2026): `getStatusEx` answers `model: null` and
@@ -12,20 +12,20 @@ const description = (model: string): string =>
 const stubbed = (body: string) => vi.fn(async () => new Response(body, { status: 200 }))
 
 describe('parseModelName', () => {
-  it('reads the model and drops the DLNA role suffix', () => {
+  test('reads the model and drops the DLNA role suffix', () => {
     expect(parseModelName(description('WiiM Mini Receiver'))).toBe('WiiM Mini')
     expect(parseModelName(description('WiiM Pro Receiver'))).toBe('WiiM Pro')
   })
 
-  it('keeps a name that carries no role suffix', () => {
+  test('keeps a name that carries no role suffix', () => {
     expect(parseModelName(description('WiiM Ultra'))).toBe('WiiM Ultra')
   })
 
-  it('decodes the entities a description may carry', () => {
+  test('decodes the entities a description may carry', () => {
     expect(parseModelName(description('A &amp; B Receiver'))).toBe('A & B')
   })
 
-  it('answers an empty name when the description carries none', () => {
+  test('answers an empty name when the description carries none', () => {
     expect(parseModelName('<root><device></device></root>')).toBe('')
     expect(parseModelName('')).toBe('')
   })
@@ -40,7 +40,7 @@ describe('modelFor', () => {
     vi.unstubAllGlobals()
   })
 
-  it('reads the description once and answers from the cache after that', async () => {
+  test('reads the description once and answers from the cache after that', async () => {
     const fetchSpy = stubbed(description('WiiM Mini Receiver'))
     vi.stubGlobal('fetch', fetchSpy)
     await expect(modelFor('192.0.2.10', 'Linkplay.4.6')).resolves.toBe('WiiM Mini')
@@ -48,7 +48,7 @@ describe('modelFor', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('asks again after a firmware update, which is the only thing that can rename a build', async () => {
+  test('asks again after a firmware update, which is the only thing that can rename a build', async () => {
     const fetchSpy = stubbed(description('WiiM Mini Receiver'))
     vi.stubGlobal('fetch', fetchSpy)
     await modelFor('192.0.2.10', 'Linkplay.4.6')
@@ -56,7 +56,7 @@ describe('modelFor', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2)
   })
 
-  it('keeps the last name when a later read fails, and retries sooner than it renews', async () => {
+  test('keeps the last name when a later read fails, and retries sooner than it renews', async () => {
     vi.stubGlobal('fetch', stubbed(description('WiiM Mini Receiver')))
     await modelFor('192.0.2.10', 'Linkplay.4.6')
     const failing = vi.fn(async () => {
@@ -68,7 +68,7 @@ describe('modelFor', () => {
     expect(failing).not.toHaveBeenCalled()
   })
 
-  it('answers an empty name rather than failing when nothing answers', async () => {
+  test('answers an empty name rather than failing when nothing answers', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => {

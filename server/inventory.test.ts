@@ -1,7 +1,7 @@
 // The inventory is the part of the report a support reader trusts or does not:
 // each row claims "this firmware answered this command", so the classification
 // is pinned against the answers a real player gave, negative ones included.
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import {
   eqBands,
   inputCapability,
@@ -25,7 +25,7 @@ import {
 const at = Date.UTC(2026, 10, 9, 15, 0, 0)
 
 describe('classifyAnswer', () => {
-  it('separates the four ways a command can come back empty', () => {
+  test('separates the four ways a command can come back empty', () => {
     expect(classifyAnswer(null)).toBe('unreachable')
     expect(classifyAnswer('')).toBe('empty')
     expect(classifyAnswer('   \n ')).toBe('empty')
@@ -34,12 +34,12 @@ describe('classifyAnswer', () => {
     expect(classifyAnswer('Failed')).toBe('failed')
   })
 
-  it('reads a JSON refusal as a refusal, not as an answer', () => {
+  test('reads a JSON refusal as a refusal, not as an answer', () => {
     expect(classifyAnswer('{"status":"Failed"}')).toBe('failed')
     expect(classifyAnswer('{ "status" : "failed" }')).toBe('failed')
   })
 
-  it('counts anything else as an answer, bare numbers included', () => {
+  test('counts anything else as an answer, bare numbers included', () => {
     expect(classifyAnswer(statusEx)).toBe('supported')
     expect(classifyAnswer(metaInfo)).toBe('supported')
     expect(classifyAnswer(presetInfo)).toBe('supported')
@@ -48,7 +48,7 @@ describe('classifyAnswer', () => {
     expect(classifyAnswer('OK')).toBe('supported')
   })
 
-  it('does not turn the vendor typo into a missing command', () => {
+  test('does not turn the vendor typo into a missing command', () => {
     // `getAudioInputCapbility` is the spelling the firmware expects; it answers
     // a JSON body, so the row must read as supported.
     expect(classifyAnswer(inputCapability)).toBe('supported')
@@ -57,7 +57,7 @@ describe('classifyAnswer', () => {
 })
 
 describe('buildInventory', () => {
-  it('counts one status per probe and keeps the probe order', () => {
+  test('counts one status per probe and keeps the probe order', () => {
     const inventory = buildInventory(
       [
         { command: 'getStatusEx', area: 'identity', raw: statusEx },
@@ -85,7 +85,7 @@ describe('buildInventory', () => {
     })
   })
 
-  it('flattens and cuts the answer so a table cell stays readable', () => {
+  test('flattens and cuts the answer so a table cell stays readable', () => {
     const inventory = buildInventory(
       [{ command: 'getStatusEx', area: 'identity', raw: statusEx }],
       at
@@ -97,7 +97,7 @@ describe('buildInventory', () => {
     expect(preview.endsWith('…')).toBe(true)
   })
 
-  it('names an absent answer instead of leaving the cell blank', () => {
+  test('names an absent answer instead of leaving the cell blank', () => {
     const inventory = buildInventory(
       [
         { command: 'getNetworkHealth', area: 'diagnostics', raw: null },
@@ -108,7 +108,7 @@ describe('buildInventory', () => {
     expect(inventory.rows.map(row => row.preview)).toEqual(['no answer', 'empty body'])
   })
 
-  it('lists every command the hub depends on, once', () => {
+  test('lists every command the hub depends on, once', () => {
     const commands = probeList.map(probe => probe.command)
     expect(new Set(commands).size).toBe(commands.length)
     expect(commands).toContain('getStatusEx')
@@ -137,7 +137,7 @@ describe('inventorySection', () => {
     transport: 'https',
   }
 
-  it('states the probe path and the counts before the table', () => {
+  test('states the probe path and the counts before the table', () => {
     const lines = inventorySection(inventory(), resolution, at + 120_000)
     const text = lines.join('\n')
     expect(lines[0]).toBe('## Capability inventory')
@@ -150,7 +150,7 @@ describe('inventorySection', () => {
     expect(text).toContain('| `getNetworkHealth` | diagnostics | unreachable | `no answer` |')
   })
 
-  it('says the probe was skipped when the player was offline', () => {
+  test('says the probe was skipped when the player was offline', () => {
     const offline: Resolution = {
       host: '192.0.2.150',
       ip: '192.0.2.150',
@@ -164,7 +164,7 @@ describe('inventorySection', () => {
     expect(text).not.toContain('| Command |')
   })
 
-  it('ages the probe in the unit a reader needs', () => {
+  test('ages the probe in the unit a reader needs', () => {
     expect(inventorySection(inventory(), resolution, at + 4000).join('\n')).toContain('(just now).')
     expect(inventorySection(inventory(), resolution, at + 25_000).join('\n')).toContain(
       '(25 s ago).'
@@ -182,7 +182,7 @@ describe('readInventory', () => {
     return { seen, probe }
   }
 
-  it('names the address and the scheme a host resolved to', () => {
+  test('names the address and the scheme a host resolved to', () => {
     // A literal is not resolved again: the report shows it once, and no call
     // has succeeded yet on that address.
     expect(resolutionFor('192.0.2.40')).toEqual({
@@ -193,7 +193,7 @@ describe('readInventory', () => {
     })
   })
 
-  it('probes every command, with the argument the API requires', async () => {
+  test('probes every command, with the argument the API requires', async () => {
     const { seen, probe } = probeRecorder()
     const inventory = await readInventory('192.0.2.41', at, probe)
 
@@ -205,7 +205,7 @@ describe('readInventory', () => {
     expect(inventory.counts.supported).toBe(probeList.length - 1)
   })
 
-  it('serves the cached inventory instead of probing eighteen times twice', async () => {
+  test('serves the cached inventory instead of probing eighteen times twice', async () => {
     const { seen, probe } = probeRecorder()
     const first = await readInventory('192.0.2.42', at, probe)
     const second = await readInventory('192.0.2.42', at + 30_000, probe)
@@ -214,7 +214,7 @@ describe('readInventory', () => {
     expect(seen).toHaveLength(probeList.length)
   })
 
-  it('probes again once the answer is older than a minute', async () => {
+  test('probes again once the answer is older than a minute', async () => {
     const { seen, probe } = probeRecorder()
     await readInventory('192.0.2.43', at, probe)
     const fresh = await readInventory('192.0.2.43', at + 60_001, probe)

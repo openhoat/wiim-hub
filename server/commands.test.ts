@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import { commandFor, commandOutcome, eqBandNames, parseAction } from './commands.ts'
 import type { DeviceState } from './device/index.ts'
 
@@ -51,7 +51,7 @@ const device = (overrides: Partial<DeviceState> = {}): DeviceState => ({
 })
 
 describe('parseAction', () => {
-  it('rejects a body that is not an object', () => {
+  test('rejects a body that is not an object', () => {
     expect(parseAction(null)).toEqual({ error: 'body must be an object' })
     expect(parseAction('play')).toEqual({ error: 'body must be an object' })
     expect(parseAction(42)).toEqual({ error: 'body must be an object' })
@@ -59,19 +59,19 @@ describe('parseAction', () => {
     expect(parseAction([])).toEqual({ error: 'missing action' })
   })
 
-  it('rejects a missing or non-string action', () => {
+  test('rejects a missing or non-string action', () => {
     expect(parseAction({})).toEqual({ error: 'missing action' })
     expect(parseAction({ action: 3 })).toEqual({ error: 'missing action' })
   })
 
-  it.each(['play', 'pause', 'toggle', 'stop', 'next', 'prev'])(
+  test.each(['play', 'pause', 'toggle', 'stop', 'next', 'prev'])(
     'accepts the fixed action %s without any field',
     action => {
       expect(parseAction({ action })).toEqual({ action: { action } })
     }
   )
 
-  it('accepts a seek position between zero and one day', () => {
+  test('accepts a seek position between zero and one day', () => {
     expect(parseAction({ action: 'seek', seconds: 0 })).toEqual({
       action: { action: 'seek', seconds: 0 },
     })
@@ -80,7 +80,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('rejects a seek position outside the range or not an integer', () => {
+  test('rejects a seek position outside the range or not an integer', () => {
     expect(parseAction({ action: 'seek', seconds: -1 })).toEqual({ error: 'invalid seek position' })
     expect(parseAction({ action: 'seek', seconds: 86_401 })).toEqual({
       error: 'invalid seek position',
@@ -94,7 +94,7 @@ describe('parseAction', () => {
     expect(parseAction({ action: 'seek' })).toEqual({ error: 'invalid seek position' })
   })
 
-  it('accepts a volume between zero and one hundred', () => {
+  test('accepts a volume between zero and one hundred', () => {
     expect(parseAction({ action: 'volume', level: 0 })).toEqual({
       action: { action: 'volume', level: 0 },
     })
@@ -103,7 +103,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('rejects a volume outside the range or not an integer', () => {
+  test('rejects a volume outside the range or not an integer', () => {
     expect(parseAction({ action: 'volume', level: -1 })).toEqual({ error: 'invalid volume level' })
     expect(parseAction({ action: 'volume', level: 101 })).toEqual({ error: 'invalid volume level' })
     expect(parseAction({ action: 'volume', level: 42.5 })).toEqual({
@@ -111,14 +111,14 @@ describe('parseAction', () => {
     })
   })
 
-  it('accepts a mute flag and rejects anything else', () => {
+  test('accepts a mute flag and rejects anything else', () => {
     expect(parseAction({ action: 'mute', muted: true })).toEqual({
       action: { action: 'mute', muted: true },
     })
     expect(parseAction({ action: 'mute', muted: 'yes' })).toEqual({ error: 'invalid mute flag' })
   })
 
-  it('accepts a non-empty source and rejects an empty or non-string one', () => {
+  test('accepts a non-empty source and rejects an empty or non-string one', () => {
     expect(parseAction({ action: 'source', input: 'optical' })).toEqual({
       action: { action: 'source', input: 'optical' },
     })
@@ -126,7 +126,7 @@ describe('parseAction', () => {
     expect(parseAction({ action: 'source', input: 3 })).toEqual({ error: 'invalid input' })
   })
 
-  it('accepts a preset slot between one and forty', () => {
+  test('accepts a preset slot between one and forty', () => {
     expect(parseAction({ action: 'preset', slot: 1 })).toEqual({
       action: { action: 'preset', slot: 1 },
     })
@@ -137,7 +137,7 @@ describe('parseAction', () => {
     expect(parseAction({ action: 'preset', slot: 41 })).toEqual({ error: 'invalid preset slot' })
   })
 
-  it('accepts a sleep timer between zero and one day', () => {
+  test('accepts a sleep timer between zero and one day', () => {
     expect(parseAction({ action: 'sleep', seconds: 0 })).toEqual({
       action: { action: 'sleep', seconds: 0 },
     })
@@ -150,7 +150,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('accepts an output mode between one and ninety-nine', () => {
+  test('accepts an output mode between one and ninety-nine', () => {
     expect(parseAction({ action: 'output', hardware: 1 })).toEqual({
       action: { action: 'output', hardware: 1 },
     })
@@ -160,14 +160,14 @@ describe('parseAction', () => {
     })
   })
 
-  it('accepts an eq flag and rejects anything else', () => {
+  test('accepts an eq flag and rejects anything else', () => {
     expect(parseAction({ action: 'eq', enabled: false })).toEqual({
       action: { action: 'eq', enabled: false },
     })
     expect(parseAction({ action: 'eq', enabled: 1 })).toEqual({ error: 'invalid eq flag' })
   })
 
-  it('accepts an eq preset name of one to forty characters', () => {
+  test('accepts an eq preset name of one to forty characters', () => {
     expect(parseAction({ action: 'eqPreset', name: 'Rock' })).toEqual({
       action: { action: 'eqPreset', name: 'Rock' },
     })
@@ -177,13 +177,13 @@ describe('parseAction', () => {
     })
   })
 
-  it.each(eqBandNames)('accepts the writable band %s', band => {
+  test.each(eqBandNames)('accepts the writable band %s', band => {
     expect(parseAction({ action: 'eqBand', band, value: 3 })).toEqual({
       action: { action: 'eqBand', band, value: 3 },
     })
   })
 
-  it('rejects an eq band the firmware does not name', () => {
+  test('rejects an eq band the firmware does not name', () => {
     expect(parseAction({ action: 'eqBand', band: 'band40hz', value: 3 })).toEqual({
       error: 'invalid eq band',
     })
@@ -192,7 +192,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('accepts an eq gain up to twelve decibels and keeps the decimal', () => {
+  test('accepts an eq gain up to twelve decibels and keeps the decimal', () => {
     expect(parseAction({ action: 'eqBand', band: 'band31hz', value: -12 })).toEqual({
       action: { action: 'eqBand', band: 'band31hz', value: -12 },
     })
@@ -204,7 +204,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('rejects an eq gain outside the measured range or not a number', () => {
+  test('rejects an eq gain outside the measured range or not a number', () => {
     expect(parseAction({ action: 'eqBand', band: 'band31hz', value: 12.1 })).toEqual({
       error: 'eq gain outside -12..12 dB',
     })
@@ -216,7 +216,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('trims a device name and accepts letters, digits, punctuation and spaces', () => {
+  test('trims a device name and accepts letters, digits, punctuation and spaces', () => {
     expect(parseAction({ action: 'rename', name: '  Kitchen  ' })).toEqual({
       action: { action: 'rename', name: 'Kitchen' },
     })
@@ -225,7 +225,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('rejects a device name that is empty, too long or not printable', () => {
+  test('rejects a device name that is empty, too long or not printable', () => {
     expect(parseAction({ action: 'rename', name: '   ' })).toEqual({ error: 'invalid device name' })
     expect(parseAction({ action: 'rename', name: 'x'.repeat(33) })).toEqual({
       error: 'invalid device name',
@@ -238,12 +238,12 @@ describe('parseAction', () => {
     })
   })
 
-  it.each(['led', 'buttons', 'fade'])('accepts the boolean flag of %s', action => {
+  test.each(['led', 'buttons', 'fade'])('accepts the boolean flag of %s', action => {
     expect(parseAction({ action, on: true })).toEqual({ action: { action, on: true } })
     expect(parseAction({ action, on: 1 })).toEqual({ error: `invalid ${action} flag` })
   })
 
-  it('accepts a balance between minus one and one', () => {
+  test('accepts a balance between minus one and one', () => {
     expect(parseAction({ action: 'balance', value: -1 })).toEqual({
       action: { action: 'balance', value: -1 },
     })
@@ -256,7 +256,7 @@ describe('parseAction', () => {
     expect(parseAction({ action: 'balance', value: 'left' })).toEqual({ error: 'invalid balance' })
   })
 
-  it('accepts a maximum volume between one and one hundred', () => {
+  test('accepts a maximum volume between one and one hundred', () => {
     expect(parseAction({ action: 'maxVolume', level: 90 })).toEqual({
       action: { action: 'maxVolume', level: 90 },
     })
@@ -268,7 +268,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('accepts an http or https stream address and normalises it', () => {
+  test('accepts an http or https stream address and normalises it', () => {
     expect(parseAction({ action: 'url', url: 'https://example.com/radio.mp3' })).toEqual({
       action: { action: 'url', url: 'https://example.com/radio.mp3' },
     })
@@ -280,7 +280,7 @@ describe('parseAction', () => {
     })
   })
 
-  it('rejects a stream address the speaker cannot fetch', () => {
+  test('rejects a stream address the speaker cannot fetch', () => {
     expect(parseAction({ action: 'url', url: '' })).toEqual({ error: 'invalid stream url' })
     expect(parseAction({ action: 'url', url: 'not a url' })).toEqual({
       error: 'invalid stream url',
@@ -296,13 +296,13 @@ describe('parseAction', () => {
     })
   })
 
-  it('rejects an unknown action instead of passing it through', () => {
+  test('rejects an unknown action instead of passing it through', () => {
     expect(parseAction({ action: 'reboot' })).toEqual({ error: 'unknown action reboot' })
   })
 })
 
 describe('commandFor', () => {
-  it.each([
+  test.each([
     ['play', 'setPlayerCmd:resume'],
     ['pause', 'setPlayerCmd:pause'],
     ['toggle', 'setPlayerCmd:onepause'],
@@ -313,27 +313,27 @@ describe('commandFor', () => {
     expect(commandFor({ action }, device())).toEqual({ command, family: null })
   })
 
-  it('builds a seek command and marks it coalescable', () => {
+  test('builds a seek command and marks it coalescable', () => {
     expect(commandFor({ action: 'seek', seconds: 90 }, device())).toEqual({
       command: 'setPlayerCmd:seek:90',
       family: 'seek',
     })
   })
 
-  it('refuses a volume above the ceiling the device reports', () => {
+  test('refuses a volume above the ceiling the device reports', () => {
     expect(commandFor({ action: 'volume', level: 70 }, device({ maxVolume: 60 }))).toEqual({
       error: 'volume above the device ceiling (60)',
     })
   })
 
-  it('falls back to one hundred when the device reports no ceiling', () => {
+  test('falls back to one hundred when the device reports no ceiling', () => {
     expect(commandFor({ action: 'volume', level: 100 }, device({ maxVolume: null }))).toEqual({
       command: 'setPlayerCmd:vol:100',
       family: 'volume',
     })
   })
 
-  it('maps mute, preset and sleep to their commands', () => {
+  test('maps mute, preset and sleep to their commands', () => {
     expect(commandFor({ action: 'mute', muted: true }, device())).toEqual({
       command: 'setPlayerCmd:mute:1',
       family: null,
@@ -352,7 +352,7 @@ describe('commandFor', () => {
     })
   })
 
-  it('refuses an input the device does not report', () => {
+  test('refuses an input the device does not report', () => {
     expect(commandFor({ action: 'source', input: 'optical' }, device())).toEqual({
       command: 'setPlayerCmd:switchmode:optical',
       family: null,
@@ -362,7 +362,7 @@ describe('commandFor', () => {
     })
   })
 
-  it('refuses an output mode the device does not report', () => {
+  test('refuses an output mode the device does not report', () => {
     expect(commandFor({ action: 'output', hardware: 1 }, device())).toEqual({
       command: 'setAudioOutputHardwareMode:1',
       family: null,
@@ -372,7 +372,7 @@ describe('commandFor', () => {
     })
   })
 
-  it('maps the equalizer switch and refuses an unknown preset', () => {
+  test('maps the equalizer switch and refuses an unknown preset', () => {
     expect(commandFor({ action: 'eq', enabled: true }, device())).toEqual({
       command: 'EQOn',
       family: null,
@@ -390,14 +390,14 @@ describe('commandFor', () => {
     })
   })
 
-  it('refuses an eq band write when the source is unknown', () => {
+  test('refuses an eq band write when the source is unknown', () => {
     const state = device({ eq: { ...device().eq, source: '' } })
     expect(commandFor({ action: 'eqBand', band: 'band31hz', value: 3 }, state)).toEqual({
       error: 'eq source unknown',
     })
   })
 
-  it('writes an eq band against the reported source, rounded to the tenth', () => {
+  test('writes an eq band against the reported source, rounded to the tenth', () => {
     const result = commandFor({ action: 'eqBand', band: 'band31hz', value: 6.04 }, device())
     if ('error' in result) throw new Error(result.error)
     expect(result.family).toBe('eq-band')
@@ -410,7 +410,7 @@ describe('commandFor', () => {
     })
   })
 
-  it('maps the device name, the LEDs, the buttons, the fade and the maximum volume', () => {
+  test('maps the device name, the LEDs, the buttons, the fade and the maximum volume', () => {
     expect(commandFor({ action: 'rename', name: 'Kitchen' }, device())).toEqual({
       command: 'setDeviceName:Kitchen',
       family: null,
@@ -433,7 +433,7 @@ describe('commandFor', () => {
     })
   })
 
-  it('rounds the balance to the tenth and marks it coalescable', () => {
+  test('rounds the balance to the tenth and marks it coalescable', () => {
     expect(commandFor({ action: 'balance', value: 0.5 }, device())).toEqual({
       command: 'setChannelBalance:0.5',
       family: 'balance',
@@ -444,7 +444,7 @@ describe('commandFor', () => {
     })
   })
 
-  it('pushes a stream address to the player', () => {
+  test('pushes a stream address to the player', () => {
     expect(commandFor({ action: 'url', url: 'https://example.com/radio.mp3' }, device())).toEqual({
       command: 'setPlayerCmd:play:https://example.com/radio.mp3',
       family: null,
@@ -453,27 +453,27 @@ describe('commandFor', () => {
 })
 
 describe('commandOutcome', () => {
-  it('reads an unreachable device as a failed write', () => {
+  test('reads an unreachable device as a failed write', () => {
     expect(commandOutcome(null)).toEqual({ ok: false, unsupported: false })
   })
 
-  it('reads OK as a success', () => {
+  test('reads OK as a success', () => {
     expect(commandOutcome('OK')).toEqual({ ok: true, unsupported: false })
     expect(commandOutcome('  OK  ')).toEqual({ ok: true, unsupported: false })
   })
 
-  it('reads unknown command as an unsupported capability, whatever the case', () => {
+  test('reads unknown command as an unsupported capability, whatever the case', () => {
     expect(commandOutcome('unknown command')).toEqual({ ok: false, unsupported: true })
     expect(commandOutcome('Unknown Command')).toEqual({ ok: false, unsupported: true })
   })
 
-  it('reads Failed and a JSON failure status as failed writes', () => {
+  test('reads Failed and a JSON failure status as failed writes', () => {
     expect(commandOutcome('Failed')).toEqual({ ok: false, unsupported: false })
     expect(commandOutcome('{"status":"Failed"}')).toEqual({ ok: false, unsupported: false })
     expect(commandOutcome('{"status" : "failed"}')).toEqual({ ok: false, unsupported: false })
   })
 
-  it('reads any other body as a success', () => {
+  test('reads any other body as a success', () => {
     expect(commandOutcome('{"EQStat":"On"}')).toEqual({ ok: true, unsupported: false })
   })
 })

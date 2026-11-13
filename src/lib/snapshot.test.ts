@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, test } from 'vitest'
 import {
   clearSnapshot,
   parseSnapshot,
@@ -29,14 +29,14 @@ const memory = (initial: Record<string, string> = {}) => {
 }
 
 describe('parseSnapshot', () => {
-  it('reads back what the page wrote', () => {
+  test('reads back what the page wrote', () => {
     expect(parseSnapshot(serializeSnapshot(state, 1_700_000_000_500))).toEqual({
       at: 1_700_000_000_500,
       state,
     })
   })
 
-  it('refuses what it cannot parse or does not recognise', () => {
+  test('refuses what it cannot parse or does not recognise', () => {
     expect(parseSnapshot(null)).toBeNull()
     expect(parseSnapshot('')).toBeNull()
     expect(parseSnapshot('{"at":')).toBeNull()
@@ -44,7 +44,7 @@ describe('parseSnapshot', () => {
     expect(parseSnapshot('{"at":1}')).toBeNull()
   })
 
-  it('refuses a payload that is not a hub answer', () => {
+  test('refuses a payload that is not a hub answer', () => {
     // A hand edit or a leftover from another app: the page must fall back to its
     // empty state rather than render half a device.
     expect(parseSnapshot('{"at":1,"state":{"devices":[]}}')).toBeNull()
@@ -54,18 +54,18 @@ describe('parseSnapshot', () => {
 })
 
 describe('the stored snapshot', () => {
-  it('round trips through the store', () => {
+  test('round trips through the store', () => {
     const { store } = memory()
     writeSnapshot(store, state, 42)
     expect(readSnapshot(store)).toEqual({ at: 42, state })
   })
 
-  it('answers nothing when the store holds something else', () => {
+  test('answers nothing when the store holds something else', () => {
     const { store } = memory({ 'another-key': 'x' })
     expect(readSnapshot(store)).toBeNull()
   })
 
-  it('survives a store that refuses to read or write', () => {
+  test('survives a store that refuses to read or write', () => {
     const refusing: SnapshotStore = {
       getItem: () => {
         throw new Error('denied')
@@ -82,7 +82,7 @@ describe('the stored snapshot', () => {
     expect(() => clearSnapshot(refusing)).not.toThrow()
   })
 
-  it('clears only its own key', () => {
+  test('clears only its own key', () => {
     const { store, items } = memory({ kept: 'y' })
     writeSnapshot(store, state, 42)
     clearSnapshot(store)
