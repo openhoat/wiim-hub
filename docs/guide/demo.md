@@ -13,17 +13,21 @@ npm run demo         # http://localhost:8090, PORT=8091 to move it
 
 Three players, on documentation addresses (`192.0.2.21`, `.22` and `.23`):
 
-| Device  | State                                                                             |
-| ------- | --------------------------------------------------------------------------------- |
-| Living  | playing, with a generated cover, a running group it drives, and a full sound card |
-| Bedroom | offline, three failed polls, with a group it remembers but does not run           |
-| Hallway | online, member of the running group, answering nothing about its own playback     |
+| Device  | State                                                                         |
+| ------- | ----------------------------------------------------------------------------- |
+| Living  | playing, with a generated cover, and a running group it drives                |
+| Bedroom | offline, three failed polls, with a group it remembers but does not run       |
+| Hallway | online, member of the running group, answering nothing about its own playback |
 
 The running group is the shape the page draws as one card: Living Room drives it, Hallway renders
 it, and Bathroom is a member the master names with no address, which the card shows with an unknown
 state. All three report a deterministic signal history, so the sparkline has a shape rather than
 noise, and the offline card carries the findings a real one would: a device that does not answer,
 and a group that is saved without running.
+
+Living Room drives a group, so its equalizer and its settings open from its own row, one gesture
+under the room's name; the card above keeps the player. Bedroom drives nothing and keeps the sound
+card under its player, which the capture below shows on the right.
 
 What is **not** faked is the path a write takes. The demo goes through the same action parser and
 the same command builder as the hub: the volume ceiling, the available inputs and outputs and the

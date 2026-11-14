@@ -112,7 +112,10 @@ exported report still say what the device itself answered.
 The transport is not offered on a member. A command sent to a member drives its own silent input,
 not the group, and the hub does not write to another speaker on your behalf. Volume stays: it is the
 member's own, and the master reports it in its slave list. A button on the row opens that speaker's
-own sheet, with its volume, its equalizer and its settings, which is what its card used to carry.
+own sheet, with its volume, its equalizer and its settings, which is what its card used to carry. The
+master's row opens the same sheet, so the group card carries no sound card of its own: the equalizer
+of the speaker that drives the group would otherwise sit twice on the same page, one gesture apart. A
+speaker that drives no group keeps the sound card under its player, where it is the only way in.
 
 A group is folded only when it currently runs: a saved group that is not running, and a group whose
 master stopped answering, leave the speakers on their own cards, since nothing confirms that the

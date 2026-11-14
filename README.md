@@ -31,9 +31,9 @@ history, event log, and findings that quote the number they come from. A card fo
 in the diagnostic view, and the arrows in a now playing header set an order the page keeps per
 browser, so the speaker you care about stays first.
 
-|                                    |                                               |
-| ---------------------------------- | --------------------------------------------- |
-| ![Sound card](docs/img/sound.jpeg) | ![Diagnostic view](docs/img/diagnostics.jpeg) |
+|                                       |                                               |
+| ------------------------------------- | --------------------------------------------- |
+| ![Speaker sheet](docs/img/sound.jpeg) | ![Diagnostic view](docs/img/diagnostics.jpeg) |
 
 <p align="center"><img src="docs/img/mobile.jpeg" width="300" alt="Now playing on a phone"></p>
 

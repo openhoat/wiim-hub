@@ -52,14 +52,14 @@ behaviour was measured on a real player it is recorded in the
 
 ## What it looks like
 
-Two readings of the same data: the sound card, with a per-source equalizer, and the diagnostic
-view, which turns the device's own counters into short facts. Both fit a phone, where the cards
-stack one per screen and nothing needs a zoom. A running group is one card there too, with its
-speakers as rows.
+Two readings of the same data: the sheet of one speaker, with its volume, its equalizer and its
+settings, and the diagnostic view, which turns the device's own counters into short facts. Both fit
+a phone, where the cards stack one per screen and nothing needs a zoom. A running group is one card
+there too, with its speakers as rows.
 
-|                                                                           |                                        |
-| ------------------------------------------------------------------------- | -------------------------------------- |
-| ![Sound card](img/sound.jpeg)<br>![Diagnostic view](img/diagnostics.jpeg) | ![A group on a phone](img/mobile.jpeg) |
+|                                                                              |                                        |
+| ---------------------------------------------------------------------------- | -------------------------------------- |
+| ![Speaker sheet](img/sound.jpeg)<br>![Diagnostic view](img/diagnostics.jpeg) | ![A group on a phone](img/mobile.jpeg) |
 
 ## Where to go next
 
