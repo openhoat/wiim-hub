@@ -1,5 +1,32 @@
 import { describe, expect, test } from 'vitest'
-import { isExternalInput, positionMs } from './status.ts'
+import { inputFromMode, isExternalInput, positionMs } from './status.ts'
+
+describe('inputFromMode', () => {
+  test('reads the device playlist as the wifi input', () => {
+    expect(inputFromMode('10')).toBe('wifi')
+    expect(inputFromMode('19')).toBe('wifi')
+  })
+
+  test('reads a cast and the streaming services as the wifi input too', () => {
+    // Measured on the reference player while casting: mode 5, vendor CAST.
+    expect(inputFromMode('5')).toBe('wifi')
+    expect(inputFromMode('31')).toBe('wifi')
+    expect(inputFromMode('32')).toBe('wifi')
+    expect(inputFromMode('36')).toBe('wifi')
+  })
+
+  test('keeps the analogue and digital inputs on their own ids', () => {
+    expect(inputFromMode('40')).toBe('line-in')
+    expect(inputFromMode('41')).toBe('bluetooth')
+    expect(inputFromMode('43')).toBe('optical')
+  })
+
+  test('leaves an unknown, absent or idle mode unnamed', () => {
+    expect(inputFromMode('9')).toBe('')
+    expect(inputFromMode('99')).toBe('')
+    expect(inputFromMode('')).toBe('')
+  })
+})
 
 describe('isExternalInput', () => {
   test('treats the analogue and optical inputs as sources without a track', () => {

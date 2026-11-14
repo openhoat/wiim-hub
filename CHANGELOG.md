@@ -29,11 +29,17 @@ Releases are cut from `package.json`: the version in that file names the section
   title and the copy speak of favorites, and the icon is a heart rather than a shelf. The sheet
   offers every favorite the speaker holds, whatever the service it names, so a radio and a service
   list sit side by side; nothing on the page claims a playlist anymore.
+- The source picker belongs to the speaker, not to the card that plays. It moved into the settings of
+  each speaker, where a group member reaches it from its row and a solo player from its card: a group
+  is a stream, not an input, and only the speaker itself has one to switch.
 
 ### Fixed
 
 - A speaker that follows a group louder than its master is no longer dragged down to the master's
   level when the group moves.
+- A cast no longer leaves the source row with nothing lit. A cast and the streaming services play
+  through the network input, which is what the picker would switch back to, so the row shows it
+  active instead of looking like a control that lost the player's state.
 
 ## [0.9.27] - 2026-11-14
 

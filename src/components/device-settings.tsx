@@ -11,6 +11,7 @@ import {
 import type { Action } from '@/lib/api'
 import { fetchSettings } from '@/lib/api'
 import { cn } from '@/lib/cn'
+import { inputLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { DeviceSettings } from '@/lib/types'
 import type { Controls } from '@/lib/use-controls'
@@ -107,6 +108,38 @@ const Level = ({
   )
 }
 
+// The source belongs to one speaker, not to the group that speaker follows: a
+// group is a stream, its members render it, and only the speaker itself has an
+// input to switch. The vendor app keeps the picker in the same place for the
+// same reason. It reads the polled capability list rather than the settings
+// payload, so it survives a failed settings read: switching an input is a
+// control, not a stored preference.
+const SourceRow = ({ controls }: Readonly<{ controls: Controls }>) => {
+  const { t } = useSettings()
+  const device = controls.device
+  if (device.inputs.length === 0) return null
+  return (
+    <div className="border-b border-border/60 pt-1 pb-3">
+      <p className="text-xs font-medium">{t('device.source')}</p>
+      <p className="text-[11px] text-muted-foreground">{t('device.sourceHint')}</p>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        {device.inputs.map(input => (
+          <Button
+            key={input}
+            size="sm"
+            variant={device.input === input ? 'default' : 'outline'}
+            aria-pressed={device.input === input}
+            disabled={!device.online || controls.pending}
+            onClick={() => void controls.run({ action: 'source', input })}
+          >
+            {inputLabel(t, device.inputLabels, input)}
+          </Button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // The rows themselves, without the sheet that carries them: the page shows them
 // behind a card's settings button, and a member of a group shows them in its own
 // sheet, since a member has no card of its own.
@@ -165,9 +198,14 @@ export const DeviceSettingsBody = ({ controls }: Readonly<{ controls: Controls }
   const disabled = controls.pending
   const balance = settings?.balance ?? 0
   const ceiling = settings?.maxVolume ?? 100
+  // A source switch writes through `controls`, not through `save`, so the row
+  // reports the queue's error as well as the local one.
+  const shownError = error ?? controls.error
 
   return (
     <>
+      <SourceRow controls={controls} />
+
       {loading && settings === null && (
         <p className="py-6 text-[11px] text-muted-foreground">{t('device.loading')}</p>
       )}
@@ -267,9 +305,9 @@ export const DeviceSettingsBody = ({ controls }: Readonly<{ controls: Controls }
       <p
         role="status"
         aria-live="polite"
-        className={cn('mt-2 text-[11px] text-warning', error === null && 'sr-only')}
+        className={cn('mt-2 text-[11px] text-warning', shownError === null && 'sr-only')}
       >
-        {error === null ? '' : t('device.failed', { error })}
+        {shownError === null ? '' : t('device.failed', { error: shownError })}
       </p>
     </>
   )

@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
-import { controlErrorLabel, inputLabel, isExternalInput, muteLabel } from '@/lib/labels'
+import { controlErrorLabel, isExternalInput, muteLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Controls } from '@/lib/use-controls'
 
@@ -268,7 +268,6 @@ export const PlayerControls = ({
   const sleepSeconds = device.sleepSeconds ?? 0
   const sleepMinutes = Math.ceil(sleepSeconds / 60)
   const external = isExternalInput(device.input)
-  const sourceLabel = (input: string): string => inputLabel(t, device.inputLabels, input)
   const outputName =
     device.outputs.find(output => output.hardware === device.outputHardware)?.name ??
     t('controls.outputs')
@@ -325,23 +324,6 @@ export const PlayerControls = ({
           live={volume?.live}
         />
       </div>
-
-      {device.inputs.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] text-muted-foreground">{t('controls.sources')}</span>
-          {device.inputs.map(input => (
-            <Button
-              key={input}
-              size="sm"
-              variant={device.input === input ? 'default' : 'outline'}
-              disabled={!online || busy}
-              onClick={() => void controls.run({ action: 'source', input })}
-            >
-              {sourceLabel(input)}
-            </Button>
-          ))}
-        </div>
-      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <DropdownMenu>

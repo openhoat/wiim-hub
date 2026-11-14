@@ -112,10 +112,17 @@ exported report still say what the device itself answered.
 The transport is not offered on a member. A command sent to a member drives its own silent input,
 not the group, and the hub does not write to another speaker on your behalf. Volume stays: it is the
 member's own, and the master reports it in its slave list. A button on the row opens that speaker's
-own sheet, with its volume, its equalizer and its settings, which is what its card used to carry. The
-master's row opens the same sheet, so the group card carries no sound card of its own: the equalizer
-of the speaker that drives the group would otherwise sit twice on the same page, one gesture apart. A
-speaker that drives no group keeps the sound card under its player, where it is the only way in.
+own sheet, with its volume, its equalizer, its source and its settings, which is what its card used
+to carry. The master's row opens the same sheet, so the group card carries no sound card of its own:
+the equalizer of the speaker that drives the group would otherwise sit twice on the same page, one
+gesture apart. A speaker that drives no group keeps the sound card under its player, where it is the
+only way in.
+
+The source sits in that sheet too, for the master as well: a group is a stream, not an input, and
+only the speaker itself has one to switch. The vendor app keeps the picker in the same place for the
+same reason. A source that is not a physical input still reads as the network one, because a cast or
+a service Connect session is exactly what `switchmode:wifi` would return to, and leaving the row
+with nothing lit while the room plays reads as a control that lost its state.
 
 A group is folded only when it currently runs: a saved group that is not running, and a group whose
 master stopped answering, leave the speakers on their own cards, since nothing confirms that the

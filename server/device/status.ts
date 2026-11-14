@@ -49,13 +49,21 @@ export const cleanModel = (value: string): string =>
 export const readRssi = (status: Record<string, unknown> | null): number | null =>
   num(status?.RSSI) ?? num(status?.rssi)
 
-// Playback mode -> input id. Only the codes seen on a real player are mapped
-// (10-19 is the device playlist over the network, then the analogue and
-// digital inputs); anything else stays unknown rather than lighting up the
-// wrong source.
+// Playback mode -> input id. The network families all play through the wifi
+// input, which is also what `setPlayerCmd:switchmode:wifi` switches back to:
+// the device playlist (10-19), the cast family (5, measured with `vendor:
+// CAST`) and the streaming services documented in the research notes (31
+// Spotify, 32 TIDAL, 36 Qobuz). A cast is a network input, not a source of its
+// own: without this the source row lights nothing up while the speaker casts.
+// The analogue and digital inputs keep their own codes; anything else stays
+// unknown rather than lighting up the wrong source.
+const NETWORK_MODES = new Set([5, 31, 32, 36])
+
 export const inputFromMode = (mode: string): string => {
   const code = Number.parseInt(mode, 10)
-  if (Number.isFinite(code) && code >= 10 && code <= 19) return 'wifi'
+  if (!Number.isFinite(code)) return ''
+  if (code >= 10 && code <= 19) return 'wifi'
+  if (NETWORK_MODES.has(code)) return 'wifi'
   if (code === 40) return 'line-in'
   if (code === 41) return 'bluetooth'
   if (code === 43) return 'optical'

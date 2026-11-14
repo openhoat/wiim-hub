@@ -218,6 +218,37 @@ test('opens the equalizer of a group speaker from its row', async ({ page }) => 
   await expect(sheet.getByText('96 kHz · 24 bit · 2304 kb/s')).toBeVisible()
 })
 
+// The source is the speaker's, not the card's: a group is a stream, and only
+// the speaker itself has an input to switch. The picker therefore sits in the
+// settings of every speaker, the master included, where the vendor app keeps it.
+test('switches the source from the settings of its speaker', async ({ page }) => {
+  await openHub(page)
+
+  const group = page.getByTestId('playing-192.0.2.21')
+  // The player of the card carries no source picker any more. (The output
+  // dropdown of the card is named Optical too: the analogue entry is the one
+  // that can only come from the missing row.)
+  await expect(group.getByRole('button', { name: 'Line in' })).toHaveCount(0)
+
+  await group.getByRole('button', { name: 'Settings for Living Room' }).click()
+  const sheet = page.getByRole('dialog')
+  // A network stream is the network input: the row lights it rather than
+  // leaving every entry looking inactive, which is what a cast used to do.
+  const wifi = sheet.getByRole('button', { name: 'Wi-Fi' })
+  await expect(wifi).toHaveAttribute('aria-pressed', 'true')
+
+  const optical = sheet.getByRole('button', { name: 'Optical' })
+  await expect(optical).toHaveAttribute('aria-pressed', 'false')
+  await optical.click()
+  await expect(optical).toHaveAttribute('aria-pressed', 'true')
+  await expect(wifi).toHaveAttribute('aria-pressed', 'false')
+
+  // The demo holds one fleet in memory: put the network input back, or every
+  // test after this one would meet a speaker it was not written against.
+  await wifi.click()
+  await expect(wifi).toHaveAttribute('aria-pressed', 'true')
+})
+
 // A speaker alone keeps the sound card under its player: it has no row, so the
 // card is the only way to its equalizer. One card on the page is the point: the
 // group draws none, since its speakers open their own.

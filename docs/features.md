@@ -7,16 +7,16 @@ and the behaviours measured on a real player are recorded in the
 
 ## On the page
 
-| Feature                                                     | What you get                                                                                                      |
-| ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| [One card per speaker](/guide/devices#one-card-per-speaker) | Album art, track, progress, volume and source, or the raw fields, signal samples and event log of the same device |
-| [Two views, one dataset](/how-it-works#the-page)            | A now playing view for everyday use, a diagnostic view for support, switched from the header                      |
-| [An order that stays](/how-it-works#the-page)               | The arrows in a card header set the order you chose, per browser; a diagnostic card folds to its header           |
-| [Controls that answer first](/how-it-works#the-page)        | A control paints the value you asked for, and the next poll confirms or reverts it                                |
-| [A phone, really](/how-it-works#the-page)                   | Sheets sit above the on screen keyboard instead of under it                                                       |
-| [Language and theme](/how-it-works#the-page)                | English or French, light or dark, following the browser unless you say otherwise                                  |
-| [Installed like an app](/how-it-works#updates)              | The shell opens without a network, the last state stays readable and its clock stops                              |
-| [Updates without a reinstall](/how-it-works#updates)        | A new worker waits for your click, then reloads once, keeping the view and the last state                         |
+| Feature                                                     | What you get                                                                                              |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| [One card per speaker](/guide/devices#one-card-per-speaker) | Album art, track, progress and volume, or the raw fields, signal samples and event log of the same device |
+| [Two views, one dataset](/how-it-works#the-page)            | A now playing view for everyday use, a diagnostic view for support, switched from the header              |
+| [An order that stays](/how-it-works#the-page)               | The arrows in a card header set the order you chose, per browser; a diagnostic card folds to its header   |
+| [Controls that answer first](/how-it-works#the-page)        | A control paints the value you asked for, and the next poll confirms or reverts it                        |
+| [A phone, really](/how-it-works#the-page)                   | Sheets sit above the on screen keyboard instead of under it                                               |
+| [Language and theme](/how-it-works#the-page)                | English or French, light or dark, following the browser unless you say otherwise                          |
+| [Installed like an app](/how-it-works#updates)              | The shell opens without a network, the last state stays readable and its clock stops                      |
+| [Updates without a reinstall](/how-it-works#updates)        | A new worker waits for your click, then reloads once, keeping the view and the last state                 |
 
 ## The fleet
 
@@ -31,17 +31,18 @@ and the behaviours measured on a real player are recorded in the
 
 ## Control
 
-| Feature                                                    | What you get                                                                                                                  |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| [Playback](/reference/http-api#intents)                    | Play, pause, toggle, stop, next, previous, seek in seconds, volume and mute                                                   |
-| [Sources and sleep](/reference/http-api#intents)           | Switch input, set a sleep timer the player counts down itself                                                                 |
-| [Audio route](/reference/http-api#intents)                 | Choose the output the player should drive, when it publishes the list                                                         |
-| [A stream URL](/reference/http-api#intents)                | Hand the player a URL it fetches itself, so the stream outlives the hub                                                       |
-| [Favourites](/feature-research#_5-4-presets)               | Everything the speaker saved, radio or service list, one tap from the controls row; the player resolves a service slot itself |
-| [Equalizer](/feature-research#_5-5-eq-and-acoustic)        | On or off, presets, bands, RoomFit, and the quality the device reports                                                        |
-| [Device settings](/reference/http-api)                     | Name, LED, front buttons, balance, maximum volume and fade                                                                    |
-| [One queue per speaker](/how-it-works#the-write-path)      | Writes to a device are serialised, so two gestures cannot race each other                                                     |
-| [Intents, never raw commands](/reference/http-api#intents) | The body is an intent the hub maps itself, so no caller can send an arbitrary firmware command                                |
+| Feature                                                       | What you get                                                                                                                  |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [Playback](/reference/http-api#intents)                       | Play, pause, toggle, stop, next, previous, seek in seconds, volume and mute                                                   |
+| [Sources and sleep](/reference/http-api#intents)              | Switch an input from the speaker's own settings, set a sleep timer the player counts down itself                              |
+| [Audio route](/reference/http-api#intents)                    | Choose the output the player should drive, when it publishes the list                                                         |
+| [A stream URL](/reference/http-api#intents)                   | Hand the player a URL it fetches itself, so the stream outlives the hub                                                       |
+| [Favourites](/feature-research#_5-4-presets)                  | Everything the speaker saved, radio or service list, one tap from the controls row; the player resolves a service slot itself |
+| [Equalizer](/feature-research#_5-5-eq-and-acoustic)           | On or off, presets, bands, RoomFit, and the quality the device reports                                                        |
+| [Device settings](/reference/http-api)                        | Name, LED, front buttons, balance, maximum volume and fade                                                                    |
+| [The source of a speaker](/guide/devices#multiroom-read-only) | The input picker sits in the settings of the speaker it switches, group member or solo player                                 |
+| [One queue per speaker](/how-it-works#the-write-path)         | Writes to a device are serialised, so two gestures cannot race each other                                                     |
+| [Intents, never raw commands](/reference/http-api#intents)    | The body is an intent the hub maps itself, so no caller can send an arbitrary firmware command                                |
 
 ## Diagnostics
 

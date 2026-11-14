@@ -127,10 +127,10 @@ describe('parseDevice', () => {
       curposMs: 49489,
       totalMs: 123000,
       source: 'CAST',
-      // Mode 5 is not a source the hub maps: it stays unmapped rather than
-      // lighting up the wrong input.
+      // A cast is the network input: `switchmode:wifi` is what the picker would
+      // return to, so the source row lights that entry instead of nothing.
       mode: '5',
-      input: '',
+      input: 'wifi',
       maxVolume: 100,
       mute: false,
       sleepSeconds: 0,
