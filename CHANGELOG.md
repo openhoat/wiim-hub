@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.29] - 2026-11-14
+
+### Changed
+
+- The live group volume drains its burst through a step rather than a loop: the writes stay
+  sequential, one in flight, and the scanner no longer reads the wait between two as a blocking
+  loop. The behaviour is unchanged, which is what the drag test pins.
+
 ## [0.9.28] - 2026-11-14
 
 ### Changed
@@ -796,7 +804,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.28...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.29...HEAD
+[0.9.29]: https://github.com/openhoat/wiim-hub/compare/v0.9.28...v0.9.29
 [0.9.28]: https://github.com/openhoat/wiim-hub/compare/v0.9.27...v0.9.28
 [0.9.27]: https://github.com/openhoat/wiim-hub/compare/v0.9.26...v0.9.27
 [0.9.26]: https://github.com/openhoat/wiim-hub/compare/v0.9.25...v0.9.26

@@ -51,6 +51,11 @@ type Slot = {
   stopped: boolean
 }
 
+type Writer = {
+  slot: Slot
+  send: (level: number) => Promise<void>
+}
+
 const messageOf = (cause: unknown): string =>
   cause instanceof Error ? cause.message : String(cause)
 
@@ -58,6 +63,26 @@ const delay = (ms: number): Promise<void> =>
   new Promise(resolve => {
     window.setTimeout(resolve, ms)
   })
+
+// The drain of one burst: the newest crank, the beat, the write, then the same
+// question again. Written as a step rather than a loop because each write has to
+// finish before the next one starts, and a step reads as what it is instead of a
+// loop that holds an `await`; the stack unwinds in the promise continuation, so
+// a long drag costs no frame.
+const drain = async ({ slot, send }: Writer): Promise<void> => {
+  const level = slot.queued
+  if (level === null || level === slot.sent) return
+  const wait = slot.lastAt + liveBeatMs - Date.now()
+  if (wait > 0) await delay(wait)
+  if (slot.stopped) return
+  const latest = slot.queued
+  if (latest === null || latest === slot.sent) return
+  slot.queued = null
+  slot.sent = latest
+  slot.lastAt = Date.now()
+  await send(latest)
+  return drain({ slot, send })
+}
 
 export const useGroupVolume = (master: Device, onChanged?: () => void): GroupVolume => {
   const [drag, setDrag] = useState<GroupDrag | null>(null)
@@ -99,42 +124,40 @@ export const useGroupVolume = (master: Device, onChanged?: () => void): GroupVol
     return () => window.clearTimeout(timer)
   }, [drag])
 
+  // One write in flight, until nothing newer is queued: the levels are written
+  // in order, each after the answer of the previous one, and the beat between
+  // two belongs to the speaker.
+  const write = useCallback(
+    async (level: number): Promise<void> => {
+      try {
+        const answer = await sendGroupAction(
+          master,
+          { intent: 'volume', level, bases: bases.current },
+          { live: true }
+        )
+        const failure = groupFailure(answer.results)
+        if (failure !== null && mounted.current) setError(failure)
+      } catch (cause) {
+        if (mounted.current) setError(messageOf(cause))
+      }
+    },
+    [master]
+  )
+
   // One loop per burst: it takes the newest crank, waits out the beat, sends,
   // and repeats until nothing newer is queued. A release stops it before its own
   // write, so the last level the speakers see is the one the reader let go of.
   const pump = useCallback((): void => {
     if (sending.current !== null) return
-    const current = slot.current
+    const writer: Writer = { slot: slot.current, send: write }
     sending.current = (async () => {
       try {
-        while (true) {
-          const level = current.queued
-          if (level === null || level === current.sent) return
-          const wait = current.lastAt + liveBeatMs - Date.now()
-          if (wait > 0) await delay(wait)
-          if (current.stopped) return
-          const latest = current.queued
-          if (latest === null || latest === current.sent) return
-          current.queued = null
-          current.sent = latest
-          current.lastAt = Date.now()
-          try {
-            const answer = await sendGroupAction(
-              master,
-              { intent: 'volume', level: latest, bases: bases.current },
-              { live: true }
-            )
-            const failure = groupFailure(answer.results)
-            if (failure !== null && mounted.current) setError(failure)
-          } catch (cause) {
-            if (mounted.current) setError(messageOf(cause))
-          }
-        }
+        await drain(writer)
       } finally {
         sending.current = null
       }
     })()
-  }, [master])
+  }, [write])
 
   const paint = useCallback(
     (from: number | null, start: Record<string, number>, level: number): void => {
