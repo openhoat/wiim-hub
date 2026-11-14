@@ -10,6 +10,26 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.26] - 2026-11-14
+
+### Added
+
+- The speakers of a group fold away, as a diagnostic card does: the header keeps the count and one
+  chevron. Expanded is the default, and the fold is a preference of the browser kept on the master's
+  address, so a reload finds the list as the reader left it.
+- The volume readout follows the thumb. The number beside a slider comes from the drag itself, not
+  from the last level the device reported: dragging still writes once, on release, and the write
+  lands with the next poll, which is what made the number look like it answered on release.
+
+### Changed
+
+- The row of the speaker that drives a group is the row of any other speaker: same slider, same
+  mute, same settings sheet. The card header no longer carries the settings of a group's speaker.
+  Measured, the master's own mute reaches the whole group, and the group's level and mute stay on
+  the player above the list.
+- The sheet opened from the master's row stops at its equalizer and its settings: the master cannot
+  be removed from the group it drives, dissolving the group is the group panel's gesture.
+
 ## [0.9.25] - 2026-11-13
 
 ### Fixed
@@ -725,7 +745,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.25...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.26...HEAD
+[0.9.26]: https://github.com/openhoat/wiim-hub/compare/v0.9.25...v0.9.26
 [0.9.25]: https://github.com/openhoat/wiim-hub/compare/v0.9.24...v0.9.25
 [0.9.24]: https://github.com/openhoat/wiim-hub/compare/v0.9.23...v0.9.24
 [0.9.23]: https://github.com/openhoat/wiim-hub/compare/v0.9.22...v0.9.23
