@@ -417,7 +417,7 @@ const MoveButtons = ({
 // measured on a real group, `setPlayerCmd:vol` sent to a member moves that member
 // alone, and the same command sent to the master moves the master alone (the
 // group level is a fan-out, never a value the firmware holds). The master row is
-// what the card was missing: the big slider above it fans the group out, so
+// what the card was missing: the big slider above it carries the group along, so
 // without this row the room that drives the group had no level of its own, which
 // the vendor app does offer.
 //
@@ -661,10 +661,10 @@ export const NowPlayingCard = ({
       <PlayerControls controls={controls} now={now} />
 
       {/* One slider for the whole group is a fan-out, not a group volume the
-          device knows: saying so once, where the reader meets it, is cheaper
-          than a support question about why the two rooms drift apart. The row of
-          the speaker that drives the group, below, is how a room is settled on
-          its own. */}
+          device knows: it carries every speaker along in proportion to the one
+          that drives it, and saying so once, where the reader meets it, is
+          cheaper than a support question about why a room was left behind. The
+          row of a speaker, below, settles that room on its own. */}
       {driven && <p className="mt-2 text-[11px] text-muted-foreground">{t('group.volumeHint')}</p>}
 
       <p

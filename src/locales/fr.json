@@ -56,7 +56,7 @@
     "driver": "pilote le groupe",
     "volumeOf": "Volume de {name}",
     "memberSettings": "Réglages de {name}",
-    "volumeHint": "Le volume du groupe règle toutes les enceintes au même niveau ; la ligne de l'enceinte qui pilote ne règle que celle-ci.",
+    "volumeHint": "Le volume du groupe entraîne toutes les enceintes proportionnellement à celle qui pilote : une pièce réglée plus bas reste plus bas ; la ligne d'une enceinte ne règle que celle-ci.",
     "join": "Rejoindre un groupe",
     "joinTitle": "Ajouter {name} à un groupe",
     "joinHint": "Le groupe joue sur l'enceinte qui le pilote ; les autres la suivent.",

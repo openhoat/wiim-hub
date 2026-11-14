@@ -42,6 +42,7 @@ import {
   type GroupIntent,
   groupPlanFor,
   parseGroupIntent,
+  scaledGroupLevel,
 } from './group-commands.ts'
 import { createGroupReconciler } from './groups.ts'
 import { guidesFor } from './guides.ts'
@@ -912,11 +913,15 @@ const listed = (state: DeviceState): DeviceState[] => {
   return members
 }
 
-// The group's own level is a fan-out: measured, `setPlayerCmd:vol` moves the
-// master alone, while its mute propagates.
+// The group's own level is a fan-out scaled from the driver's, exactly as the
+// hub plans it: measured, `setPlayerCmd:vol` moves the master alone, and its mute
+// reaches the group.
 const applyVolume = (level: number, entry: DeviceState): void => {
+  const from = entry.volume
   entry.volume = level
-  for (const member of listed(entry)) member.volume = level
+  for (const member of listed(entry)) {
+    member.volume = scaledGroupLevel(level, from, member.volume, member.maxVolume ?? 100)
+  }
 }
 
 const applyMute = (muted: boolean, entry: DeviceState): void => {

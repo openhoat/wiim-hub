@@ -132,12 +132,15 @@ The card of a running group carries the volume and the mute of what the reader h
 gestures do not take the same path. Both follow the measurements in
 [the research notes](../feature-research.md), section 5.8.1:
 
-- **Volume fans out.** `setPlayerCmd:vol` on the master moves the master alone, and
-  `setPlayerCmd:slave_vol` does no better. The hub sends the master its own level and one
-  `multiroom:SlaveVolume` per member, each in its own queue family, so a drag leaves one pending
-  value per speaker instead of one per step. There is no level the group knows: the line under the
-  slider says so, and the row of the master sets that room alone, the same measured write without
-  the fan-out.
+- **Volume fans out, in proportion.** `setPlayerCmd:vol` on the master moves the master alone, and
+  `setPlayerCmd:slave_vol` does no better. The hub sends the master its new level and one
+  `multiroom:SlaveVolume` per member, each scaled from the level the master held before the write:
+  a room kept at half of the driver stays at half, so moving the group keeps the balance the reader
+  set one room at a time instead of levelling every speaker. Each member has its own queue family,
+  so a drag leaves one pending value per speaker instead of one per step. A scaled level is clamped
+  at the member's own ceiling rather than refused, and a gesture with nothing to scale against (a
+  driver at zero, a member the fleet has not read yet) lands as asked. There is no level the group
+  knows: the line under the slider says so, and the row of each speaker settles that room alone.
 - **Mute is one write.** The master's own mute reaches the members and the list it keeps, so one
   command silences the group, and one command restores it. The master's row therefore carries no
   mute button: it names one room, and the write would silence every room.

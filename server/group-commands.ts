@@ -143,18 +143,33 @@ const requireMember = (target: FleetUnit, member: string): string | null => {
 const memberWrites = (target: FleetUnit, command: (ip: string) => GroupWrite): GroupWrite[] =>
   target.state.group.members.filter(member => member.ip !== '').map(member => command(member.ip))
 
+// A member's level, from the driver's: the ratio the reader set room by room.
+// The group slider carries the driver's level, so a room kept at half of it
+// stays at half, whatever the group is moved to; one level for every speaker
+// would erase a balance that was set one room at a time.
+//
+// Nothing to scale against (a driver at zero, a member the fleet has not read
+// yet) falls back to the level itself: the gesture still reaches the speaker,
+// and a member that was at zero stays silent, which is where it was put.
+export const scaledGroupLevel = (
+  level: number,
+  from: number | null,
+  to: number | null,
+  ceiling: number
+): number => {
+  if (from === null || from === 0 || to === null) return Math.min(level, ceiling)
+  return Math.min(ceiling, Math.max(0, Math.round((level * to) / from)))
+}
+
 // The master's own volume moves alone, so a group volume is every speaker's
-// volume. Each member gets its own coalescing family: a drag then leaves one
-// pending value per speaker instead of forty, and the master's own value is not
-// overwritten by a member's.
+// volume, each one scaled from the level the master had before the write. Each
+// member gets its own coalescing family: a drag then leaves one pending value
+// per speaker instead of forty, and the master's own value is not overwritten
+// by a member's.
 const volumeWrites = (level: number, target: FleetUnit, fleet: readonly FleetUnit[]): GroupPlan => {
-  const members = target.state.group.members
-    .map(member => unitAt(fleet, member.ip))
-    .filter((unit): unit is FleetUnit => unit !== null)
-  const tooLoud = [target, ...members].find(unit => level > ceilingOf(unit))
-  if (tooLoud !== undefined) {
-    return { error: `volume above the device ceiling (${ceilingOf(tooLoud)})` }
-  }
+  const ceiling = ceilingOf(target)
+  if (level > ceiling) return { error: `volume above the device ceiling (${ceiling})` }
+  const from = target.state.volume
   const own: GroupWrite = {
     key: target.key,
     command: `setPlayerCmd:vol:${level}`,
@@ -163,11 +178,16 @@ const volumeWrites = (level: number, target: FleetUnit, fleet: readonly FleetUni
   return {
     writes: [
       own,
-      ...memberWrites(target, ip => ({
-        key: target.key,
-        command: `multiroom:SlaveVolume:${ip}:${level}`,
-        family: `volume:${ip}`,
-      })),
+      ...memberWrites(target, ip => {
+        const unit = unitAt(fleet, ip)
+        const scaled =
+          unit === null ? level : scaledGroupLevel(level, from, unit.state.volume, ceilingOf(unit))
+        return {
+          key: target.key,
+          command: `multiroom:SlaveVolume:${ip}:${scaled}`,
+          family: `volume:${ip}`,
+        }
+      }),
     ],
   }
 }

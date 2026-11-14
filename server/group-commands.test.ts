@@ -156,7 +156,57 @@ describe('groupPlanFor, volume', () => {
     expect(plan.writes.map(write => write.family)).toEqual(['volume', 'volume:192.0.2.20'])
   })
 
-  test('refuses a level above the ceiling of any speaker it would reach', () => {
+  test('scales each member from the level the driver had before the write', () => {
+    // Living Room 40, Bedroom 20: half. Moving the group to 30 leaves Bedroom at
+    // 15, where the reader had put it, instead of levelling the two rooms.
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const quiet = follower()
+    quiet.state.volume = 20
+    expect(groupPlanFor({ intent: 'volume', level: 30 }, two, [two, quiet])).toEqual({
+      writes: [
+        { key: '192.0.2.10', command: 'setPlayerCmd:vol:30', family: 'volume' },
+        {
+          key: '192.0.2.10',
+          command: 'multiroom:SlaveVolume:192.0.2.20:15',
+          family: 'volume:192.0.2.20',
+        },
+      ],
+    })
+  })
+
+  test('lands the level as asked when there is no ratio to read', () => {
+    // A driver the fleet has read no volume for, or one at zero: the gesture
+    // still reaches the members, it just cannot be proportional.
+    for (const from of [null, 0]) {
+      const unread = master([member('Bedroom', '192.0.2.20')])
+      unread.state.volume = from
+      const plan = groupPlanFor({ intent: 'volume', level: 25 }, unread, [unread, follower()])
+      if ('error' in plan) throw new Error(plan.error)
+      expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:25')
+    }
+  })
+
+  test('leaves a member that was at zero where it was put', () => {
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const silent = follower()
+    silent.state.volume = 0
+    const plan = groupPlanFor({ intent: 'volume', level: 60 }, two, [two, silent])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:0')
+  })
+
+  test('clamps a scaled level at the ceiling of that member', () => {
+    // The master asks for 60 and the member follows, but a Mini that stops at
+    // 30 gets 30 rather than a value it would refuse.
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const small = follower()
+    small.state.maxVolume = 30
+    const plan = groupPlanFor({ intent: 'volume', level: 60 }, two, [two, small])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:30')
+  })
+
+  test('refuses a level above the ceiling of the speaker that drives the group', () => {
     const quiet = master([member('Bedroom', '192.0.2.20')])
     quiet.state.maxVolume = 80
     const plan = groupPlanFor({ intent: 'volume', level: 90 }, quiet, [quiet, follower()])

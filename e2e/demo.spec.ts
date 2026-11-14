@@ -863,7 +863,7 @@ test.describe('on a phone', () => {
 // speakers reports: a group volume fans out, a group mute is one write, and the
 // two teardown gestures belong to the speaker that owns the group.
 test.describe('multiroom', () => {
-  test('sets the same volume on every speaker in the group', async ({ page }) => {
+  test('carries every speaker of the group along, in proportion', async ({ page }) => {
     await openHub(page)
 
     const group = page.getByTestId('playing-192.0.2.21')
@@ -872,21 +872,23 @@ test.describe('multiroom', () => {
     // one room on its own.
     await expect(
       group.getByText(
-        'Group volume sets every speaker to the same level; the row of the speaker that drives the group sets that speaker alone.'
+        'Group volume carries every speaker along in proportion to the one that drives it: a room set quieter stays quieter; the row of a speaker sets that speaker alone.'
       )
     ).toBeVisible()
 
     const volume = group.getByRole('slider', { name: 'Volume', exact: true })
     await expect(volume).toHaveValue('44')
+    // Hallway sits at 35 of the driver's 44, so one step up takes it to 36: the
+    // level it keeps is the ratio the reader set, not the driver's own level.
+    await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
     await volume.press('ArrowRight')
     await expect(volume).toHaveValue('45')
-    // One gesture, one level: the member's row follows the master's slider.
-    await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('45')
+    await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('36')
 
     const response = await page.request.get('/api/state')
     expect(response.ok()).toBe(true)
     const state: { devices: { name: string; volume: number | null }[] } = await response.json()
-    expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(45)
+    expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(36)
   })
 
   test('mutes the whole group, and the member row reports the member muted', async ({ page }) => {
@@ -922,7 +924,9 @@ test.describe('multiroom', () => {
     await expect(page.getByTestId('playing-192.0.2.23')).toBeVisible()
     await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveCount(0)
     await expect(
-      group.getByText('Group volume sets every speaker in the group to the same level.')
+      group.getByText(
+        'Group volume carries every speaker along in proportion to the one that drives it: a room set quieter stays quieter; the row of a speaker sets that speaker alone.'
+      )
     ).toHaveCount(0)
   })
 

@@ -56,7 +56,7 @@
     "driver": "drives the group",
     "volumeOf": "Volume of {name}",
     "memberSettings": "Settings for {name}",
-    "volumeHint": "Group volume sets every speaker to the same level; the row of the speaker that drives the group sets that speaker alone.",
+    "volumeHint": "Group volume carries every speaker along in proportion to the one that drives it: a room set quieter stays quieter; the row of a speaker sets that speaker alone.",
     "join": "Join a group",
     "joinTitle": "Add {name} to a group",
     "joinHint": "The group plays on the speaker that drives it; the others follow it.",
