@@ -23,7 +23,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { artUrl } from '@/lib/api'
-import { cardTitle, type FleetCard } from '@/lib/cards'
+import { cardTitle, drivesGroup, type FleetCard } from '@/lib/cards'
 import { cn } from '@/lib/cn'
 import { joinTargets } from '@/lib/group'
 import { agoLabel, controlErrorLabel, inputLabel, isExternalInput, statusLabel } from '@/lib/labels'
@@ -582,11 +582,7 @@ export const NowPlayingCard = ({
   onGroupChanged?: () => void
 }>) => {
   const { t, resolvedLang } = useSettings()
-  // A card whose speaker drives a group carries the group's volume and mute: the
-  // reader set them for what they hear, and the server fans them out. Only the
-  // members the hub polls count: a group the master remembers but nothing answers
-  // for has no fan-out to do, and one write on the master is then the whole job.
-  const driven = card.master.group.role === 'master' && card.members.length > 0
+  const driven = drivesGroup(card)
   const controls = useControls(card.master, { group: driven })
   const live = controls.device
   const groupRun = useGroupRun(onGroupChanged)

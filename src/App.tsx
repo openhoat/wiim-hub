@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/toaster'
 import { UpdateBanner } from '@/components/update-banner'
-import { fleetCards } from '@/lib/cards'
+import { drivesGroup, fleetCards } from '@/lib/cards'
 import { cn } from '@/lib/cn'
 import { inputLabel, isExternalInput } from '@/lib/labels'
 import { sortDevices } from '@/lib/layout'
@@ -199,7 +199,13 @@ const Hub = () => {
                       onMove={delta => layout.move(card.ip, delta)}
                       onGroupChanged={hub.refresh}
                     />
-                    <SoundCard device={card.master} />
+                    {/* A group's speakers are rows, and each row opens the
+                        sheet of that room: its equalizer is one gesture away,
+                        under the name of the speaker it changes. The sound card
+                        under the group would repeat the master's equalizer on
+                        the page the reader lands on. A solo card keeps it: the
+                        card is its only way in. */}
+                    {!drivesGroup(card) && <SoundCard device={card.master} />}
                   </div>
                 ))}
               </div>

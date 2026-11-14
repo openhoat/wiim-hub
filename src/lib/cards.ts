@@ -96,6 +96,19 @@ export const fleetCards = (devices: readonly Device[]): FleetCard[] => {
     })
 }
 
+// A card whose speaker drives a group carries the group's volume and mute: the
+// reader set them for what they hear, and the server fans them out. Only the
+// members the hub polls count: a group the master remembers but nothing answers
+// for has no fan-out to do, and one write on the master is then the whole job.
+//
+// This same condition decides where a speaker's own settings live. A solo card
+// keeps its sound card under it, and that card is the only way in. A group draws
+// its speakers as rows, and each row opens a sheet that already carries the
+// equalizer of that room: keeping the sound card under the group would show the
+// master's equalizer twice, one gesture apart.
+export const drivesGroup = (card: FleetCard): boolean =>
+  card.master.group.role === 'master' && card.members.length > 0
+
 // The name the card announces: the group's when the speaker drives one, since
 // that is the thing the reader sees in the room, and the speaker's otherwise.
 export const cardTitle = (card: FleetCard): string => {

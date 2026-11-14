@@ -186,25 +186,55 @@ test('folds the speakers of a group, and keeps the fold across a reload', async 
   await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toBeVisible()
 })
 
-test('opens the sound card on the curve, the presets and the stream quality', async ({ page }) => {
+// The equalizer of a speaker that drives a group lives in that speaker's own
+// sheet, with the rest of what the room answers: the group card carries the
+// player, and one gesture opens the room.
+test('opens the equalizer of a group speaker from its row', async ({ page }) => {
   await openHub(page)
 
-  await page.getByRole('button', { name: 'Sound, show' }).first().click()
-  await expect(page.getByRole('button', { name: 'Sound, hide' }).first()).toBeVisible()
+  const group = page.getByTestId('playing-192.0.2.21')
+  // The group has no sound card of its own: its equalizer is a gesture away,
+  // under the name of the speaker it changes.
+  await expect(group.getByRole('button', { name: 'Sound, show' })).toHaveCount(0)
+  await group.getByRole('button', { name: 'Settings for Living Room' }).click()
+
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.getByRole('heading', { name: 'Living Room' })).toBeVisible()
 
   // Ten bands, the fifth selected by default, and the curve is custom because
   // a demo band was moved by hand.
-  await expect(page.getByRole('button', { name: /^-?\d+ (Hz|kHz) [+-]?\d+\.\d dB$/ })).toHaveCount(
+  await expect(sheet.getByRole('button', { name: /^-?\d+ (Hz|kHz) [+-]?\d+\.\d dB$/ })).toHaveCount(
     10
   )
-  await expect(page.getByRole('button', { name: '500 Hz -1.5 dB' })).toHaveAttribute(
+  await expect(sheet.getByRole('button', { name: '500 Hz -1.5 dB' })).toHaveAttribute(
     'aria-pressed',
     'true'
   )
-  await expect(page.getByRole('button', { name: 'Custom' })).toBeVisible()
-  await expect(page.getByText('This player reports room correction.')).toBeVisible()
+  await expect(sheet.getByRole('button', { name: 'Custom' })).toBeVisible()
+  await expect(sheet.getByText('This player reports room correction.')).toBeVisible()
 
-  await expect(page.getByText('96 kHz · 24 bit · 2304 kb/s')).toBeVisible()
+  await expect(sheet.getByText('96 kHz · 24 bit · 2304 kb/s')).toBeVisible()
+})
+
+// A speaker alone keeps the sound card under its player: it has no row, so the
+// card is the only way to its equalizer. One card on the page is the point: the
+// group draws none, since its speakers open their own.
+test('keeps the sound card of a speaker that drives no group', async ({ page }) => {
+  await openHub(page)
+
+  const sound = page.getByRole('button', { name: 'Sound, show' })
+  await expect(sound).toHaveCount(1)
+  await expect(sound).toHaveAttribute('aria-controls', 'sound-panel-192.0.2.22')
+  await sound.click()
+  await expect(page.getByRole('button', { name: 'Sound, hide' })).toBeVisible()
+
+  const panel = page.locator('[id="sound-panel-192.0.2.22"]')
+  await expect(panel.getByRole('button', { name: /^-?\d+ (Hz|kHz) [+-]?\d+\.\d dB$/ })).toHaveCount(
+    10
+  )
+  await expect(panel.getByRole('button', { name: 'Flat' })).toBeVisible()
+  await expect(panel.getByText('This player reports room correction.')).toHaveCount(0)
+  await expect(page.getByText('48 kHz · 24 bit · 1536 kb/s')).toBeVisible()
 })
 
 test('keeps the name being typed across a poll, then renames the speaker', async ({ page }) => {

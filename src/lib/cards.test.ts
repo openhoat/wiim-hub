@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { cardTitle, fleetCards, sameMember } from './cards.ts'
+import { cardTitle, drivesGroup, fleetCards, sameMember } from './cards.ts'
 import type { Device, GroupState } from './types'
 
 // A speaker as the hub serves it, minimal: only the group fields and the track
@@ -175,6 +175,37 @@ describe('fleetCards', () => {
     expect(cards).toHaveLength(1)
     expect(cards[0].members).toEqual([])
     expect(cards[0].absent).toEqual([{ name: 'Bathroom', ip: '', uuid: 'EF' }])
+  })
+})
+
+describe('drivesGroup', () => {
+  test('answers for the card whose speaker the fleet confirms as a master', () => {
+    const cards = fleetCards([
+      master([{ name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }]),
+      follower('192.0.2.23', 'Hallway'),
+    ])
+    expect(drivesGroup(cards[0])).toBe(true)
+  })
+
+  test('takes a card with no polled member, even a named group', () => {
+    // A saved group that does not run is a speaker with a name to remember, not
+    // a fan-out to do: its own sound card stays under it.
+    const cards = fleetCards([master([{ name: 'Bathroom', ip: '', uuid: 'EF' }])])
+    expect(drivesGroup(cards[0])).toBe(false)
+  })
+
+  test('takes a solo card', () => {
+    const cards = fleetCards([device('192.0.2.22', 'Bedroom')])
+    expect(drivesGroup(cards[0])).toBe(false)
+  })
+
+  test('drives a group whose master carries no group name', () => {
+    // The title falls back to the speaker's name, the group still runs.
+    const cards = fleetCards([
+      master([{ name: 'Hallway', ip: '192.0.2.23', uuid: 'AB' }], ''),
+      follower('192.0.2.23', 'Hallway'),
+    ])
+    expect(drivesGroup(cards[0])).toBe(true)
   })
 })
 
