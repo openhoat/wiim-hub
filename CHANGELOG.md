@@ -10,6 +10,26 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.27] - 2026-11-14
+
+### Changed
+
+- The group volume carries every speaker along in proportion to the one that drives it. The slider
+  still writes the driver's level and a `multiroom:SlaveVolume` per member, but each member's level
+  is now scaled from the driver's: two rooms at 40 and 20 stay 2:1 wherever the group goes, so a
+  gesture of the whole group no longer flattens it to one level. A scaled level is clamped at the
+  member's own ceiling, and a gesture with nothing to scale against (a driver at zero, a member the
+  fleet has not read yet) lands as asked.
+- A running group no longer draws a sound card under its player. Its speakers are rows, and each row
+  opens the sheet of that room, which already carries its equalizer and its settings: the master's
+  curve therefore sat twice on the same page, one gesture apart. A speaker that drives no group
+  keeps the sound card under its player, where it is the only way in.
+
+### Docs
+
+- The captures come from the demo again: the group with its rows and the speaker sheet in place of
+  the former card-wide sound card, and one diagnostic card open beside the folded ones.
+
 ## [0.9.26] - 2026-11-14
 
 ### Added
@@ -745,7 +765,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.26...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.27...HEAD
+[0.9.27]: https://github.com/openhoat/wiim-hub/compare/v0.9.26...v0.9.27
 [0.9.26]: https://github.com/openhoat/wiim-hub/compare/v0.9.25...v0.9.26
 [0.9.25]: https://github.com/openhoat/wiim-hub/compare/v0.9.24...v0.9.25
 [0.9.24]: https://github.com/openhoat/wiim-hub/compare/v0.9.23...v0.9.24
