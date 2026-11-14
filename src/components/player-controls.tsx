@@ -41,6 +41,10 @@ const sleepOptions = [0, 15, 30, 45, 60, 90]
 // Dragging is local state; the write happens once, on release. The server queue
 // coalesces too, but the cheapest request is the one never sent.
 //
+// The number next to the slider reads the same local state: the value the device
+// reports only comes back with the next poll, and a readout that waits for it
+// answers on release while the thumb has already moved.
+//
 // The label names the speaker the slider drives when it is drawn outside the
 // player: a group card shows one row per speaker, and two sliders announced as
 // "Volume" tell a screen reader nothing about which one it just moved.
@@ -48,8 +52,7 @@ export const VolumeControl = ({
   controls,
   label,
   speaker,
-  withMute = true,
-}: Readonly<{ controls: Controls; label?: string; speaker?: string; withMute?: boolean }>) => {
+}: Readonly<{ controls: Controls; label?: string; speaker?: string }>) => {
   const { t } = useSettings()
   const device = controls.device
   const ceiling = ceilingOf(device.maxVolume)
@@ -85,25 +88,20 @@ export const VolumeControl = ({
   return (
     <div className="min-w-0 flex-1">
       <div className="flex items-center gap-2">
-        {/* A row can drop the button and keep the slider: on the speaker that
-            drives a group, this mute is the group's, since the master's own
-            mute propagates to the members (measured). Drawing it here would
-            silence the whole group from a row that names one room. The empty
-            slot keeps the sliders of the list aligned. */}
-        {withMute ? (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            disabled={!device.online}
-            aria-label={muteLabel}
-            aria-pressed={muted}
-            onClick={() => void controls.run({ action: 'mute', muted: !muted })}
-          >
-            {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-          </Button>
-        ) : (
-          <span className="size-8 shrink-0" aria-hidden="true" />
-        )}
+        {/* Every row keeps its mute button, the master's row included: a
+            member's mute silences that member, while the master's reaches the
+            whole group (measured). Identical rows are the point; the player
+            above the list carries the group's own control. */}
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          disabled={!device.online}
+          aria-label={muteLabel}
+          aria-pressed={muted}
+          onClick={() => void controls.run({ action: 'mute', muted: !muted })}
+        >
+          {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
+        </Button>
         <input
           type="range"
           min={0}
@@ -119,7 +117,7 @@ export const VolumeControl = ({
           className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-accent disabled:cursor-not-allowed disabled:opacity-50"
         />
         <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
-          {device.volume ?? '—'}
+          {device.volume === null ? '—' : Math.min(level, ceiling)}
         </span>
       </div>
       {confirmLevel !== null && (

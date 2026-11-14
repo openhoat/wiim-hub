@@ -20,15 +20,17 @@ import { useGroupRun } from '@/lib/use-group-run'
 
 // A speaker that follows a group has no card of its own any more, so the things
 // that used to live on its card need a place: its volume, its equalizer, its
-// settings and the one gesture that takes it out of the group. They open one
-// gesture deep, from the row that names it, because the row itself answers what
-// the group card is about (who is playing, and which speakers render it).
+// settings and, for a member, the gesture that takes it out of the group. They
+// open one gesture deep, from the row that names it, because the row itself
+// answers what the group card is about (who is playing, and which speakers
+// render it). The master's row opens the same sheet: the card header no longer
+// carries the settings of a group's speaker.
 //
 // The sheet is the same content the standalone card carries, not a summary of
 // it: a member's equalizer is as real as a master's, and hiding it behind the
 // diagnostic view would make it unreachable from where the reader is.
 //
-// Removing the member is a write on the master, not on the member: the group is
+// Removing a member is a write on the master, not on the member: the group is
 // the master's, and the kick is the measured command that cleans both sides at
 // once. It asks first, because the speaker stops rendering the stream.
 const RemoveFromGroup = ({
@@ -102,6 +104,9 @@ export const MemberSheet = ({
   const live = controls.device
   const eq = live.eq
   const label = t('group.memberSettings', { name: device.name })
+  // The master opens this sheet from its own row: it drives the group, so it
+  // cannot leave it, and no kick is ever addressed to it.
+  const isMaster = device.ip === master.ip
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -146,12 +151,14 @@ export const MemberSheet = ({
           <DeviceSettingsBody controls={controls} />
         </div>
 
-        <RemoveFromGroup
-          device={device}
-          master={master}
-          onChanged={onChanged}
-          onDone={() => setOpen(false)}
-        />
+        {isMaster ? null : (
+          <RemoveFromGroup
+            device={device}
+            master={master}
+            onChanged={onChanged}
+            onDone={() => setOpen(false)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   )

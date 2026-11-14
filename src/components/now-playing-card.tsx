@@ -1,4 +1,13 @@
-import { ArrowLeft, ArrowRight, ChevronRight, Disc3, Radio, Unlink, Users } from 'lucide-react'
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  ChevronRight,
+  Disc3,
+  Radio,
+  Unlink,
+  Users,
+} from 'lucide-react'
 import { useState } from 'react'
 import { DeviceSettingsDialog } from '@/components/device-settings'
 import { MemberSheet } from '@/components/member-sheet'
@@ -412,8 +421,10 @@ const MoveButtons = ({
 // without this row the room that drives the group had no level of its own, which
 // the vendor app does offer.
 //
-// The mute button stays out of the master row: its mute reaches the whole group
-// (measured), and a row naming one room must not silence three.
+// Every row is the same row, the master's included: same slider, same mute, same
+// sheet. A member's mute silences that member, while the master's reaches the
+// whole group (measured); the group's own level and mute stay on the player
+// above the list, where the reader also finds the fan-out.
 const SpeakerRow = ({
   device,
   master,
@@ -445,15 +456,8 @@ const SpeakerRow = ({
         <p className="truncate text-[11px] text-muted-foreground">{state}</p>
       </div>
       <div className="flex min-w-0 basis-full items-center gap-1.5 sm:basis-auto sm:w-56">
-        <VolumeControl controls={controls} label={label} speaker={device.name} withMute={!driver} />
-        {/* The sheet carries the equalizer and the settings of a member; for the
-            master the card header already opens those, so the slot stays empty
-            and both rows keep the same slider width. */}
-        {driver ? (
-          <span className="size-8 shrink-0" aria-hidden="true" />
-        ) : (
-          <MemberSheet device={device} master={master} onChanged={onChanged} />
-        )}
+        <VolumeControl controls={controls} label={label} speaker={device.name} />
+        <MemberSheet device={device} master={master} onChanged={onChanged} />
       </div>
     </li>
   )
@@ -476,20 +480,56 @@ const AbsentRow = ({ member }: Readonly<{ member: GroupMember }>) => {
 // room at a time, and the card's own slider stays the group's level, fanned out
 // to every speaker. The master comes first because it is the reference the
 // others follow, which is also the order the diagnostic view sorts by.
+//
+// The list folds like a diagnostic card: a reader who knows the group does not
+// need three rows under every card. Expanded is the default, and the fold is a
+// preference of the browser, kept on the master's address.
 const MemberList = ({
   card,
   now,
   driven,
+  collapsed,
+  onToggle,
   onChanged,
-}: Readonly<{ card: FleetCard; now: number; driven: boolean; onChanged?: () => void }>) => {
+}: Readonly<{
+  card: FleetCard
+  now: number
+  driven: boolean
+  collapsed: boolean
+  onToggle?: () => void
+  onChanged?: () => void
+}>) => {
   const { t } = useSettings()
   if (card.members.length === 0 && card.absent.length === 0) return null
+  const panelId = `group-members-${card.ip}`
+  const count = (driven ? 1 : 0) + card.members.length + card.absent.length
   return (
     <div className="mt-4">
-      <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
-        {t('group.speakers')}
-      </p>
-      <ul className="mt-1 divide-y divide-border/60 rounded-xl border border-border/60 px-3">
+      <div className="flex items-center gap-2">
+        <p className="text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
+          {t('group.speakers')}
+        </p>
+        <span className="text-[11px] tabular-nums text-muted-foreground">({count})</span>
+        <span className="flex-1" />
+        {onToggle !== undefined && (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={collapsed ? t('expand') : t('collapse')}
+            title={collapsed ? t('expand') : t('collapse')}
+            aria-expanded={!collapsed}
+            aria-controls={panelId}
+            onClick={onToggle}
+          >
+            <ChevronDown className={cn('size-4 transition-transform', collapsed && '-rotate-90')} />
+          </Button>
+        )}
+      </div>
+      <ul
+        id={panelId}
+        hidden={collapsed}
+        className="mt-1 divide-y divide-border/60 rounded-xl border border-border/60 px-3"
+      >
         {driven && (
           <SpeakerRow
             key={card.master.ip}
@@ -526,6 +566,8 @@ export const NowPlayingCard = ({
   fleet = [],
   index = 0,
   count = 1,
+  membersCollapsed = false,
+  onToggleMembers,
   onMove,
   onGroupChanged,
 }: Readonly<{
@@ -534,6 +576,8 @@ export const NowPlayingCard = ({
   fleet?: readonly Device[]
   index?: number
   count?: number
+  membersCollapsed?: boolean
+  onToggleMembers?: () => void
   onMove?: (delta: -1 | 1) => void
   onGroupChanged?: () => void
 }>) => {
@@ -589,7 +633,10 @@ export const NowPlayingCard = ({
         </div>
         <div className="flex items-center gap-1.5">
           {onMove !== undefined && <MoveButtons index={index} count={count} onMove={onMove} />}
-          <DeviceSettingsDialog controls={controls} />
+          {/* A group card keeps its header for the group: the settings of the
+              speaker that drives it open from its own row, like every other
+              room's. A solo card keeps the dialog; it is the only way in. */}
+          {!driven && <DeviceSettingsDialog controls={controls} />}
           <StatusBadge online={live.online} status={live.status} playing={playing && !external} />
         </div>
       </div>
@@ -632,7 +679,14 @@ export const NowPlayingCard = ({
         {controlErrorLabel(t, groupRun.error)}
       </p>
 
-      <MemberList card={card} now={now} driven={driven} onChanged={onGroupChanged} />
+      <MemberList
+        card={card}
+        now={now}
+        driven={driven}
+        collapsed={membersCollapsed}
+        onToggle={onToggleMembers}
+        onChanged={onGroupChanged}
+      />
 
       {canJoin && <JoinGroup device={live} fleet={fleet} onChanged={onGroupChanged} />}
 

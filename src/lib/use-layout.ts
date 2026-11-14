@@ -6,6 +6,7 @@ import {
   type LayoutStore,
   moveDevice,
   pinOrder,
+  pruneAddresses,
   readLayout,
   sameOrder,
   sortDevices,
@@ -33,8 +34,10 @@ export type LayoutControls<T extends Keyed> = {
   // The hub's cards, in the order the page shows them.
   devices: T[]
   collapsed: ReadonlySet<string>
+  groupsCollapsed: ReadonlySet<string>
   move: (ip: string, delta: -1 | 1) => void
   toggle: (ip: string) => void
+  toggleGroup: (ip: string) => void
 }
 
 // The order is pinned the first time a speaker is seen and kept from then on:
@@ -58,8 +61,11 @@ export const useLayout = <T extends Keyed>(devices: T[]): LayoutControls<T> => {
     if (devices.length === 0) return
     setLayout(current => {
       const order = pinOrder(current.order, devices)
-      if (sameOrder(order, current.order)) return current
-      const next = { order, collapsed: current.collapsed }
+      const groupsCollapsed = pruneAddresses(current.groupsCollapsed, devices)
+      if (sameOrder(order, current.order) && sameOrder(groupsCollapsed, current.groupsCollapsed)) {
+        return current
+      }
+      const next = { order, collapsed: current.collapsed, groupsCollapsed }
       persist(next)
       return next
     })
@@ -69,7 +75,7 @@ export const useLayout = <T extends Keyed>(devices: T[]): LayoutControls<T> => {
     setLayout(current => {
       const order = moveDevice(latest.current, current.order, ip, delta)
       if (sameOrder(order, current.order)) return current
-      const next = { order, collapsed: current.collapsed }
+      const next = { order, collapsed: current.collapsed, groupsCollapsed: current.groupsCollapsed }
       persist(next)
       return next
     })
@@ -77,7 +83,23 @@ export const useLayout = <T extends Keyed>(devices: T[]): LayoutControls<T> => {
 
   const toggle = useCallback((ip: string): void => {
     setLayout(current => {
-      const next = { order: current.order, collapsed: toggleCollapsed(current.collapsed, ip) }
+      const next = {
+        order: current.order,
+        collapsed: toggleCollapsed(current.collapsed, ip),
+        groupsCollapsed: current.groupsCollapsed,
+      }
+      persist(next)
+      return next
+    })
+  }, [])
+
+  const toggleGroup = useCallback((ip: string): void => {
+    setLayout(current => {
+      const next = {
+        order: current.order,
+        collapsed: current.collapsed,
+        groupsCollapsed: toggleCollapsed(current.groupsCollapsed, ip),
+      }
       persist(next)
       return next
     })
@@ -85,6 +107,7 @@ export const useLayout = <T extends Keyed>(devices: T[]): LayoutControls<T> => {
 
   const ordered = useMemo(() => sortDevices(devices, layout.order), [devices, layout.order])
   const collapsed = useMemo(() => new Set(layout.collapsed), [layout.collapsed])
+  const groupsCollapsed = useMemo(() => new Set(layout.groupsCollapsed), [layout.groupsCollapsed])
 
-  return { devices: ordered, collapsed, move, toggle }
+  return { devices: ordered, collapsed, groupsCollapsed, move, toggle, toggleGroup }
 }

@@ -13,6 +13,10 @@ export type Layout = {
   // Device addresses whose diagnostic card is folded: the header stays, the
   // body is one click away.
   collapsed: string[]
+  // Device addresses whose group speakers list is folded. Expanded is the
+  // default, so this only holds the lists the reader closed, keyed on the
+  // address of the speaker that drives the group.
+  groupsCollapsed: string[]
 }
 
 export type Keyed = { ip: string }
@@ -23,7 +27,7 @@ export const LAYOUT_KEY = 'wiim-hub:layout'
 // browser hands it `localStorage`, and neither has to know about the other.
 export type LayoutStore = Pick<Storage, 'getItem' | 'setItem'>
 
-export const emptyLayout: Layout = { order: [], collapsed: [] }
+export const emptyLayout: Layout = { order: [], collapsed: [], groupsCollapsed: [] }
 
 // A hand edit, a payload from another release, a duplicated entry: keep the
 // strings that are addresses, in order, once each.
@@ -48,12 +52,24 @@ export const parseLayout = (raw: string | null): Layout => {
     return emptyLayout
   }
   if (typeof body !== 'object' || body === null) return emptyLayout
-  const { order, collapsed } = body as { order?: unknown; collapsed?: unknown }
-  return { order: addresses(order), collapsed: addresses(collapsed) }
+  const { order, collapsed, groupsCollapsed } = body as {
+    order?: unknown
+    collapsed?: unknown
+    groupsCollapsed?: unknown
+  }
+  return {
+    order: addresses(order),
+    collapsed: addresses(collapsed),
+    groupsCollapsed: addresses(groupsCollapsed),
+  }
 }
 
 export const serializeLayout = (layout: Layout): string =>
-  JSON.stringify({ order: layout.order, collapsed: layout.collapsed })
+  JSON.stringify({
+    order: layout.order,
+    collapsed: layout.collapsed,
+    groupsCollapsed: layout.groupsCollapsed,
+  })
 
 export const readLayout = (store: LayoutStore): Layout => {
   try {
@@ -123,3 +139,10 @@ export const moveDevice = (
 
 export const toggleCollapsed = (collapsed: readonly string[], ip: string): string[] =>
   collapsed.includes(ip) ? collapsed.filter(entry => entry !== ip) : [...collapsed, ip]
+
+// A fold the page has no card for any more holds nothing: dropped on the next
+// pin, the same way the order drops an address the hub stopped reporting.
+export const pruneAddresses = (folded: readonly string[], devices: readonly Keyed[]): string[] => {
+  const live = new Set(devices.map(device => device.ip))
+  return folded.filter(ip => live.has(ip))
+}

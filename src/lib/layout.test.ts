@@ -7,6 +7,7 @@ import {
   moveDevice,
   parseLayout,
   pinOrder,
+  pruneAddresses,
   readLayout,
   sameOrder,
   serializeLayout,
@@ -32,7 +33,11 @@ const memory = (initial: Record<string, string> = {}) => {
 
 describe('parseLayout', () => {
   test('reads back what the page wrote', () => {
-    const layout: Layout = { order: [bedroom.ip, livingRoom.ip], collapsed: [bedroom.ip] }
+    const layout: Layout = {
+      order: [bedroom.ip, livingRoom.ip],
+      collapsed: [bedroom.ip],
+      groupsCollapsed: [livingRoom.ip],
+    }
     expect(parseLayout(serializeLayout(layout))).toEqual(layout)
   })
 
@@ -48,6 +53,15 @@ describe('parseLayout', () => {
     expect(parseLayout('{"order":["a","a",3,"","b",null],"collapsed":"c"}')).toEqual({
       order: ['a', 'b'],
       collapsed: [],
+      groupsCollapsed: [],
+    })
+  })
+
+  test('reads a payload written before the group fold existed', () => {
+    expect(parseLayout(`{"order":["${bedroom.ip}"],"collapsed":["${livingRoom.ip}"]}`)).toEqual({
+      order: [bedroom.ip],
+      collapsed: [livingRoom.ip],
+      groupsCollapsed: [],
     })
   })
 })
@@ -55,8 +69,16 @@ describe('parseLayout', () => {
 describe('the stored layout', () => {
   test('round trips through the store', () => {
     const { store, items } = memory()
-    writeLayout(store, { order: [bedroom.ip], collapsed: [livingRoom.ip] })
-    expect(readLayout(store)).toEqual({ order: [bedroom.ip], collapsed: [livingRoom.ip] })
+    writeLayout(store, {
+      order: [bedroom.ip],
+      collapsed: [livingRoom.ip],
+      groupsCollapsed: [kitchen.ip],
+    })
+    expect(readLayout(store)).toEqual({
+      order: [bedroom.ip],
+      collapsed: [livingRoom.ip],
+      groupsCollapsed: [kitchen.ip],
+    })
     expect(items.has(LAYOUT_KEY)).toBe(true)
   })
 
@@ -152,6 +174,21 @@ describe('toggleCollapsed', () => {
 
   test('leaves the other cards untouched', () => {
     expect(toggleCollapsed([bedroom.ip], livingRoom.ip)).toEqual([bedroom.ip, livingRoom.ip])
+  })
+})
+
+describe('pruneAddresses', () => {
+  test('drops an address the hub no longer reports', () => {
+    expect(pruneAddresses([livingRoom.ip, kitchen.ip], [livingRoom, bedroom])).toEqual([
+      livingRoom.ip,
+    ])
+  })
+
+  test('keeps the folds in the order they were made', () => {
+    expect(pruneAddresses([bedroom.ip, livingRoom.ip], [livingRoom, bedroom])).toEqual([
+      bedroom.ip,
+      livingRoom.ip,
+    ])
   })
 })
 

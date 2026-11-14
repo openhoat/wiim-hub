@@ -153,13 +153,37 @@ test('draws a running group as one card, with its members as rows', async ({ pag
   await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
   await expect(group.getByText('Bathroom')).toBeVisible()
   await expect(group.getByText('state unknown')).toBeVisible()
-  // Its mute reaches every speaker (measured), so the row that names one room
-  // carries no mute button: the group's own is on the player above.
-  await expect(group.getByRole('button', { name: 'Mute of Living Room' })).toHaveCount(0)
+  // Every row is the same row, the master's included: its mute sits next to its
+  // volume. Measured, the master's mute reaches every speaker, and the group's
+  // own control stays on the player above.
+  await expect(group.getByRole('button', { name: 'Mute Living Room' })).toBeVisible()
 
   // The offline speaker keeps its own card and draws no row of the group.
   const bedroom = page.getByTestId('playing-192.0.2.22')
   await expect(bedroom.getByRole('heading', { level: 2, name: 'Bedroom' })).toBeVisible()
+})
+
+// The list folds like a diagnostic card does, and the fold is a preference of
+// the browser: a reader who knows the group can keep the card to its player.
+test('folds the speakers of a group, and keeps the fold across a reload', async ({ page }) => {
+  await openHub(page)
+
+  const group = page.getByTestId('playing-192.0.2.21')
+  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toBeVisible()
+
+  await group.getByRole('button', { name: 'Collapse' }).click()
+  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveCount(0)
+  await expect(group.getByRole('button', { name: 'Expand' })).toHaveAttribute(
+    'aria-expanded',
+    'false'
+  )
+
+  await page.reload()
+  await expect(page.locator('[data-testid^="playing-"]').first()).toBeVisible()
+  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveCount(0)
+
+  await group.getByRole('button', { name: 'Expand' }).click()
+  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toBeVisible()
 })
 
 test('opens the sound card on the curve, the presets and the stream quality', async ({ page }) => {
@@ -189,7 +213,9 @@ test('keeps the name being typed across a poll, then renames the speaker', async
   // The sheet reads the speaker when it opens, and only then. A read driven by
   // the poll would rewrite the field every three seconds, which is less than the
   // time it takes to type a name, so the save button could never be reached.
-  const card = page.getByRole('button', { name: 'Device settings' }).first()
+  // The master's settings live on its own row, in the sheet, like every other
+  // speaker's: the group card's header only carries the group.
+  const card = page.getByRole('button', { name: 'Settings for Living Room' })
   await card.click()
   const sheet = page.getByRole('dialog')
   const name = sheet.getByRole('textbox', { name: 'Name' })
@@ -211,7 +237,7 @@ test('keeps the name being typed across a poll, then renames the speaker', async
 
   // The demo holds one fleet in memory: put the name back, or every test after
   // this one would meet a speaker it was not written against.
-  await page.getByRole('button', { name: 'Device settings' }).first().click()
+  await page.getByRole('button', { name: 'Settings for Kitchen' }).click()
   const reopened = page.getByRole('textbox', { name: 'Name' })
   await expect(reopened).toHaveValue('Kitchen')
   await reopened.fill('Living Room')
@@ -526,6 +552,44 @@ test('writes the volume of the group master without moving the group', async ({ 
   expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(35)
 })
 
+// Dragging writes once, on release, but the readout follows the thumb: the value
+// the device reported only lands with the next poll, and a number that waits for
+// it answers on release while the thumb has already moved.
+test('follows the thumb in the volume readout, before the write is sent', async ({ page }) => {
+  await openHub(page)
+
+  const group = page.getByTestId('playing-192.0.2.21')
+  const slider = group.getByRole('slider', { name: 'Volume of Hallway' })
+  const readout = slider.locator('xpath=following-sibling::span[1]')
+  await slider.scrollIntoViewIfNeeded()
+  await expect(readout).toHaveText('35')
+
+  const box = await slider.boundingBox()
+  if (box === null) throw new Error('the slider has no box')
+  const y = box.y + box.height / 2
+  await page.mouse.move(box.x + box.width * 0.35, y)
+  await page.mouse.down()
+  // Stops short of the loud level: past 85 the sheet asks before writing.
+  await page.mouse.move(box.x + box.width * 0.7, y, { steps: 8 })
+
+  // Still held: the number already moved, and nothing was written yet.
+  await expect(readout).not.toHaveText('35')
+  const held = await page.request.get('/api/state')
+  const heldState: { devices: { name: string; volume: number | null }[] } = await held.json()
+  expect(heldState.devices.find(device => device.name === 'Hallway')?.volume).toBe(35)
+
+  await page.mouse.up()
+  // Released: one write, and the room lands on the level the readout showed.
+  const target = Number(await readout.textContent())
+  await expect
+    .poll(async () => {
+      const answer = await page.request.get('/api/state')
+      const state: { devices: { name: string; volume: number | null }[] } = await answer.json()
+      return state.devices.find(device => device.name === 'Hallway')?.volume
+    })
+    .toBe(target)
+})
+
 test('remembers the view, the language and the theme', async ({ page }) => {
   await openHub(page)
 
@@ -799,7 +863,7 @@ test.describe('multiroom', () => {
     await openHub(page)
 
     const group = page.getByTestId('playing-192.0.2.21')
-    // Two mute buttons on one card are named: the group's own, and the member's.
+    // Every mute button on one card is named: the group's own, and one per row.
     await expect(group.getByRole('button', { name: 'Mute', exact: true })).toHaveCount(1)
     await expect(group.getByRole('button', { name: 'Mute Hallway' })).toBeVisible()
     await group.getByRole('button', { name: 'Mute', exact: true }).click()

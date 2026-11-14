@@ -194,6 +194,8 @@ const Hub = () => {
                       fleet={devices}
                       index={index}
                       count={ordered.length}
+                      membersCollapsed={layout.groupsCollapsed.has(card.ip)}
+                      onToggleMembers={() => layout.toggleGroup(card.ip)}
                       onMove={delta => layout.move(card.ip, delta)}
                       onGroupChanged={hub.refresh}
                     />
