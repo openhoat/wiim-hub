@@ -913,15 +913,31 @@ const listed = (state: DeviceState): DeviceState[] => {
   return members
 }
 
-// The group's own level is a fan-out scaled from the driver's, exactly as the
-// hub plans it: measured, `setPlayerCmd:vol` moves the master alone, and its mute
-// reaches the group.
-const applyVolume = (level: number, entry: DeviceState): void => {
-  const from = entry.volume
-  entry.volume = level
-  for (const member of listed(entry)) {
-    member.volume = scaledGroupLevel(level, from, member.volume, member.maxVolume ?? 100)
+// The group's own level is a fan-out scaled from the loudest speaker, exactly as
+// the hub plans it: measured, `setPlayerCmd:vol` moves the master alone, and its
+// mute reaches the group. A group whose rooms sit at 44 and 60 turns on the room
+// at 60, which is the level the demo slider shows.
+//
+// The bases are the levels the page's gesture started from, when it sent them: a
+// drag writes the same plan on every crank, so the ratio does not drift with the
+// rounding of the crank before.
+const applyVolume = (level: number, entry: DeviceState, bases?: Record<string, number>): void => {
+  const speakers = [entry, ...listed(entry)]
+  const baseOf = (speaker: DeviceState): number | null => bases?.[speaker.ip] ?? speaker.volume
+  let anchor: DeviceState | null = null
+  for (const speaker of speakers) {
+    if (!speaker.online || baseOf(speaker) === null) continue
+    if (anchor === null || (baseOf(anchor) ?? 0) < (baseOf(speaker) ?? 0)) anchor = speaker
   }
+  const from = anchor === null ? null : baseOf(anchor)
+  // Every level is computed before any is written: the anchor is one of these
+  // speakers, and writing it first would change the ratio the others read.
+  const levels = speakers.map(speaker =>
+    scaledGroupLevel(level, from, baseOf(speaker), speaker.maxVolume ?? 100)
+  )
+  speakers.forEach((speaker, index) => {
+    speaker.volume = levels[index]
+  })
 }
 
 const applyMute = (muted: boolean, entry: DeviceState): void => {
@@ -993,7 +1009,7 @@ const settleRoles = (): void => {
 const applyGroupIntent = (intent: GroupIntent, entry: DeviceState): void => {
   switch (intent.intent) {
     case 'volume':
-      applyVolume(intent.level, entry)
+      applyVolume(intent.level, entry, intent.bases)
       break
     case 'mute':
       applyMute(intent.muted, entry)

@@ -1,4 +1,4 @@
-import { Library, Play } from 'lucide-react'
+import { Heart, Play } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,16 +13,17 @@ import { controlErrorLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Controls } from '@/lib/use-controls'
 
-// The slots the player holds, browsed in a sheet rather than printed on the
+// The favourites the speaker holds, listed in a sheet rather than printed on the
 // card: the card answers "what is playing now", and a list of favourites
-// competes with that on a phone. A slot is not always a playlist, since the app
-// saves radios and configurations in the same list, so a row prints what the
-// firmware reported, cover and service included, and claims nothing more.
+// competes with that on a phone. A favourite is a saved slot, not a playlist: the
+// firmware reports the service a slot was saved from (measured: `YouTubeMusic`
+// on the Pro), and nothing about the kind of thing it holds, so every slot the
+// speaker reports is offered, cover and service included, with no filter.
 //
 // A tap sends the slot number and nothing else. On a service slot the player
 // resolves the stream itself (measured: `url` answers `unknow`), which is why a
 // YouTube Music playlist starts here without the hub holding any account.
-export const BrowseSheet = ({ controls }: Readonly<{ controls: Controls }>) => {
+export const FavoritesSheet = ({ controls }: Readonly<{ controls: Controls }>) => {
   const { t } = useSettings()
   const [open, setOpen] = useState(false)
   const device = controls.device
@@ -35,7 +36,7 @@ export const BrowseSheet = ({ controls }: Readonly<{ controls: Controls }>) => {
     if (ok) setOpen(false)
   }
 
-  // A speaker that saved nothing has nothing to browse, and a button that opens
+  // A speaker that saved nothing has nothing to offer, and a button that opens
   // an empty sheet is a dead end: no trigger at all.
   if (device.presets.length === 0) return null
 
@@ -43,20 +44,20 @@ export const BrowseSheet = ({ controls }: Readonly<{ controls: Controls }>) => {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" disabled={!device.online} className="gap-1.5">
-          <Library className="size-3.5" />
-          {t('browse.open')}
+          <Heart className="size-3.5" />
+          {t('favorites.open')}
         </Button>
       </DialogTrigger>
-      <DialogContent closeLabel={t('browse.close')}>
-        <DialogTitle className="text-sm font-medium">{t('browse.title')}</DialogTitle>
+      <DialogContent closeLabel={t('favorites.close')}>
+        <DialogTitle className="text-sm font-medium">{t('favorites.title')}</DialogTitle>
         <DialogDescription className="mt-1 text-[11px] text-muted-foreground">
-          {t('browse.hint')}
+          {t('favorites.hint')}
         </DialogDescription>
 
         <ul className="mt-3 space-y-1">
           {device.presets.map(preset => {
             const art = presetArtUrl(device, preset.artwork)
-            const slot = t('browse.slot', { n: preset.number })
+            const slot = t('favorites.slot', { n: preset.number })
             const detail = preset.source === '' ? slot : `${preset.source} · ${slot}`
             return (
               <li key={preset.number}>

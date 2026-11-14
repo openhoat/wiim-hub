@@ -131,7 +131,7 @@ export const fetchSettings = (device: Device): Promise<DeviceSettings> =>
 // answers every body it got, so the page can name the speaker that refused. The
 // shape is the same union the server validates.
 export type GroupAction =
-  | { intent: 'volume'; level: number }
+  | { intent: 'volume'; level: number; bases?: Record<string, number> }
   | { intent: 'mute'; muted: boolean }
   | { intent: 'memberVolume'; member: string; level: number }
   | { intent: 'memberMute'; member: string; muted: boolean }
@@ -151,15 +151,23 @@ export type GroupAnswer = {
 
 // The host is the only field this route reads: a group write is addressed to the
 // speaker the server plans from, and a member's own mute goes through its master.
+//
+// `live` marks a crank of a drag: the server sends the writes and answers without
+// reading the fleet back, because the page is painting the gesture and a read
+// between two cranks would overwrite it. The release sends the same intent with
+// no flag, and that one reads the speakers again.
 export const sendGroupAction = (
   device: Pick<Device, 'ip'>,
-  action: GroupAction
-): Promise<GroupAnswer> =>
-  readJson<GroupAnswer>(`/api/group?host=${encodeURIComponent(device.ip)}`, {
+  action: GroupAction,
+  options?: { live?: boolean }
+): Promise<GroupAnswer> => {
+  const live = options?.live === true ? '&live=1' : ''
+  return readJson<GroupAnswer>(`/api/group?host=${encodeURIComponent(device.ip)}${live}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(action),
   })
+}
 
 // Cover art travels through the hub: the page is served over https while the// speaker only answers plain http, and a browser drops that mixed content. The
 // device address and the track URI form the cache key, so a cover is fetched

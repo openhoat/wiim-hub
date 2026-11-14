@@ -699,8 +699,17 @@ const groupRoute = async (url: URL, req: IncomingMessage, res: ServerResponse): 
   // immediate poll answers the state from before the write and a join looks
   // ignored until the next one. Those intents wait for the group to move, and
   // answer the last read whether it moved or not.
-  if (membershipIntents.has(parsed.intent.intent)) await settleGroup(entry.key, before)
-  else await pollAll()
+  //
+  // `live=1` is a drag in progress: it carries the acknowledgements alone and
+  // reads nothing back. The page paints the gesture as it goes, and a poll
+  // between two cranks would replace that projection with the levels the
+  // speakers answered a moment earlier. Only the volume gesture has a drag, and
+  // its release sends the same intent without the flag, which reads the fleet.
+  const live = url.searchParams.get('live') === '1' && parsed.intent.intent === 'volume'
+  if (!live) {
+    if (membershipIntents.has(parsed.intent.intent)) await settleGroup(entry.key, before)
+    else await pollAll()
+  }
   const fresh = states.get(entry.key) ?? entry.state
   sendJson(res, 200, { ts: Date.now(), host: entry.key, results, group: fresh.group })
 }

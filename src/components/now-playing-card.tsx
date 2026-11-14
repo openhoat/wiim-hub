@@ -25,12 +25,13 @@ import {
 import { artUrl } from '@/lib/api'
 import { cardTitle, drivesGroup, type FleetCard } from '@/lib/cards'
 import { cn } from '@/lib/cn'
-import { joinTargets } from '@/lib/group'
+import { groupAnchor, groupCeiling, joinTargets, scaledGroupLevel } from '@/lib/group'
 import { agoLabel, controlErrorLabel, inputLabel, isExternalInput, statusLabel } from '@/lib/labels'
 import { type Translate, useSettings } from '@/lib/settings'
 import type { Device, GroupMember, GroupState } from '@/lib/types'
 import { useControls } from '@/lib/use-controls'
 import { useGroupRun } from '@/lib/use-group-run'
+import { useGroupVolume } from '@/lib/use-group-volume'
 
 const Equalizer = () => (
   <span className="flex h-3 items-end gap-[2px]" aria-hidden="true">
@@ -430,12 +431,14 @@ const SpeakerRow = ({
   master,
   driver = false,
   now,
+  painted = null,
   onChanged,
 }: Readonly<{
   device: Device
   master: Device
   driver?: boolean
   now: number
+  painted?: number | null
   onChanged?: () => void
 }>) => {
   const { t, resolvedLang } = useSettings()
@@ -456,7 +459,7 @@ const SpeakerRow = ({
         <p className="truncate text-[11px] text-muted-foreground">{state}</p>
       </div>
       <div className="flex min-w-0 basis-full items-center gap-1.5 sm:basis-auto sm:w-56">
-        <VolumeControl controls={controls} label={label} speaker={device.name} />
+        <VolumeControl controls={controls} label={label} speaker={device.name} painted={painted} />
         <MemberSheet device={device} master={master} onChanged={onChanged} />
       </div>
     </li>
@@ -491,6 +494,7 @@ const MemberList = ({
   collapsed,
   onToggle,
   onChanged,
+  paint,
 }: Readonly<{
   card: FleetCard
   now: number
@@ -498,6 +502,7 @@ const MemberList = ({
   collapsed: boolean
   onToggle?: () => void
   onChanged?: () => void
+  paint?: (device: Device) => number | null
 }>) => {
   const { t } = useSettings()
   if (card.members.length === 0 && card.absent.length === 0) return null
@@ -537,6 +542,7 @@ const MemberList = ({
             master={card.master}
             driver
             now={now}
+            painted={paint?.(card.master) ?? null}
             onChanged={onChanged}
           />
         )}
@@ -546,6 +552,7 @@ const MemberList = ({
             device={member}
             master={card.master}
             now={now}
+            painted={paint?.(member) ?? null}
             onChanged={onChanged}
           />
         ))}
@@ -586,6 +593,48 @@ export const NowPlayingCard = ({
   const controls = useControls(card.master, { group: driven })
   const live = controls.device
   const groupRun = useGroupRun(onGroupChanged)
+  const groupVolume = useGroupVolume(card.master, onGroupChanged)
+  // The level the group slider carries: the loudest speaker's, since that is the
+  // one a gesture of the whole group names. Every row is painted from it while
+  // the hand moves, so the reader sees the group land before letting go.
+  const speakers = [live, ...card.members]
+  const anchor = groupAnchor(speakers)
+  const anchorLevel = anchor?.volume ?? null
+  const groupLevel = groupVolume.drag?.level ?? anchorLevel
+  // The levels the gesture starts from, which the hub scales every crank with:
+  // sending them keeps a drag from drifting on its own rounding.
+  const bases = (): Record<string, number> => {
+    const levels: Record<string, number> = {}
+    for (const device of speakers) {
+      if (device.online && device.ip !== '' && device.volume !== null) {
+        levels[device.ip] = device.volume
+      }
+    }
+    return levels
+  }
+  const projected = (device: Device): number | null =>
+    groupVolume.drag === null
+      ? null
+      : scaledGroupLevel(
+          groupVolume.drag.level,
+          groupVolume.drag.from,
+          groupVolume.drag.bases[device.ip] ?? device.volume,
+          groupCeiling(device)
+        )
+  const volume = driven
+    ? {
+        painted: groupLevel,
+        ceiling: anchor === null ? null : groupCeiling(anchor),
+        live: {
+          onChange: (level: number) => groupVolume.paint(anchorLevel, bases(), level),
+          onRelease: (level: number) => {
+            void groupVolume.release(level)
+          },
+          onCancel: groupVolume.cancel,
+        },
+      }
+    : undefined
+  const error = groupVolume.error ?? groupRun.error
   const [groupOpen, setGroupOpen] = useState(false)
   const title = cardTitle(card)
   // The card is a group when its title is the group's: the reader then needs to
@@ -658,21 +707,14 @@ export const NowPlayingCard = ({
         />
       )}
 
-      <PlayerControls controls={controls} now={now} />
-
-      {/* One slider for the whole group is a fan-out, not a group volume the
-          device knows: it carries every speaker along in proportion to the one
-          that drives it, and saying so once, where the reader meets it, is
-          cheaper than a support question about why a room was left behind. The
-          row of a speaker, below, settles that room on its own. */}
-      {driven && <p className="mt-2 text-[11px] text-muted-foreground">{t('group.volumeHint')}</p>}
+      <PlayerControls controls={controls} now={now} volume={volume} />
 
       <p
         role="status"
         aria-live="polite"
-        className={cn('mt-2 text-[11px] text-warning', groupRun.error === null && 'sr-only')}
+        className={cn('mt-2 text-[11px] text-warning', error === null && 'sr-only')}
       >
-        {controlErrorLabel(t, groupRun.error)}
+        {controlErrorLabel(t, error)}
       </p>
 
       <MemberList
@@ -682,6 +724,7 @@ export const NowPlayingCard = ({
         collapsed={membersCollapsed}
         onToggle={onToggleMembers}
         onChanged={onGroupChanged}
+        paint={projected}
       />
 
       {canJoin && <JoinGroup device={live} fleet={fleet} onChanged={onGroupChanged} />}

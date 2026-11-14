@@ -132,18 +132,26 @@ The card of a running group carries the volume and the mute of what the reader h
 gestures do not take the same path. Both follow the measurements in
 [the research notes](../feature-research.md), section 5.8.1:
 
-- **Volume fans out, in proportion.** `setPlayerCmd:vol` on the master moves the master alone, and
-  `setPlayerCmd:slave_vol` does no better. The hub sends the master its new level and one
-  `multiroom:SlaveVolume` per member, each scaled from the level the master held before the write:
-  a room kept at half of the driver stays at half, so moving the group keeps the balance the reader
-  set one room at a time instead of levelling every speaker. Each member has its own queue family,
-  so a drag leaves one pending value per speaker instead of one per step. A scaled level is clamped
-  at the member's own ceiling rather than refused, and a gesture with nothing to scale against (a
-  driver at zero, a member the fleet has not read yet) lands as asked. There is no level the group
-  knows: the line under the slider says so, and the row of each speaker settles that room alone.
+- **Volume fans out, in proportion, from the loudest room.** `setPlayerCmd:vol` on the master moves
+  the master alone, and `setPlayerCmd:slave_vol` does no better. The slider carries the level of the
+  loudest speaker the hub still reads, so a group kept at 40 in one room and 60 in another turns on
+  the room at 60. The hub sends every speaker its level, each scaled from that anchor's level before
+  the write: a room kept at two thirds of it stays at two thirds, so moving the group keeps the
+  balance the reader set one room at a time instead of levelling every speaker. A scaled level is
+  clamped at that speaker's own ceiling rather than refused, a speaker at zero stays at zero, and a
+  gesture with nothing to scale against (no speaker read yet) lands as asked. A speaker the fleet
+  cannot read keeps its last level on screen but never carries the gesture: nothing would move it.
+  There is no level the group knows; the row of each speaker settles that room alone.
 - **Mute is one write.** The master's own mute reaches the members and the list it keeps, so one
-  command silences the group, and one command restores it. The master's row therefore carries no
-  mute button: it names one room, and the write would silence every room.
+  command silences the group, and one command restores it. Every row carries a mute button, the
+  master's included: the button on a member's row silences that member alone, while the group's own
+  silences every room, which is what the firmware does.
+
+A drag writes while the thumb moves. The page paints every row from the anchor as the hand goes and
+sends the level as it changes, one write in flight and a short beat between two, so the rooms follow
+instead of waiting for the release; above the confirmation threshold nothing is sent until the reader
+agrees. Releasing sends the level once more, and the hub reads the fleet back, which is where the
+painted levels give way to what the speakers report.
 
 ### Forming and breaking a group
 

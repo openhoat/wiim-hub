@@ -10,6 +10,31 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.28] - 2026-11-14
+
+### Changed
+
+- A group volume turns on the loudest room, not on the master. The slider carries the level of the
+  loudest speaker the hub still reads, so a group kept at 40 in one room and 60 in another follows
+  the room at 60; every speaker is scaled from that anchor, and a speaker the fleet cannot read never
+  carries the gesture. A level is refused above the anchor's ceiling, not above the master's.
+- The gesture runs live. The page paints every row from the anchor as the thumb moves and sends the
+  level while it moves, one write in flight and a short beat between two, instead of writing once on
+  release: the rooms follow the hand. Only the release reads the fleet back, so a poll can no longer
+  replace the projection with a level the speakers answered a moment earlier. Above the confirmation
+  threshold nothing is sent until the reader agrees.
+- The group card no longer explains its fan-out under the slider. The rows carry the result, and the
+  guide describes the gesture.
+- What the speaker saved is reached through a Favorites sheet, and named so: the trigger, the sheet
+  title and the copy speak of favorites, and the icon is a heart rather than a shelf. The sheet
+  offers every favorite the speaker holds, whatever the service it names, so a radio and a service
+  list sit side by side; nothing on the page claims a playlist anymore.
+
+### Fixed
+
+- A speaker that follows a group louder than its master is no longer dragged down to the master's
+  level when the group moves.
+
 ## [0.9.27] - 2026-11-14
 
 ### Changed

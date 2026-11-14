@@ -11,10 +11,53 @@ import type { Device } from './types'
 
 // The two gestures the group card carries. Everything else stays a device write:
 // the transport runs on the master, and a member has no stream of its own.
+//
+// The group volume is not here: it is a card-level gesture, because the level it
+// carries is the loudest speaker's and every row has to follow the thumb while it
+// moves (`useGroupVolume`). `groupActionFor` answers the one group gesture that
+// is a single write, the mute, and both callers of this module know the
+// difference.
 export const groupActionFor = (action: Action): GroupAction | null => {
-  if (action.action === 'volume') return { intent: 'volume', level: action.level }
   if (action.action === 'mute') return { intent: 'mute', muted: action.muted }
   return null
+}
+
+// The speaker a group gesture turns: the loudest one the hub still reads. A
+// group whose rooms sit at 40 and 60 belongs to the room at 60, which is the
+// level the slider shows and the one a gesture names.
+//
+// A speaker the fleet cannot read keeps its last value on screen but cannot
+// carry the gesture: nothing would move it, and its ratio would set the pace of
+// every other speaker from a level that no longer exists.
+export const groupAnchor = (speakers: readonly Device[]): Device | null => {
+  let anchor: Device | null = null
+  for (const device of speakers) {
+    if (!device.online || device.volume === null) continue
+    if (anchor === null || (anchor.volume ?? 0) < device.volume) anchor = device
+  }
+  return anchor
+}
+
+// The ceiling the device reports, with the same fallback the player uses: a
+// missing field never produces a level that cannot be reached.
+export const groupCeiling = (device: Device): number =>
+  device.maxVolume !== null && device.maxVolume > 0 ? device.maxVolume : 100
+
+// The level a speaker lands on, from the one that carries the gesture. The hub
+// plans with the same formula (`server/group-commands.ts`) and the duplication is
+// deliberate: the image serves only `server/`, and the page needs the projection
+// locally to follow the thumb without a read per pixel.
+//
+// Nothing to scale against (a speaker at zero, one not read yet) lands on the
+// level itself, clamped to the ceiling.
+export const scaledGroupLevel = (
+  level: number,
+  from: number | null,
+  to: number | null,
+  ceiling: number
+): number => {
+  if (from === null || from === 0 || to === null) return Math.min(level, ceiling)
+  return Math.min(ceiling, Math.max(0, Math.round((level * to) / from)))
 }
 
 // The first write that did not answer `OK`, with its command and the raw body:

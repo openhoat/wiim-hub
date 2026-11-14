@@ -20,7 +20,7 @@ import type { DeviceState } from './device/index.ts'
 import type { GroupMember } from './device/multiroom.ts'
 
 export type GroupIntent =
-  | { intent: 'volume'; level: number }
+  | { intent: 'volume'; level: number; bases?: Record<string, number> }
   | { intent: 'mute'; muted: boolean }
   | { intent: 'memberVolume'; member: string; level: number }
   | { intent: 'memberMute'; member: string; muted: boolean }
@@ -60,6 +60,32 @@ const flagField = (fields: Record<string, unknown>, key: string): boolean | null
   return typeof value === 'boolean' ? value : null
 }
 
+// The levels the gesture started from, one per speaker, sent by the page that
+// carries the drag. Without them the hub would scale every crank from the level
+// its previous crank wrote, and ten cranks of rounding would leave the last
+// speaker a step or two from where the reader saw it land. Absent is the normal
+// case of a single write: the hub then reads the fleet.
+//
+// Bounded on purpose: a body is untrusted JSON, so the map is capped rather than
+// walked to whatever length a client sends.
+const maxBases = 16
+
+const basesField = (fields: Record<string, unknown>): Record<string, number> | null | undefined => {
+  if (!Object.hasOwn(fields, 'bases')) return undefined
+  const raw = fields.bases
+  if (!isRecord(raw)) return null
+  const entries = Object.entries(raw)
+  if (entries.length > maxBases) return null
+  const bases: Record<string, number> = {}
+  for (const [ip, value] of entries) {
+    if (ip.length === 0 || ip.length > 45) return null
+    const level = integer(value)
+    if (level === null || level < 0 || level > maxLevel) return null
+    bases[ip] = level
+  }
+  return bases
+}
+
 // An address the device itself published, so it is checked for shape rather than
 // resolved: a name here would be a value no speaker reported.
 const addressField = (fields: Record<string, unknown>, key: string): string | null => {
@@ -76,7 +102,12 @@ type Parser = (fields: Record<string, unknown>) => ParsedGroup
 const parsers: Record<string, Parser> = {
   volume: fields => {
     const level = levelField(fields)
-    return level === null ? refuse('invalid volume level') : accept({ intent: 'volume', level })
+    if (level === null) return refuse('invalid volume level')
+    const bases = basesField(fields)
+    if (bases === null) return refuse('invalid volume bases')
+    return accept(
+      bases === undefined ? { intent: 'volume', level } : { intent: 'volume', level, bases }
+    )
   },
   mute: fields => {
     const muted = flagField(fields, 'muted')
@@ -143,14 +174,14 @@ const requireMember = (target: FleetUnit, member: string): string | null => {
 const memberWrites = (target: FleetUnit, command: (ip: string) => GroupWrite): GroupWrite[] =>
   target.state.group.members.filter(member => member.ip !== '').map(member => command(member.ip))
 
-// A member's level, from the driver's: the ratio the reader set room by room.
-// The group slider carries the driver's level, so a room kept at half of it
-// stays at half, whatever the group is moved to; one level for every speaker
-// would erase a balance that was set one room at a time.
+// A speaker's level, from the one that carries the gesture: the ratio the reader
+// set room by room. A room kept at half of the loudest stays at half, whatever
+// the group is moved to; one level for every speaker would erase a balance that
+// was set one room at a time.
 //
-// Nothing to scale against (a driver at zero, a member the fleet has not read
-// yet) falls back to the level itself: the gesture still reaches the speaker,
-// and a member that was at zero stays silent, which is where it was put.
+// Nothing to scale against (a speaker at zero, one the fleet has not read yet)
+// falls back to the level itself: the gesture still reaches the device, and a
+// speaker that was at zero stays silent, which is where it was put.
 export const scaledGroupLevel = (
   level: number,
   from: number | null,
@@ -161,33 +192,68 @@ export const scaledGroupLevel = (
   return Math.min(ceiling, Math.max(0, Math.round((level * to) / from)))
 }
 
+// A speaker's level as the gesture found it: the page's own snapshot when it sent
+// one, the fleet's reading otherwise.
+const baseOf = (unit: FleetUnit, bases?: Record<string, number>): number | null =>
+  bases?.[unit.state.ip] ?? unit.state.volume
+
+// The speaker a group gesture turns: the loudest one the hub still reads, the
+// master included. Anchoring on the master alone would drag a member that the
+// reader set louder down to the master's level and past it on the way up: a
+// group whose rooms sit at 40 and 60 belongs to the room at 60, which is the
+// level the slider shows and the one the gesture names.
+//
+// A speaker the fleet cannot read keeps its last value on screen but cannot
+// carry the gesture: nothing would move it, and its ratio would set the pace of
+// every other speaker from a level that no longer exists.
+const anchorOf = (
+  target: FleetUnit,
+  fleet: readonly FleetUnit[],
+  bases?: Record<string, number>
+): FleetUnit | null => {
+  const members = target.state.group.members
+    .map(member => unitAt(fleet, member.ip))
+    .filter((unit): unit is FleetUnit => unit !== null)
+  let anchor: FleetUnit | null = null
+  for (const unit of [target, ...members]) {
+    if (!unit.state.online) continue
+    const level = baseOf(unit, bases)
+    if (level === null) continue
+    if (anchor === null || (baseOf(anchor, bases) ?? 0) < level) anchor = unit
+  }
+  return anchor
+}
+
 // The master's own volume moves alone, so a group volume is every speaker's
-// volume, each one scaled from the level the master had before the write. Each
-// member gets its own coalescing family: a drag then leaves one pending value
-// per speaker instead of forty, and the master's own value is not overwritten
-// by a member's.
-const volumeWrites = (level: number, target: FleetUnit, fleet: readonly FleetUnit[]): GroupPlan => {
-  const ceiling = ceilingOf(target)
+// volume, each one scaled from the level the loudest speaker had before the
+// write. Each member gets its own coalescing family: a drag then leaves one
+// pending value per speaker instead of forty, and the master's own value is not
+// overwritten by a member's.
+const volumeWrites = (
+  intent: Extract<GroupIntent, { intent: 'volume' }>,
+  target: FleetUnit,
+  fleet: readonly FleetUnit[]
+): GroupPlan => {
+  const { level, bases } = intent
+  const anchor = anchorOf(target, fleet, bases)
+  const ceiling = anchor === null ? ceilingOf(target) : ceilingOf(anchor)
   if (level > ceiling) return { error: `volume above the device ceiling (${ceiling})` }
-  const from = target.state.volume
+  const from = anchor === null ? null : baseOf(anchor, bases)
+  const scaledFor = (unit: FleetUnit | null): number =>
+    unit === null ? level : scaledGroupLevel(level, from, baseOf(unit, bases), ceilingOf(unit))
   const own: GroupWrite = {
     key: target.key,
-    command: `setPlayerCmd:vol:${level}`,
+    command: `setPlayerCmd:vol:${scaledFor(target)}`,
     family: 'volume',
   }
   return {
     writes: [
       own,
-      ...memberWrites(target, ip => {
-        const unit = unitAt(fleet, ip)
-        const scaled =
-          unit === null ? level : scaledGroupLevel(level, from, unit.state.volume, ceilingOf(unit))
-        return {
-          key: target.key,
-          command: `multiroom:SlaveVolume:${ip}:${scaled}`,
-          family: `volume:${ip}`,
-        }
-      }),
+      ...memberWrites(target, ip => ({
+        key: target.key,
+        command: `multiroom:SlaveVolume:${ip}:${scaledFor(unitAt(fleet, ip))}`,
+        family: `volume:${ip}`,
+      })),
     ],
   }
 }
@@ -259,7 +325,7 @@ const volumePlan = (
   fleet: readonly FleetUnit[]
 ): GroupPlan => {
   const error = requireMaster(target)
-  return error === null ? volumeWrites(intent.level, target, fleet) : { error }
+  return error === null ? volumeWrites(intent, target, fleet) : { error }
 }
 
 // The member's own ceiling, not the master's: a Mini and a Pro do not stop at

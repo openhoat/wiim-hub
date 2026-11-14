@@ -56,7 +56,6 @@
     "driver": "pilote le groupe",
     "volumeOf": "Volume de {name}",
     "memberSettings": "Réglages de {name}",
-    "volumeHint": "Le volume du groupe entraîne toutes les enceintes proportionnellement à celle qui pilote : une pièce réglée plus bas reste plus bas ; la ligne d'une enceinte ne règle que celle-ci.",
     "join": "Rejoindre un groupe",
     "joinTitle": "Ajouter {name} à un groupe",
     "joinHint": "Le groupe joue sur l'enceinte qui le pilote ; les autres la suivent.",
@@ -301,10 +300,10 @@
     "play": "Lire",
     "close": "Fermer"
   },
-  "browse": {
-    "open": "Parcourir",
-    "title": "Parcourir",
-    "hint": "Enregistrés dans le lecteur. Un créneau joue ce que l'enceinte a mémorisé, et le lecteur va chercher un service lui-même.",
+  "favorites": {
+    "open": "Favoris",
+    "title": "Favoris",
+    "hint": "Enregistrés dans l'enceinte. Un favori joue ce qu'elle a mémorisé, et le lecteur va chercher le service lui-même.",
     "slot": "Créneau {n}",
     "close": "Fermer"
   },

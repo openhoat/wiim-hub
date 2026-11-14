@@ -112,12 +112,22 @@ describe('parseGroupIntent', () => {
     }
   })
 
+  test('reads the levels a drag started from', () => {
+    expect(parseGroupIntent({ intent: 'volume', level: 42, bases: { '192.0.2.20': 35 } })).toEqual({
+      intent: { intent: 'volume', level: 42, bases: { '192.0.2.20': 35 } },
+    })
+  })
+
   test('refuses a level or a flag outside its range', () => {
     for (const body of [
       { intent: 'volume', level: -1 },
       { intent: 'volume', level: 101 },
       { intent: 'volume', level: 42.5 },
       { intent: 'volume', level: '42' },
+      { intent: 'volume', level: 42, bases: 'nope' },
+      { intent: 'volume', level: 42, bases: { '192.0.2.20': 101 } },
+      { intent: 'volume', level: 42, bases: { '192.0.2.20': 12.5 } },
+      { intent: 'volume', level: 42, bases: { '': 12 } },
       { intent: 'mute', muted: 'yes' },
       { intent: 'memberVolume', member: '192.0.2.20' },
       { intent: 'kick', member: '' },
@@ -156,7 +166,7 @@ describe('groupPlanFor, volume', () => {
     expect(plan.writes.map(write => write.family)).toEqual(['volume', 'volume:192.0.2.20'])
   })
 
-  test('scales each member from the level the driver had before the write', () => {
+  test('scales each speaker from the loudest one before the write', () => {
     // Living Room 40, Bedroom 20: half. Moving the group to 30 leaves Bedroom at
     // 15, where the reader had put it, instead of levelling the two rooms.
     const two = master([member('Bedroom', '192.0.2.20')])
@@ -174,16 +184,123 @@ describe('groupPlanFor, volume', () => {
     })
   })
 
-  test('lands the level as asked when there is no ratio to read', () => {
-    // A driver the fleet has read no volume for, or one at zero: the gesture
-    // still reaches the members, it just cannot be proportional.
-    for (const from of [null, 0]) {
-      const unread = master([member('Bedroom', '192.0.2.20')])
-      unread.state.volume = from
-      const plan = groupPlanFor({ intent: 'volume', level: 25 }, unread, [unread, follower()])
-      if ('error' in plan) throw new Error(plan.error)
-      expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:25')
-    }
+  test('turns on a member that is louder than the master', () => {
+    // A group kept at 40 and 60 belongs to the room at 60: the gesture names 30,
+    // the master follows at 20, and the loud room lands where the reader asked.
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const louder = follower()
+    louder.state.volume = 60
+    const plan = groupPlanFor({ intent: 'volume', level: 30 }, two, [two, louder])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes.map(write => write.command)).toEqual([
+      'setPlayerCmd:vol:20',
+      'multiroom:SlaveVolume:192.0.2.20:30',
+    ])
+  })
+
+  test('keeps the master as the anchor when two speakers are equal', () => {
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const same = follower()
+    const plan = groupPlanFor({ intent: 'volume', level: 30 }, two, [two, same])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes.map(write => write.command)).toEqual([
+      'setPlayerCmd:vol:30',
+      'multiroom:SlaveVolume:192.0.2.20:30',
+    ])
+  })
+
+  test('lands the level as asked when no speaker was read', () => {
+    // Nothing to scale against: the gesture still reaches every speaker, it just
+    // cannot be proportional.
+    const unread = master([member('Bedroom', '192.0.2.20')])
+    const guest = follower()
+    unread.state.volume = null
+    guest.state.volume = null
+    const plan = groupPlanFor({ intent: 'volume', level: 25 }, unread, [unread, guest])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes.map(write => write.command)).toEqual([
+      'setPlayerCmd:vol:25',
+      'multiroom:SlaveVolume:192.0.2.20:25',
+    ])
+  })
+
+  test('never lets a speaker the fleet cannot read carry the gesture', () => {
+    // The offline one keeps its last level on screen, but its ratio would set the
+    // pace of every other speaker from a level that no longer exists.
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const offline = follower()
+    offline.state.volume = 90
+    offline.state.online = false
+    const plan = groupPlanFor({ intent: 'volume', level: 30 }, two, [two, offline])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes.map(write => write.command)).toEqual([
+      'setPlayerCmd:vol:30',
+      'multiroom:SlaveVolume:192.0.2.20:68',
+    ])
+  })
+
+  test('reads the anchor from the levels the gesture started from', () => {
+    // A drag names the levels its first crank saw. The fleet, by then, already
+    // carries what the previous crank wrote: reading it again would move the
+    // anchor with the hand instead of keeping it where the gesture started.
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const louder = follower()
+    louder.state.volume = 40
+    const plan = groupPlanFor(
+      { intent: 'volume', level: 30, bases: { '192.0.2.10': 40, '192.0.2.20': 60 } },
+      two,
+      [two, louder]
+    )
+    expect(plan).toEqual({
+      writes: [
+        { key: '192.0.2.10', command: 'setPlayerCmd:vol:20', family: 'volume' },
+        {
+          key: '192.0.2.10',
+          command: 'multiroom:SlaveVolume:192.0.2.20:30',
+          family: 'volume:192.0.2.20',
+        },
+      ],
+    })
+  })
+
+  test('lands every crank of one gesture on the same levels', () => {
+    // Same gesture, same level: the second crank writes what the first one did,
+    // whatever the fleet now reports. Without the bases, ten cranks of rounding
+    // would drift the quiet room away from where the page painted it.
+    const bases = { '192.0.2.10': 40, '192.0.2.20': 20 }
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const quiet = follower()
+    quiet.state.volume = 20
+    const first = groupPlanFor({ intent: 'volume', level: 30, bases }, two, [two, quiet])
+    two.state.volume = 30
+    quiet.state.volume = 15
+    const second = groupPlanFor({ intent: 'volume', level: 30, bases }, two, [two, quiet])
+    expect(second).toEqual(first)
+    expect(first).toEqual({
+      writes: [
+        { key: '192.0.2.10', command: 'setPlayerCmd:vol:30', family: 'volume' },
+        {
+          key: '192.0.2.10',
+          command: 'multiroom:SlaveVolume:192.0.2.20:15',
+          family: 'volume:192.0.2.20',
+        },
+      ],
+    })
+  })
+
+  test('falls back to the fleet for a speaker the page did not name', () => {
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const quiet = follower()
+    quiet.state.volume = 20
+    const plan = groupPlanFor({ intent: 'volume', level: 30, bases: { '192.0.2.10': 40 } }, two, [
+      two,
+      quiet,
+    ])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes.map(write => write.command)).toEqual([
+      'setPlayerCmd:vol:30',
+      'multiroom:SlaveVolume:192.0.2.20:15',
+    ])
   })
 
   test('leaves a member that was at zero where it was put', () => {
@@ -206,11 +323,20 @@ describe('groupPlanFor, volume', () => {
     expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:30')
   })
 
-  test('refuses a level above the ceiling of the speaker that drives the group', () => {
+  test('refuses a level above the ceiling of the speaker that carries the group', () => {
     const quiet = master([member('Bedroom', '192.0.2.20')])
     quiet.state.maxVolume = 80
     const plan = groupPlanFor({ intent: 'volume', level: 90 }, quiet, [quiet, follower()])
     expect(plan).toEqual({ error: 'volume above the device ceiling (80)' })
+  })
+
+  test('refuses on the ceiling of the anchor, not the master, when the anchor is a member', () => {
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const capped = follower()
+    capped.state.volume = 60
+    capped.state.maxVolume = 50
+    const plan = groupPlanFor({ intent: 'volume', level: 60 }, two, [two, capped])
+    expect(plan).toEqual({ error: 'volume above the device ceiling (50)' })
   })
 
   test('refuses on a speaker that drives no group', () => {

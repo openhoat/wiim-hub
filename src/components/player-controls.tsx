@@ -9,8 +9,8 @@ import {
   Volume2,
   VolumeX,
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { BrowseSheet } from '@/components/browse-sheet'
+import { useState } from 'react'
+import { FavoritesSheet } from '@/components/favorites-sheet'
 import { PlayUrlDialog } from '@/components/play-url-dialog'
 import { Button } from '@/components/ui/button'
 import {
@@ -48,32 +48,85 @@ const sleepOptions = [0, 15, 30, 45, 60, 90]
 // The label names the speaker the slider drives when it is drawn outside the
 // player: a group card shows one row per speaker, and two sliders announced as
 // "Volume" tell a screen reader nothing about which one it just moved.
+//
+// A slider can also show a level another gesture paints on it. The group card
+// carries the loudest speaker's level, and while the hand moves every row shows
+// the level it will land on; the device reading is not what the thumb should
+// show then.
+export type VolumeLive = {
+  onChange: (level: number) => void
+  onRelease: (level: number) => void
+  onCancel: () => void
+}
+
 export const VolumeControl = ({
   controls,
   label,
   speaker,
-}: Readonly<{ controls: Controls; label?: string; speaker?: string }>) => {
+  painted = null,
+  ceiling: ceilingLimit = null,
+  live,
+}: Readonly<{
+  controls: Controls
+  label?: string
+  speaker?: string
+  painted?: number | null
+  // The ceiling of the speaker that carries a group gesture: the slider stops
+  // where the gesture would be refused, which is not always where this device
+  // stops.
+  ceiling?: number | null
+  live?: VolumeLive
+}>) => {
   const { t } = useSettings()
   const device = controls.device
-  const ceiling = ceilingOf(device.maxVolume)
-  const [level, setLevel] = useState(device.volume ?? 0)
+  const ceiling = ceilingLimit ?? ceilingOf(device.maxVolume)
+  const [dragging, setDragging] = useState<number | null>(null)
   const [confirmLevel, setConfirmLevel] = useState<number | null>(null)
+  // The level a gesture starts from, which is what the confirmation threshold
+  // compares with: the painted level when a group carries the gesture, the
+  // device's own otherwise.
+  const base = painted ?? device.volume ?? 0
+  const level = dragging ?? painted ?? device.volume ?? 0
 
-  useEffect(() => {
-    setLevel(device.volume ?? 0)
-  }, [device.volume])
+  const guarded = (value: number): boolean => value > loudLevel && base <= loudLevel
 
-  const commit = (value: number): void => {
-    if (value > loudLevel && (device.volume ?? 0) <= loudLevel) {
-      setConfirmLevel(value)
+  const send = (value: number): void => {
+    setDragging(null)
+    if (live === undefined) void controls.run({ action: 'volume', level: value })
+    else live.onRelease(value)
+  }
+
+  const commit = (): void => {
+    if (dragging === null) return
+    if (guarded(dragging)) {
+      setConfirmLevel(dragging)
+      // Nothing was written beyond the threshold, so nothing is painted as if it
+      // had been: the rows fall back to the speakers' reading until the reader
+      // confirms.
+      live?.onCancel()
       return
     }
-    void controls.run({ action: 'volume', level: value })
+    send(dragging)
+  }
+
+  const change = (value: number): void => {
+    setDragging(value)
+    // Above the threshold the write waits for a confirmation, so the thumb moves
+    // alone: no level beyond it reaches the speakers on its own.
+    if (live === undefined || guarded(value)) return
+    live.onChange(value)
+  }
+
+  const abandon = (): void => {
+    if (dragging === null) return
+    setDragging(null)
+    live?.onCancel()
   }
 
   const cancel = (): void => {
     setConfirmLevel(null)
-    setLevel(device.volume ?? 0)
+    setDragging(null)
+    live?.onCancel()
   }
 
   const muted = device.mute
@@ -107,14 +160,14 @@ export const VolumeControl = ({
           value={Math.min(level, ceiling)}
           disabled={!device.online}
           aria-label={label ?? t('controls.volume')}
-          onChange={event => setLevel(Number(event.currentTarget.value))}
-          onPointerUp={() => commit(level)}
-          onKeyUp={() => commit(level)}
-          onBlur={() => setLevel(device.volume ?? 0)}
+          onChange={event => change(Number(event.currentTarget.value))}
+          onPointerUp={commit}
+          onKeyUp={commit}
+          onBlur={abandon}
           className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-accent disabled:cursor-not-allowed disabled:opacity-50"
         />
         <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
-          {device.volume === null ? '—' : Math.min(level, ceiling)}
+          {device.volume === null && painted === null ? '—' : Math.min(level, ceiling)}
         </span>
       </div>
       {confirmLevel !== null && (
@@ -127,7 +180,7 @@ export const VolumeControl = ({
             size="sm"
             onClick={() => {
               setConfirmLevel(null)
-              void controls.run({ action: 'volume', level: confirmLevel })
+              send(confirmLevel)
             }}
           >
             {t('controls.apply')}
@@ -199,7 +252,14 @@ const SeekBar = ({ controls, now }: Readonly<{ controls: Controls; now: number }
 export const PlayerControls = ({
   controls,
   now,
-}: Readonly<{ controls: Controls; now: number }>) => {
+  volume,
+}: Readonly<{
+  controls: Controls
+  now: number
+  // The group card names the level its slider carries and the gesture every row
+  // follows; a solo player leaves both out.
+  volume?: { painted?: number | null; ceiling?: number | null; live?: VolumeLive }
+}>) => {
   const { t } = useSettings()
   const device = controls.device
   const online = device.online
@@ -258,7 +318,12 @@ export const PlayerControls = ({
             <Square className="size-3.5" />
           </Button>
         </div>
-        <VolumeControl controls={controls} />
+        <VolumeControl
+          controls={controls}
+          painted={volume?.painted ?? null}
+          ceiling={volume?.ceiling ?? null}
+          live={volume?.live}
+        />
       </div>
 
       {device.inputs.length > 0 && (
@@ -334,7 +399,7 @@ export const PlayerControls = ({
         )}
 
         <PlayUrlDialog controls={controls} />
-        <BrowseSheet controls={controls} />
+        <FavoritesSheet controls={controls} />
       </div>
 
       <p

@@ -56,7 +56,6 @@
     "driver": "drives the group",
     "volumeOf": "Volume of {name}",
     "memberSettings": "Settings for {name}",
-    "volumeHint": "Group volume carries every speaker along in proportion to the one that drives it: a room set quieter stays quieter; the row of a speaker sets that speaker alone.",
     "join": "Join a group",
     "joinTitle": "Add {name} to a group",
     "joinHint": "The group plays on the speaker that drives it; the others follow it.",
@@ -301,10 +300,10 @@
     "play": "Play",
     "close": "Close"
   },
-  "browse": {
-    "open": "Browse",
-    "title": "Browse",
-    "hint": "Saved in the player. A slot plays what the speaker memorised, and the player fetches a service itself.",
+  "favorites": {
+    "open": "Favorites",
+    "title": "Favorites",
+    "hint": "Saved in the speaker. A favorite plays what it memorised, and the player fetches the service itself.",
     "slot": "Slot {n}",
     "close": "Close"
   },

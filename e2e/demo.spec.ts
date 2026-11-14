@@ -61,17 +61,19 @@ test('renders a group as one card, and an offline speaker beside it', async ({ p
   await expect(art.first()).toHaveAttribute('src', /uri=demo%3A%2F%2Fcover%2F/)
 })
 
-// The card answers what is playing now; the slots the player saved live one tap
-// away, in a sheet. The demo saves a radio and a YouTube Music playlist, and the
-// offline speaker saved nothing, so it gets no trigger at all.
-test('browses the saved slots from a sheet instead of the card', async ({ page }) => {
+// The card answers what is playing now; the favourites the speaker saved live one
+// tap away, in a sheet. The demo saves a radio and a YouTube Music playlist, and
+// the offline speaker saved nothing, so it gets no trigger at all.
+test('offers every favourite the speaker saved, whatever the service', async ({ page }) => {
   await openHub(page)
 
   // Nothing of the list sits on the card before the sheet is opened.
   await expect(page.getByRole('button', { name: /Sunday Jazz/ })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Browse' })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Favorites', exact: true })).toHaveCount(1)
 
-  await page.getByRole('button', { name: 'Browse' }).click()
+  // The trigger is named after what the sheet holds, and the sheet is not a
+  // playlist picker: the radio and the service list are both offered.
+  await page.getByRole('button', { name: 'Favorites', exact: true }).click()
   const sheet = page.getByRole('dialog')
   await expect(sheet.getByRole('button', { name: 'Morning Radio, vTuner · Slot 1' })).toBeVisible()
   await expect(
@@ -867,18 +869,9 @@ test.describe('multiroom', () => {
     await openHub(page)
 
     const group = page.getByTestId('playing-192.0.2.21')
-    // A group volume is a fan-out, not a level the device knows: the card says
-    // so where the reader meets the slider, and points at the row that settles
-    // one room on its own.
-    await expect(
-      group.getByText(
-        'Group volume carries every speaker along in proportion to the one that drives it: a room set quieter stays quieter; the row of a speaker sets that speaker alone.'
-      )
-    ).toBeVisible()
-
     const volume = group.getByRole('slider', { name: 'Volume', exact: true })
     await expect(volume).toHaveValue('44')
-    // Hallway sits at 35 of the driver's 44, so one step up takes it to 36: the
+    // Hallway sits at 35 of the group's 44, so one step up takes it to 36: the
     // level it keeps is the ratio the reader set, not the driver's own level.
     await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
     await volume.press('ArrowRight')
@@ -889,6 +882,47 @@ test.describe('multiroom', () => {
     expect(response.ok()).toBe(true)
     const state: { devices: { name: string; volume: number | null }[] } = await response.json()
     expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(36)
+  })
+
+  test('paints the group while the thumb moves, and writes before the release', async ({
+    page,
+  }) => {
+    await openHub(page)
+
+    const group = page.getByTestId('playing-192.0.2.21')
+    const volume = group.getByRole('slider', { name: 'Volume', exact: true })
+    const hallway = group.getByRole('slider', { name: 'Volume of Hallway' })
+    const box = await volume.boundingBox()
+    if (box === null) throw new Error('the group slider has no box')
+
+    // A real drag: the thumb goes past the middle of the track and stays there,
+    // so nothing is released while the assertions run.
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width * 0.75, box.y + box.height / 2, { steps: 8 })
+
+    // The rows follow the thumb before the reader lets go: Hallway sits at 35 of
+    // the group's 44, so it lands on its share of whatever level the hand
+    // reached. The track is not a ruler (its thumb has a width), so the level is
+    // read back rather than assumed from the pointer's position.
+    const level = Number(await volume.inputValue())
+    expect(level).toBeGreaterThan(60)
+    const expected = Math.round((level * 35) / 44)
+    await expect(hallway).toHaveValue(String(expected))
+
+    // The writes leave during the drag, not on release: the demo answers the
+    // same plan the hub sends, so `/api/state` already carries the new levels.
+    await expect
+      .poll(async () => {
+        const response = await page.request.get('/api/state')
+        const state: { devices: { name: string; volume: number | null }[] } = await response.json()
+        return state.devices.find(device => device.name === 'Hallway')?.volume
+      })
+      .toBe(expected)
+
+    await page.mouse.up()
+    await expect(volume).toHaveValue(String(level))
+    await expect(hallway).toHaveValue(String(expected))
   })
 
   test('mutes the whole group, and the member row reports the member muted', async ({ page }) => {
@@ -923,11 +957,6 @@ test.describe('multiroom', () => {
     // offering its row and its group volume.
     await expect(page.getByTestId('playing-192.0.2.23')).toBeVisible()
     await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveCount(0)
-    await expect(
-      group.getByText(
-        'Group volume carries every speaker along in proportion to the one that drives it: a room set quieter stays quieter; the row of a speaker sets that speaker alone.'
-      )
-    ).toHaveCount(0)
   })
 
   test('dissolves the group, then drafts a speaker back into it', async ({ page }) => {
