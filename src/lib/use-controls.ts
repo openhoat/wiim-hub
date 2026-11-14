@@ -57,35 +57,35 @@ export const useControls = (device: Device, options?: { group?: boolean }): Cont
 
   const run = useCallback(
     async (action: Action): Promise<boolean> => {
+      // One exit for a failed write: the message the reader sees, and the
+      // optimistic value dropped so the device reading shows through again.
+      const failed = (message: string): false => {
+        setError(message)
+        if (mounted.current) setOverride(null)
+        return false
+      }
+      const runGroup = async (): Promise<boolean | null> => {
+        if (!grouped) return null
+        const group = groupActionFor(action)
+        if (group === null) return null
+        const answer = await sendGroupAction(device, group)
+        const failure = groupFailure(answer.results)
+        return failure === null ? true : failed(failure)
+      }
+
       setError(null)
       setOverride({ value: optimisticFor(device, action), at: Date.now() })
       setPending(count => count + 1)
       try {
-        const group = grouped ? groupActionFor(action) : null
-        if (group !== null) {
-          const answer = await sendGroupAction(device, group)
-          const failure = groupFailure(answer.results)
-          if (failure !== null) {
-            setError(failure)
-            if (mounted.current) setOverride(null)
-            return false
-          }
-          return true
-        }
+        const throughGroup = await runGroup()
+        if (throughGroup !== null) return throughGroup
         const result = await sendCommand(device, action)
-        if (!result.ok) {
-          setError(result.unsupported ? 'unsupported' : result.body || 'failed')
-          if (mounted.current) setOverride(null)
-          return false
-        }
+        if (!result.ok) return failed(result.unsupported ? 'unsupported' : result.body || 'failed')
         return true
       } catch (cause) {
         const message = cause instanceof Error ? cause.message : String(cause)
-        if (mounted.current) {
-          setError(message)
-          setOverride(null)
-        }
-        return false
+        if (!mounted.current) return false
+        return failed(message)
       } finally {
         if (mounted.current) setPending(count => Math.max(0, count - 1))
       }

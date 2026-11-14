@@ -39,12 +39,24 @@ const decodeEntities = (value: string): string =>
 // The description names the DLNA role with the model ("WiiM Mini Receiver",
 // "WiiM Pro Receiver"), while the firmware and the vendor app call the speaker
 // "WiiM Mini": the suffix is dropped rather than shown to the reader.
+//
+// Matched on the trimmed suffix, not with `\s+receiver\s*$`: a run of spaces
+// makes that expression backtrack over every split, which a scanner reports as
+// super-linear, and the reader only ever sees a name that has to end here.
+const receiverSuffix = 'receiver'
+
+const withoutReceiverSuffix = (name: string): string => {
+  const trimmed = name.trim()
+  if (!trimmed.toLowerCase().endsWith(receiverSuffix)) return trimmed
+  const head = trimmed.slice(0, trimmed.length - receiverSuffix.length)
+  // A word glued to the name is part of it, not a suffix to drop.
+  return /\s$/.test(head) ? head.trim() : trimmed
+}
+
 export const parseModelName = (xml: string): string => {
   const match = /<modelName>([^<]*)<\/modelName>/i.exec(xml)
   if (match === null) return ''
-  return decodeEntities(match[1])
-    .replace(/\s+receiver\s*$/i, '')
-    .trim()
+  return withoutReceiverSuffix(decodeEntities(match[1]))
 }
 
 export const modelFor = async (ip: string, firmware: string): Promise<string> => {

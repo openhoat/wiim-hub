@@ -7,6 +7,7 @@ import {
   eventText,
   inputLabel,
   isExternalInput,
+  muteLabel,
   statusLabel,
 } from './labels'
 import type { DeviceEvent } from './types'
@@ -30,6 +31,15 @@ describe('statusLabel', () => {
 describe('eventKindLabel', () => {
   test('names the kind, or keeps the token', () => {
     expect(eventKindLabel(tFor('fr'), 'offline')).toBe('appareil injoignable')
+  })
+})
+
+describe('muteLabel', () => {
+  test('names the button of the player, then of the speaker the row names', () => {
+    expect(muteLabel(tFor('en'), false)).toBe('Mute')
+    expect(muteLabel(tFor('en'), true)).toBe('Unmute')
+    expect(muteLabel(tFor('en'), false, 'Living Room')).toBe('Mute Living Room')
+    expect(muteLabel(tFor('fr'), true, 'Living Room')).toBe('Rétablir le son de Living Room')
   })
 })
 

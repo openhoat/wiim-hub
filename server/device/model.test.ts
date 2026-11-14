@@ -21,6 +21,16 @@ describe('parseModelName', () => {
     expect(parseModelName(description('WiiM Ultra'))).toBe('WiiM Ultra')
   })
 
+  test('drops the suffix only where a word ends, whatever the padding', () => {
+    // The suffix used to be matched by a regex that backtracks over a run of
+    // spaces: these pin the reading it must keep, whatever the shape of the
+    // match.
+    expect(parseModelName(description('  WiiM Mini   Receiver  '))).toBe('WiiM Mini')
+    expect(parseModelName(description('WiiMMiniReceiver'))).toBe('WiiMMiniReceiver')
+    expect(parseModelName(description('Receiver'))).toBe('Receiver')
+    expect(parseModelName(description('WiiM Receiver Pro'))).toBe('WiiM Receiver Pro')
+  })
+
   test('decodes the entities a description may carry', () => {
     expect(parseModelName(description('A &amp; B Receiver'))).toBe('A & B')
   })

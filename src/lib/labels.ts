@@ -49,6 +49,16 @@ export const eventText = (t: Translate, event: DeviceEvent): string => {
   return ''
 }
 
+// One button, four sentences: mute or unmute, on the player or on a named
+// speaker. Composed here with the other labels, and the key is built once, so
+// the component does not nest a ternary inside another to pick it.
+export const muteLabel = (t: Translate, muted: boolean, speaker?: string): string => {
+  const action = muted ? 'unmute' : 'mute'
+  return speaker === undefined
+    ? t(`controls.${action}`)
+    : t(`controls.${action}Of`, { name: speaker })
+}
+
 // A write fails for two reasons worth telling apart: the firmware does not
 // support it, or it refused the value. `unsupported` is the hub's own token, so
 // it gets a sentence; anything else is the device's answer, plugged into the

@@ -135,53 +135,69 @@ export const createGroupReconciler = (graceMs = groupGraceMs): GroupReconciler =
     }
   }
 
+  // What a member keeps for this pass: the master that just answered, or the
+  // parent it named itself, as long as the grace window lasts.
+  const heldParent = (
+    state: DeviceState,
+    master: DeviceState | null,
+    now: number
+  ): HeldParent | undefined => {
+    const held = parents.get(state.ip)
+    if (master === null) {
+      return held !== undefined && now - held.at < graceMs ? held : undefined
+    }
+    const kept: HeldParent = {
+      parent: { name: master.name, ip: master.ip },
+      name: master.group.name !== '' ? master.group.name : (held?.name ?? ''),
+      members: master.group.members.length > 0 ? master.group.members : (held?.members ?? []),
+      at: now,
+    }
+    parents.set(state.ip, kept)
+    return kept
+  }
+
+  // The parent is then copied onto the member, which keeps its own fields: the
+  // role is the device's, the parent and the list come from the master.
+  const applyParent = (state: DeviceState, kept: HeldParent): void => {
+    state.group = {
+      ...state.group,
+      // A master that named no group leaves the name empty: the hub does not
+      // guess a name from the members it lists.
+      name: state.group.name === '' ? kept.name : state.group.name,
+      members: state.group.members.length > 0 ? state.group.members : kept.members,
+      parent: kept.parent,
+    }
+  }
+
+  const reconcileMember = (
+    state: DeviceState,
+    fleet: readonly DeviceState[],
+    now: number
+  ): void => {
+    state.mirror = null
+    if (!state.online || state.group.role !== 'member') {
+      parents.delete(state.ip)
+      return
+    }
+    // The device's own answer first, the master's list second: a member that
+    // names its master is right at every poll, the list is not.
+    const master = namedBy(fleet, state) ?? listedBy(fleet, state)
+    const kept = heldParent(state, master, now)
+    // Nothing confirmed the group in this pass: the member keeps the parent it
+    // named itself (an address the fleet does not poll is still a fact), and
+    // the mirror stays empty because there is nothing to copy.
+    if (kept === undefined) return
+    applyParent(state, kept)
+    const source =
+      master ?? fleet.find(candidate => candidate.online && candidate.ip === kept.parent.ip) ?? null
+    if (playsItself(state) || source === null) return
+    state.mirror = mirrorOf(source)
+  }
+
   return (states: Iterable<DeviceState>, at?: number): void => {
     const now = at ?? Date.now()
     const fleet = [...states]
     for (const state of fleet) holdMaster(state, now)
-
-    for (const state of fleet) {
-      state.mirror = null
-      if (!state.online || state.group.role !== 'member') {
-        parents.delete(state.ip)
-        continue
-      }
-      // The device's own answer first, the master's list second: a member that
-      // names its master is right at every poll, the list is not.
-      const master = namedBy(fleet, state) ?? listedBy(fleet, state)
-      const held = parents.get(state.ip)
-      if (master !== null) {
-        parents.set(state.ip, {
-          parent: { name: master.name, ip: master.ip },
-          name: master.group.name !== '' ? master.group.name : (held?.name ?? ''),
-          members: master.group.members.length > 0 ? master.group.members : (held?.members ?? []),
-          at: now,
-        })
-      }
-      const kept =
-        master !== null
-          ? parents.get(state.ip)
-          : held !== undefined && now - held.at < graceMs
-            ? held
-            : undefined
-      // Nothing confirmed the group in this pass: the member keeps the parent it
-      // named itself (an address the fleet does not poll is still a fact), and
-      // the mirror stays empty because there is nothing to copy.
-      if (kept === undefined) continue
-      state.group = {
-        ...state.group,
-        // A master that named no group leaves the name empty: the hub does not
-        // guess a name from the members it lists.
-        name: state.group.name === '' ? kept.name : state.group.name,
-        members: state.group.members.length > 0 ? state.group.members : kept.members,
-        parent: kept.parent,
-      }
-      const source =
-        master ??
-        fleet.find(candidate => candidate.online && candidate.ip === kept.parent.ip) ??
-        null
-      if (playsItself(state) || source === null) continue
-      state.mirror = mirrorOf(source)
-    }
+    for (const state of fleet) reconcileMember(state, fleet, now)
   }
 }

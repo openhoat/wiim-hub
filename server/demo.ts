@@ -912,79 +912,111 @@ const listed = (state: DeviceState): DeviceState[] => {
   return members
 }
 
-const applyGroupIntent = (intent: GroupIntent, entry: DeviceState): void => {
-  switch (intent.intent) {
-    case 'volume':
-      // The master's own volume moves the master alone, so the group's level is
-      // a fan-out: measured, `setPlayerCmd:vol` does not propagate.
-      entry.volume = intent.level
-      for (const member of listed(entry)) member.volume = intent.level
-      break
-    case 'mute':
-      // Measured: the master's mute propagates to the group.
-      entry.mute = intent.muted
-      for (const member of listed(entry)) member.mute = intent.muted
-      break
-    case 'memberVolume': {
-      const member = stateAt(intent.member)
-      if (member !== null) member.volume = intent.level
-      break
-    }
-    case 'memberMute': {
-      const member = stateAt(intent.member)
-      if (member !== null) member.mute = intent.muted
-      break
-    }
-    case 'join': {
-      const master = stateAt(intent.master)
-      if (master === null) break
-      const kept = master.group.members.filter((member: GroupMember) => member.ip !== entry.ip)
-      master.group = {
-        ...master.group,
-        role: 'master',
-        members: [...kept, { name: entry.name, ip: entry.ip, uuid: entry.uuid }],
-      }
-      entry.group = {
-        ...emptyGroup(),
-        role: 'member',
-        parent: { name: master.name, ip: master.ip },
-      }
-      break
-    }
-    case 'kick': {
-      entry.group = {
-        ...entry.group,
-        members: entry.group.members.filter(member => member.ip !== intent.member),
-      }
-      const guest = stateAt(intent.member)
-      if (guest !== null) guest.group = emptyGroup()
-      break
-    }
-    case 'leave': {
-      const parent = entry.group.parent
-      const master = parent === null ? null : stateAt(parent.ip)
-      if (master !== null) {
-        master.group = {
-          ...master.group,
-          members: master.group.members.filter(member => member.ip !== entry.ip),
-        }
-      }
-      entry.group = emptyGroup()
-      break
-    }
-    case 'ungroup': {
-      for (const member of listed(entry)) member.group = emptyGroup()
-      entry.group = emptyGroup()
-      break
+// The group's own level is a fan-out: measured, `setPlayerCmd:vol` moves the
+// master alone, while its mute propagates.
+const applyVolume = (level: number, entry: DeviceState): void => {
+  entry.volume = level
+  for (const member of listed(entry)) member.volume = level
+}
+
+const applyMute = (muted: boolean, entry: DeviceState): void => {
+  entry.mute = muted
+  for (const member of listed(entry)) member.mute = muted
+}
+
+// A gesture at one member reaches that speaker, and only where the fleet has it.
+const withMember = (ip: string, apply: (member: DeviceState) => void): void => {
+  const member = stateAt(ip)
+  if (member !== null) apply(member)
+}
+
+const applyJoin = (masterIp: string, entry: DeviceState): void => {
+  const master = stateAt(masterIp)
+  if (master === null) return
+  const kept = master.group.members.filter((member: GroupMember) => member.ip !== entry.ip)
+  master.group = {
+    ...master.group,
+    role: 'master',
+    members: [...kept, { name: entry.name, ip: entry.ip, uuid: entry.uuid }],
+  }
+  entry.group = {
+    ...emptyGroup(),
+    role: 'member',
+    parent: { name: master.name, ip: master.ip },
+  }
+}
+
+const applyKick = (memberIp: string, entry: DeviceState): void => {
+  entry.group = {
+    ...entry.group,
+    members: entry.group.members.filter(member => member.ip !== memberIp),
+  }
+  withMember(memberIp, guest => {
+    guest.group = emptyGroup()
+  })
+}
+
+// Leaving is the mirror of the kick: the master drops the speaker, the speaker
+// drops the parent it named.
+const applyLeave = (entry: DeviceState): void => {
+  const parent = entry.group.parent
+  const master = parent === null ? null : stateAt(parent.ip)
+  if (master !== null) {
+    master.group = {
+      ...master.group,
+      members: master.group.members.filter(member => member.ip !== entry.ip),
     }
   }
-  // A speaker that drives nothing is not a master any more: measured after a
-  // kick, the role follows the list, which is the only proof a group runs.
+  entry.group = emptyGroup()
+}
+
+const applyUngroup = (entry: DeviceState): void => {
+  for (const member of listed(entry)) member.group = emptyGroup()
+  entry.group = emptyGroup()
+}
+
+// A speaker that drives nothing is not a master any more: measured after a
+// kick, the role follows the list, which is the only proof a group runs.
+const settleRoles = (): void => {
   for (const state of states.values()) {
     if (state.group.role === 'master' && state.group.members.length === 0) {
       state.group = { ...state.group, role: 'none', name: '', saved: false }
     }
   }
+}
+
+const applyGroupIntent = (intent: GroupIntent, entry: DeviceState): void => {
+  switch (intent.intent) {
+    case 'volume':
+      applyVolume(intent.level, entry)
+      break
+    case 'mute':
+      applyMute(intent.muted, entry)
+      break
+    case 'memberVolume':
+      withMember(intent.member, member => {
+        member.volume = intent.level
+      })
+      break
+    case 'memberMute':
+      withMember(intent.member, member => {
+        member.mute = intent.muted
+      })
+      break
+    case 'join':
+      applyJoin(intent.master, entry)
+      break
+    case 'kick':
+      applyKick(intent.member, entry)
+      break
+    case 'leave':
+      applyLeave(entry)
+      break
+    case 'ungroup':
+      applyUngroup(entry)
+      break
+  }
+  settleRoles()
   reconcileGroups(states.values())
 }
 

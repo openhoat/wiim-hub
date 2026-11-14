@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
-import { controlErrorLabel, inputLabel, isExternalInput } from '@/lib/labels'
+import { controlErrorLabel, inputLabel, isExternalInput, muteLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Controls } from '@/lib/use-controls'
 
@@ -80,10 +80,7 @@ export const VolumeControl = ({
   // The name of the speaker the button mutes, where the row already names it: a
   // group card draws one mute button per speaker, and two of them announced as
   // "Mute" tell a screen reader nothing about which one it just silenced.
-  const muteLabel =
-    speaker === undefined
-      ? t(muted ? 'controls.unmute' : 'controls.mute')
-      : t(muted ? 'controls.unmuteOf' : 'controls.muteOf', { name: speaker })
+  const muteName = muteLabel(t, muted, speaker)
 
   return (
     <div className="min-w-0 flex-1">
@@ -96,7 +93,7 @@ export const VolumeControl = ({
           variant="ghost"
           size="icon-sm"
           disabled={!device.online}
-          aria-label={muteLabel}
+          aria-label={muteName}
           aria-pressed={muted}
           onClick={() => void controls.run({ action: 'mute', muted: !muted })}
         >

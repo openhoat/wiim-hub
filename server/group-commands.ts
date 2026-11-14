@@ -172,11 +172,12 @@ const volumeWrites = (level: number, target: FleetUnit, fleet: readonly FleetUni
   }
 }
 
-// One write, because the master's mute reaches the group on this firmware. The
-// members' own mute is still what the read side reports, so nothing is assumed
-// about it here: the next poll confirms.
-const muteWrites = (muted: boolean, target: FleetUnit): GroupPlan => ({
-  writes: [{ key: target.key, command: `setPlayerCmd:mute:${muted ? 1 : 0}`, family: null }],
+// One write on the master: measured, its mute reaches the members on its own,
+// and the next poll reads what each member did with it.
+const muteWrite = (muted: boolean, target: FleetUnit): GroupWrite => ({
+  key: target.key,
+  command: `setPlayerCmd:mute:${muted ? 1 : 0}`,
+  family: null,
 })
 
 const joinWrites = (
@@ -217,70 +218,91 @@ const joinWrites = (
   }
 }
 
+// A write the master carries alone, once the hub has checked that the speaker
+// does drive a group.
+const masterPlan = (target: FleetUnit, write: () => GroupWrite): GroupPlan => {
+  const error = requireMaster(target)
+  return error === null ? { writes: [write()] } : { error }
+}
+
+// The same check for a gesture addressed to one member: the master must drive
+// the group and must list that speaker, which is the only thing that names a
+// member.
+const memberPlan = (target: FleetUnit, member: string, write: () => GroupWrite): GroupPlan => {
+  const error = requireMaster(target) ?? requireMember(target, member)
+  return error === null ? { writes: [write()] } : { error }
+}
+
+const volumePlan = (
+  intent: Extract<GroupIntent, { intent: 'volume' }>,
+  target: FleetUnit,
+  fleet: readonly FleetUnit[]
+): GroupPlan => {
+  const error = requireMaster(target)
+  return error === null ? volumeWrites(intent.level, target, fleet) : { error }
+}
+
+// The member's own ceiling, not the master's: a Mini and a Pro do not stop at
+// the same level, and the master's list does not publish it.
+const memberVolumePlan = (
+  intent: Extract<GroupIntent, { intent: 'memberVolume' }>,
+  target: FleetUnit,
+  fleet: readonly FleetUnit[]
+): GroupPlan => {
+  const error = requireMaster(target) ?? requireMember(target, intent.member)
+  if (error !== null) return { error }
+  const member = unitAt(fleet, intent.member)
+  if (member !== null && intent.level > ceilingOf(member)) {
+    return { error: `volume above the device ceiling (${ceilingOf(member)})` }
+  }
+  return {
+    writes: [
+      {
+        key: target.key,
+        command: `multiroom:SlaveVolume:${intent.member}:${intent.level}`,
+        family: `volume:${intent.member}`,
+      },
+    ],
+  }
+}
+
+const leavePlan = (target: FleetUnit): GroupPlan => {
+  if (target.state.group.role !== 'member') return { error: 'this speaker follows no group' }
+  return { writes: [{ key: target.key, command: 'multiroom:LeaveGroup', family: null }] }
+}
+
 export const groupPlanFor = (
   intent: GroupIntent,
   target: FleetUnit,
   fleet: readonly FleetUnit[]
 ): GroupPlan => {
   switch (intent.intent) {
-    case 'volume': {
-      const error = requireMaster(target)
-      return error === null ? volumeWrites(intent.level, target, fleet) : { error }
-    }
-    case 'mute': {
-      const error = requireMaster(target)
-      return error === null ? muteWrites(intent.muted, target) : { error }
-    }
-    case 'memberVolume': {
-      const error = requireMaster(target) ?? requireMember(target, intent.member)
-      if (error !== null) return { error }
-      const member = unitAt(fleet, intent.member)
-      if (member !== null && intent.level > ceilingOf(member)) {
-        return { error: `volume above the device ceiling (${ceilingOf(member)})` }
-      }
-      return {
-        writes: [
-          {
-            key: target.key,
-            command: `multiroom:SlaveVolume:${intent.member}:${intent.level}`,
-            family: `volume:${intent.member}`,
-          },
-        ],
-      }
-    }
-    case 'memberMute': {
-      const error = requireMaster(target) ?? requireMember(target, intent.member)
-      if (error !== null) return { error }
-      return {
-        writes: [
-          {
-            key: target.key,
-            command: `multiroom:SlaveMute:${intent.member}:${intent.muted ? 1 : 0}`,
-            family: null,
-          },
-        ],
-      }
-    }
-    case 'kick': {
-      const error = requireMaster(target) ?? requireMember(target, intent.member)
-      return error === null
-        ? {
-            writes: [
-              { key: target.key, command: `multiroom:SlaveKickout:${intent.member}`, family: null },
-            ],
-          }
-        : { error }
-    }
-    case 'ungroup': {
-      const error = requireMaster(target)
-      return error === null
-        ? { writes: [{ key: target.key, command: 'multiroom:Ungroup', family: null }] }
-        : { error }
-    }
-    case 'leave': {
-      if (target.state.group.role !== 'member') return { error: 'this speaker follows no group' }
-      return { writes: [{ key: target.key, command: 'multiroom:LeaveGroup', family: null }] }
-    }
+    case 'volume':
+      return volumePlan(intent, target, fleet)
+    case 'mute':
+      return masterPlan(target, () => muteWrite(intent.muted, target))
+    case 'memberVolume':
+      return memberVolumePlan(intent, target, fleet)
+    case 'memberMute':
+      return memberPlan(target, intent.member, () => ({
+        key: target.key,
+        command: `multiroom:SlaveMute:${intent.member}:${intent.muted ? 1 : 0}`,
+        family: null,
+      }))
+    case 'kick':
+      return memberPlan(target, intent.member, () => ({
+        key: target.key,
+        command: `multiroom:SlaveKickout:${intent.member}`,
+        family: null,
+      }))
+    case 'ungroup':
+      return masterPlan(target, () => ({
+        key: target.key,
+        command: 'multiroom:Ungroup',
+        family: null,
+      }))
+    case 'leave':
+      return leavePlan(target)
     case 'join':
       return joinWrites(intent, target, fleet)
   }
