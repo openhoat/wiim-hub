@@ -253,18 +253,6 @@ export type Command = { command: string; family: string | null }
 // not accept.
 type Outcome = Command | { error: string }
 
-// `family` marks the writes that a drag can repeat (volume, seek): the writer
-// keeps only the last one pending, so a slider sends its final value instead of
-// forty intermediate ones. Everything else is queued in order.
-const volumeCommand = (
-  action: Extract<Action, { action: 'volume' }>,
-  device: DeviceState
-): Outcome => {
-  const ceiling = device.maxVolume ?? 100
-  if (action.level > ceiling) return { error: `volume above the device ceiling (${ceiling})` }
-  return { command: `setPlayerCmd:vol:${action.level}`, family: 'volume' }
-}
-
 const sourceCommand = (
   action: Extract<Action, { action: 'source' }>,
   device: DeviceState
@@ -320,15 +308,19 @@ const flagCommands: Record<'led' | 'buttons' | 'fade', string> = {
 
 // Every write the device state cannot refuse: the command is built from the
 // value the browser sent, and the only decision left is whether a drag may
-// collapse it (the `family`).
+// collapse it (the `family`: the writer keeps only the last of a repeated
+// volume or seek pending, so a slider sends its final value instead of forty
+// intermediate ones). Everything else is queued in order.
 const statelessCommand = (
-  action: Exclude<
-    Action,
-    Extract<Action, { action: 'volume' | 'source' | 'output' | 'eqPreset' | 'eqBand' }>
-  >
+  action: Exclude<Action, Extract<Action, { action: 'source' | 'output' | 'eqPreset' | 'eqBand' }>>
 ): Outcome => {
   if (isFixedName(action.action)) return { command: fixed[action.action], family: null }
   switch (action.action) {
+    case 'volume':
+      // Not bounded by `max_volume`: that field is a setting the vendor app
+      // exposes, not a hardware stop (measured, a Mini reporting 40 sat at 54).
+      // The parser already keeps the level on the protocol's 0-100 scale.
+      return { command: `setPlayerCmd:vol:${action.level}`, family: 'volume' }
     case 'seek':
       return { command: `setPlayerCmd:seek:${action.seconds}`, family: 'seek' }
     case 'mute':
@@ -364,14 +356,13 @@ const statelessCommand = (
   return { error: 'unsupported action' }
 }
 
-// The five writes the device state can refuse come first: the ceiling, the
-// input list, the output list, the preset list and the equalizer source are
-// what the player reported, so a value outside them is a stale page, not a
-// command. Everything else is a template over the value the browser sent.
+// The four writes the device state can refuse come first: the input list, the
+// output list, the preset list and the equalizer source are what the player
+// reported, so a value outside them is a stale page, not a command. Everything
+// else is a template over the value the browser sent, the volume included: a
+// level is not bounded by the player's report.
 export const commandFor = (action: Action, device: DeviceState): Outcome => {
   switch (action.action) {
-    case 'volume':
-      return volumeCommand(action, device)
     case 'source':
       return sourceCommand(action, device)
     case 'output':

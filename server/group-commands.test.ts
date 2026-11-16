@@ -312,31 +312,40 @@ describe('groupPlanFor, volume', () => {
     expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:0')
   })
 
-  test('clamps a scaled level at the ceiling of that member', () => {
-    // The master asks for 60 and the member follows, but a Mini that stops at
-    // 30 gets 30 rather than a value it would refuse.
+  test('lets a scaled level pass the max_volume that member reports', () => {
+    // `max_volume` is a setting, not a hardware stop: measured, a Mini reporting
+    // 40 sat at 54. A group gesture reaching 60 therefore reaches 60, rather than
+    // being cut at the level the setting names.
     const two = master([member('Bedroom', '192.0.2.20')])
     const small = follower()
     small.state.maxVolume = 30
     const plan = groupPlanFor({ intent: 'volume', level: 60 }, two, [two, small])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:30')
+    expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:60')
   })
 
-  test('refuses a level above the ceiling of the speaker that carries the group', () => {
+  test('accepts a level above the max_volume the speaker carrying the group reports', () => {
     const quiet = master([member('Bedroom', '192.0.2.20')])
     quiet.state.maxVolume = 80
     const plan = groupPlanFor({ intent: 'volume', level: 90 }, quiet, [quiet, follower()])
-    expect(plan).toEqual({ error: 'volume above the device ceiling (80)' })
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes.map(write => write.command)).toEqual([
+      'setPlayerCmd:vol:90',
+      'multiroom:SlaveVolume:192.0.2.20:90',
+    ])
   })
 
-  test('refuses on the ceiling of the anchor, not the master, when the anchor is a member', () => {
+  test('scales on the anchor, not the master, when the anchor is a member', () => {
     const two = master([member('Bedroom', '192.0.2.20')])
     const capped = follower()
     capped.state.volume = 60
     capped.state.maxVolume = 50
     const plan = groupPlanFor({ intent: 'volume', level: 60 }, two, [two, capped])
-    expect(plan).toEqual({ error: 'volume above the device ceiling (50)' })
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes.map(write => write.command)).toEqual([
+      'setPlayerCmd:vol:40',
+      'multiroom:SlaveVolume:192.0.2.20:60',
+    ])
   })
 
   test('refuses on a speaker that drives no group', () => {
@@ -425,7 +434,7 @@ describe('groupPlanFor, one member', () => {
     ).toEqual({ error: 'unknown group member: 192.0.2.99' })
   })
 
-  test('refuses a level above the ceiling of that member', () => {
+  test('accepts a level above the max_volume that member reports', () => {
     const quiet = follower()
     quiet.state.maxVolume = 50
     expect(
@@ -433,7 +442,15 @@ describe('groupPlanFor, one member', () => {
         master(),
         quiet,
       ])
-    ).toEqual({ error: 'volume above the device ceiling (50)' })
+    ).toEqual({
+      writes: [
+        {
+          key: '192.0.2.10',
+          command: 'multiroom:SlaveVolume:192.0.2.20:60',
+          family: 'volume:192.0.2.20',
+        },
+      ],
+    })
   })
 })
 

@@ -55,7 +55,7 @@ so the hub only ever sends the slot number and the device's own answer decides t
 Validation happens against the last known state, and a refused intent answers with the reason
 instead of reaching the speaker:
 
-- the volume is bounded by the device's own `max_volume`;
+- the volume stays on the protocol's 0-100 scale; `max_volume` is a device setting, not a stop;
 - an input or an output must be one the device reports;
 - an equalizer band must be one of the ten names the firmware matches, and the gain stays inside
   the measured range;

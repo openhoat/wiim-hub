@@ -25,7 +25,7 @@ import {
 import { artUrl } from '@/lib/api'
 import { cardTitle, drivesGroup, type FleetCard } from '@/lib/cards'
 import { cn } from '@/lib/cn'
-import { groupAnchor, groupCeiling, joinTargets, scaledGroupLevel } from '@/lib/group'
+import { groupAnchor, joinTargets, scaledGroupLevel } from '@/lib/group'
 import { agoLabel, controlErrorLabel, inputLabel, isExternalInput, statusLabel } from '@/lib/labels'
 import { type Translate, useSettings } from '@/lib/settings'
 import type { Device, GroupMember, GroupState } from '@/lib/types'
@@ -626,13 +626,11 @@ export const NowPlayingCard = ({
       : scaledGroupLevel(
           groupVolume.drag.level,
           groupVolume.drag.from,
-          groupVolume.drag.bases[device.ip] ?? device.volume,
-          groupCeiling(device)
+          groupVolume.drag.bases[device.ip] ?? device.volume
         )
   const volume = driven
     ? {
         painted: groupLevel,
-        ceiling: anchor === null ? null : groupCeiling(anchor),
         live: {
           onChange: (level: number) => groupVolume.paint(anchorLevel, bases(), level),
           onRelease: (level: number) => {

@@ -87,9 +87,10 @@ sequenceDiagram
   Note over P: the page painted 30 on click,<br/>the next poll confirms or reverts it
 ```
 
-The validation is where the hub owns the write surface: it bounds the volume by the device's
-`max_volume`, refuses an input or an output the device does not report, refuses an equalizer gain
-outside the measured range, and refuses a stream URL that is not http or https. `unknown command` is
+The validation is where the hub owns the write surface: it keeps a level on the protocol's 0-100
+scale (`max_volume` is a setting, not a stop), refuses an input or an output the device does not
+report, refuses an equalizer gain outside the measured range, and refuses a stream URL that is not
+http or https. `unknown command` is
 a capability answer, not a transient failure: the control is then shown as unsupported instead of
 being retried.
 

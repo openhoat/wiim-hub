@@ -320,13 +320,16 @@ describe('commandFor', () => {
     })
   })
 
-  test('refuses a volume above the ceiling the device reports', () => {
+  test('writes a volume above the max_volume the device reports', () => {
+    // `max_volume` is a setting the vendor app exposes, not a hardware stop:
+    // measured, a Mini reporting 40 sat at 54, so the write is not refused.
     expect(commandFor({ action: 'volume', level: 70 }, device({ maxVolume: 60 }))).toEqual({
-      error: 'volume above the device ceiling (60)',
+      command: 'setPlayerCmd:vol:70',
+      family: 'volume',
     })
   })
 
-  test('falls back to one hundred when the device reports no ceiling', () => {
+  test('writes a volume when the device reports no max_volume', () => {
     expect(commandFor({ action: 'volume', level: 100 }, device({ maxVolume: null }))).toEqual({
       command: 'setPlayerCmd:vol:100',
       family: 'volume',

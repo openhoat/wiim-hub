@@ -10,6 +10,15 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- A level is no longer capped by the `max_volume` a speaker reports. That field is a setting the
+  vendor app exposes, not a hardware stop: measured, a Mini reporting 40 sat at 54, so the group card
+  drew its row with the thumb pinned to the right of a slider that stopped at 40, and the hub refused
+  a group gesture above it. Every slider, every group write and every single-room write now stays on
+  the protocol's 0-100 scale. The setting itself is unchanged: it is still shown and written in the
+  speaker's sheet.
+
 ## [0.9.30] - 2026-11-16
 
 ### Changed

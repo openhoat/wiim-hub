@@ -158,8 +158,6 @@ export const parseGroupIntent = (body: unknown): ParsedGroup => {
 const memberOf = (state: DeviceState, ip: string): GroupMember | null =>
   state.group.members.find(member => member.ip === ip) ?? null
 
-const ceilingOf = (unit: FleetUnit): number => unit.state.maxVolume ?? maxLevel
-
 const unitAt = (fleet: readonly FleetUnit[], ip: string): FleetUnit | null =>
   fleet.find(unit => unit.state.ip === ip) ?? null
 
@@ -185,17 +183,16 @@ const memberWrites = (
 // the group is moved to; one level for every speaker would erase a balance that
 // was set one room at a time.
 //
+// Every level stays on the protocol's 0-100 scale. The `max_volume` a device
+// reports is a setting, not a hardware stop (measured, a Mini reporting 40 sat
+// at 54), so it never bounds a level here or refuses a group gesture.
+//
 // Nothing to scale against (a speaker at zero, one the fleet has not read yet)
 // falls back to the level itself: the gesture still reaches the device, and a
 // speaker that was at zero stays silent, which is where it was put.
-export const scaledGroupLevel = (
-  level: number,
-  from: number | null,
-  to: number | null,
-  ceiling: number
-): number => {
-  if (from === null || from === 0 || to === null) return Math.min(level, ceiling)
-  return Math.min(ceiling, Math.max(0, Math.round((level * to) / from)))
+export const scaledGroupLevel = (level: number, from: number | null, to: number | null): number => {
+  if (from === null || from === 0 || to === null) return Math.max(0, Math.min(maxLevel, level))
+  return Math.min(maxLevel, Math.max(0, Math.round((level * to) / from)))
 }
 
 // A speaker's level as the gesture found it: the page's own snapshot when it sent
@@ -251,11 +248,9 @@ const volumeWrites = (
 ): GroupPlan => {
   const { level, bases } = intent
   const anchor = anchorOf(target, fleet, bases)
-  const ceiling = anchor === null ? ceilingOf(target) : ceilingOf(anchor)
-  if (level > ceiling) return { error: `volume above the device ceiling (${ceiling})` }
   const from = anchor === null ? null : baseOf(anchor, bases)
   const scaledFor = (unit: FleetUnit | null): number =>
-    unit === null ? level : scaledGroupLevel(level, from, baseOf(unit, bases), ceilingOf(unit))
+    unit === null ? level : scaledGroupLevel(level, from, baseOf(unit, bases))
   const own: GroupWrite = {
     key: target.key,
     command: `setPlayerCmd:vol:${scaledFor(target)}`,
@@ -349,19 +344,15 @@ const volumePlan = (
   return error === null ? volumeWrites(intent, target, fleet) : { error }
 }
 
-// The member's own ceiling, not the master's: a Mini and a Pro do not stop at
-// the same level, and the master's list does not publish it.
+// The member's own write, and only where the master lists it: a level is not
+// bounded by the `max_volume` the member reports, for the same reason a group
+// gesture is not.
 const memberVolumePlan = (
   intent: Extract<GroupIntent, { intent: 'memberVolume' }>,
-  target: FleetUnit,
-  fleet: readonly FleetUnit[]
+  target: FleetUnit
 ): GroupPlan => {
   const error = requireMaster(target) ?? requireMember(target, intent.member)
   if (error !== null) return { error }
-  const member = unitAt(fleet, intent.member)
-  if (member !== null && intent.level > ceilingOf(member)) {
-    return { error: `volume above the device ceiling (${ceilingOf(member)})` }
-  }
   return {
     writes: [
       {
@@ -389,7 +380,7 @@ export const groupPlanFor = (
     case 'mute':
       return masterPlan(target, () => muteWrite(intent.muted, target))
     case 'memberVolume':
-      return memberVolumePlan(intent, target, fleet)
+      return memberVolumePlan(intent, target)
     case 'memberMute':
       return memberPlan(target, intent.member, () => ({
         key: target.key,

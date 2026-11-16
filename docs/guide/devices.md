@@ -77,7 +77,7 @@ Consequences worth knowing:
   treated as errors, because the firmware genuinely omits them.
 - Inputs and outputs come from the device (`getSoundCardModeSupportList`,
   `getAudioInputCapbility`), so the source picker offers what that unit accepts.
-- The volume ceiling is the device's own `max_volume`, not a constant.
+- Every level stays on the protocol's 0-100 scale. The `max_volume` a device reports is a setting the vendor app exposes, not a hardware stop: one Mini here reports 40 while sitting at 54, so it never bounds a slider or a group gesture.
 
 ## One card per player
 

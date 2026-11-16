@@ -27,14 +27,11 @@ import { controlErrorLabel, isExternalInput, muteLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Controls } from '@/lib/use-controls'
 
-// The volume ceiling the device reports, with a sane fallback so a missing
-// field never produces a slider that cannot reach 100.
-const ceilingOf = (maxVolume: number | null): number =>
-  maxVolume !== null && maxVolume > 0 ? maxVolume : 100
-
 // Above this level a single stray drag becomes a physical event on a 100 W
 // amp: the write is worth one confirmation.
 const loudLevel = 85
+
+const maxLevel = 100
 
 const sleepOptions = [0, 15, 30, 45, 60, 90]
 
@@ -69,7 +66,6 @@ export const VolumeControl = ({
   label,
   speaker,
   painted = null,
-  ceiling: ceilingLimit = null,
   silent = false,
   live,
 }: Readonly<{
@@ -77,17 +73,12 @@ export const VolumeControl = ({
   label?: string
   speaker?: string
   painted?: number | null
-  // The ceiling of the speaker that carries a group gesture: the slider stops
-  // where the gesture would be refused, which is not always where this device
-  // stops.
-  ceiling?: number | null
   // A speaker under mute: the slider is drawn but not draggable.
   silent?: boolean
   live?: VolumeLive
 }>) => {
   const { t } = useSettings()
   const device = controls.device
-  const ceiling = ceilingLimit ?? ceilingOf(device.maxVolume)
   const [dragging, setDragging] = useState<number | null>(null)
   const [confirmLevel, setConfirmLevel] = useState<number | null>(null)
   // The level a gesture starts from, which is what the confirmation threshold
@@ -163,9 +154,9 @@ export const VolumeControl = ({
         <input
           type="range"
           min={0}
-          max={ceiling}
+          max={maxLevel}
           step={1}
-          value={Math.min(level, ceiling)}
+          value={Math.min(level, maxLevel)}
           disabled={!device.online || silent}
           aria-label={label ?? t('controls.volume')}
           onChange={event => change(Number(event.currentTarget.value))}
@@ -180,7 +171,7 @@ export const VolumeControl = ({
             silent && 'opacity-50'
           )}
         >
-          {device.volume === null && painted === null ? '—' : Math.min(level, ceiling)}
+          {device.volume === null && painted === null ? '—' : Math.min(level, maxLevel)}
         </span>
       </div>
       {confirmLevel !== null && (
@@ -271,7 +262,7 @@ export const PlayerControls = ({
   now: number
   // The group card names the level its slider carries and the gesture every row
   // follows; a solo player leaves both out.
-  volume?: { painted?: number | null; ceiling?: number | null; live?: VolumeLive }
+  volume?: { painted?: number | null; live?: VolumeLive }
 }>) => {
   const { t } = useSettings()
   const device = controls.device
@@ -330,12 +321,7 @@ export const PlayerControls = ({
             <Square className="size-3.5" />
           </Button>
         </div>
-        <VolumeControl
-          controls={controls}
-          painted={volume?.painted ?? null}
-          ceiling={volume?.ceiling ?? null}
-          live={volume?.live}
-        />
+        <VolumeControl controls={controls} painted={volume?.painted ?? null} live={volume?.live} />
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

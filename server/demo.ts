@@ -4,7 +4,7 @@
 // Every state below is typed as `DeviceState`, the shape the real server
 // renders: a change in the real polling code breaks this file at compile time
 // instead of letting the demo drift into a parallel universe. Writes go through
-// the same `parseAction` and `commandFor` the hub uses, so the volume ceiling and
+// the same `parseAction` and `commandFor` the hub uses, so the level range and
 // the available inputs and outputs are enforced here too; only the last step
 // differs, the command mutates memory instead of reaching a device.
 //
@@ -932,9 +932,7 @@ const applyVolume = (level: number, entry: DeviceState, bases?: Record<string, n
   const from = anchor === null ? null : baseOf(anchor)
   // Every level is computed before any is written: the anchor is one of these
   // speakers, and writing it first would change the ratio the others read.
-  const levels = speakers.map(speaker =>
-    scaledGroupLevel(level, from, baseOf(speaker), speaker.maxVolume ?? 100)
-  )
+  const levels = speakers.map(speaker => scaledGroupLevel(level, from, baseOf(speaker)))
   // The demo follows the plan the real server builds: a muted member keeps its
   // level, the master keeps its write.
   speakers.forEach((speaker, index) => {

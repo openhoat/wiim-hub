@@ -1,12 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import {
-  groupActionFor,
-  groupAnchor,
-  groupCeiling,
-  groupFailure,
-  joinTargets,
-  scaledGroupLevel,
-} from './group'
+import { groupActionFor, groupAnchor, groupFailure, joinTargets, scaledGroupLevel } from './group'
 import type { Device } from './types'
 
 const device = (overrides: Partial<Device> = {}): Device => ({
@@ -116,31 +109,25 @@ describe('scaledGroupLevel', () => {
   test('lands a speaker on its share of the anchor', () => {
     // Living Room 60 carries the gesture: moving the group to 30 leaves Bedroom
     // at 20 (a third of the anchor), which is where the reader had put it.
-    expect(scaledGroupLevel(30, 60, 40, 100)).toBe(20)
-    expect(scaledGroupLevel(30, 60, 60, 100)).toBe(30)
+    expect(scaledGroupLevel(30, 60, 40)).toBe(20)
+    expect(scaledGroupLevel(30, 60, 60)).toBe(30)
   })
 
-  test('clamps at the ceiling of that speaker', () => {
-    expect(scaledGroupLevel(60, 40, 90, 30)).toBe(30)
+  test('stays on the protocol scale when the ratio runs past 100', () => {
+    // The `max_volume` a speaker reports never bounds a level: only the
+    // protocol's 0-100 does, so a share that overshoots lands on 100.
+    expect(scaledGroupLevel(60, 40, 90)).toBe(100)
   })
 
   test('falls back to the level itself without a ratio to read', () => {
-    expect(scaledGroupLevel(25, null, 40, 100)).toBe(25)
-    expect(scaledGroupLevel(25, 0, 40, 100)).toBe(25)
-    expect(scaledGroupLevel(25, 40, null, 100)).toBe(25)
-    expect(scaledGroupLevel(120, 40, 40, 100)).toBe(100)
+    expect(scaledGroupLevel(25, null, 40)).toBe(25)
+    expect(scaledGroupLevel(25, 0, 40)).toBe(25)
+    expect(scaledGroupLevel(25, 40, null)).toBe(25)
+    expect(scaledGroupLevel(120, 40, 40)).toBe(100)
   })
 
   test('leaves a speaker that was at zero where it was put', () => {
-    expect(scaledGroupLevel(60, 40, 0, 100)).toBe(0)
-  })
-})
-
-describe('groupCeiling', () => {
-  test('answers the ceiling the device reports, with 100 when it reports none', () => {
-    expect(groupCeiling(device({ maxVolume: 80 }))).toBe(80)
-    expect(groupCeiling(device({ maxVolume: null }))).toBe(100)
-    expect(groupCeiling(device({ maxVolume: 0 }))).toBe(100)
+    expect(scaledGroupLevel(60, 40, 0)).toBe(0)
   })
 })
 

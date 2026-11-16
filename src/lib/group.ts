@@ -40,26 +40,20 @@ export const groupAnchor = (speakers: readonly Device[]): Device | null => {
   return anchor
 }
 
-// The ceiling the device reports, with the same fallback the player uses: a
-// missing field never produces a level that cannot be reached.
-export const groupCeiling = (device: Device): number =>
-  device.maxVolume !== null && device.maxVolume > 0 ? device.maxVolume : 100
-
 // The level a speaker lands on, from the one that carries the gesture. The hub
 // plans with the same formula (`server/group-commands.ts`) and the duplication is
 // deliberate: the image serves only `server/`, and the page needs the projection
 // locally to follow the thumb without a read per pixel.
 //
+// Every level stays on the 0-100 scale the protocol speaks. The `max_volume` a
+// device reports is a setting, not a hardware limit: measured, a Mini reporting
+// 40 sat at 54, so it never bounds a level here.
+//
 // Nothing to scale against (a speaker at zero, one not read yet) lands on the
-// level itself, clamped to the ceiling.
-export const scaledGroupLevel = (
-  level: number,
-  from: number | null,
-  to: number | null,
-  ceiling: number
-): number => {
-  if (from === null || from === 0 || to === null) return Math.min(level, ceiling)
-  return Math.min(ceiling, Math.max(0, Math.round((level * to) / from)))
+// level itself.
+export const scaledGroupLevel = (level: number, from: number | null, to: number | null): number => {
+  if (from === null || from === 0 || to === null) return Math.max(0, Math.min(100, level))
+  return Math.min(100, Math.max(0, Math.round((level * to) / from)))
 }
 
 // The first write that did not answer `OK`, with its command and the raw body:

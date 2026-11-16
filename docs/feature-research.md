@@ -268,8 +268,10 @@ the feature. Rules marked **must** are correctness rules, not polish.
 
 ### 5.2 Volume
 
-- Slider plus mute toggle plus a numeric field, all writing `setPlayerCmd:vol:<n>` bounded by
-  `max_volume` from `getStatusEx` (100 here, lower on some models).
+- Slider plus mute toggle plus a numeric field, all writing `setPlayerCmd:vol:<n>` on the
+  protocol's 0-100 scale. `max_volume` from `getStatusEx` is **not** a bound: measured on 16/11, a
+  Mini reporting 40 sat at 54, so the hub does not bound a level with it (the setting is still
+  exposed in the device sheet, written as `setMaxVolume`).
 - Coalescing as above; the slider value must never jump back to the pre-drag poll value.
 - Warn above a configurable ceiling (85 % by default) with a one time confirmation, because a
   mis-drag on a 100 W amp is a real event.
