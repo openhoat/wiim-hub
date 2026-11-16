@@ -950,6 +950,34 @@ test.describe('multiroom', () => {
     expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(36)
   })
 
+  test('keeps a row on the full scale, whatever max_volume the speaker reports', async ({
+    page,
+  }) => {
+    await openHub(page)
+
+    // `max_volume` is a setting the vendor app exposes, not a hardware stop:
+    // Hallway reports 30 while sitting at 35, so a row that took it as a bound
+    // pinned its thumb to the right of a slider that stopped at 30 and showed
+    // the wrong level.
+    const hallway = page
+      .getByTestId('playing-192.0.2.21')
+      .getByRole('slider', { name: 'Volume of Hallway' })
+    await expect(hallway).toHaveAttribute('max', '100')
+    await expect(hallway).toHaveValue('35')
+
+    // The write above the setting is what proves the bound is gone: 40 is past
+    // the 30 the speaker reports, and the demo answers the same plan the hub
+    // builds.
+    await hallway.press('ArrowRight')
+    await expect(hallway).toHaveValue('36')
+    const response = await page.request.get('/api/state')
+    const state: { devices: { name: string; volume: number | null; maxVolume: number | null }[] } =
+      await response.json()
+    const device = state.devices.find(entry => entry.name === 'Hallway')
+    expect(device?.maxVolume).toBe(30)
+    expect(device?.volume).toBe(36)
+  })
+
   test('paints the group while the thumb moves, and writes before the release', async ({
     page,
   }) => {

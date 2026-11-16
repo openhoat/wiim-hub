@@ -261,7 +261,7 @@
     "balance": "Balance",
     "balanceHint": "Niveau à gauche et à droite.",
     "maxVolume": "Volume maximum",
-    "maxVolumeHint": "Le plafond du curseur de volume.",
+    "maxVolumeHint": "Le volume maximum rapporté par l'enceinte. C'est un réglage, pas un arrêt : le curseur garde toute la plage.",
     "on": "Activé",
     "off": "Désactivé",
     "loading": "Lecture de l'appareil…",

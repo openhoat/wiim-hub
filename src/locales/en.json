@@ -261,7 +261,7 @@
     "balance": "Balance",
     "balanceHint": "Left and right level.",
     "maxVolume": "Maximum volume",
-    "maxVolumeHint": "The ceiling of the volume slider.",
+    "maxVolumeHint": "The maximum volume the speaker reports. It is a setting, not a stop: the slider stays on the full range.",
     "on": "On",
     "off": "Off",
     "loading": "Reading the device…",

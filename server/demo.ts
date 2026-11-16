@@ -450,11 +450,15 @@ const hallway = (): DeviceState => {
     // shape the group card reads.
     group: { role: 'member', name: '', members: [], saved: false, parent: null },
     rssi: -61,
+    // 35 while the setting reports 30: measured on a real Mini, `max_volume` is
+    // a setting the vendor app exposes, not a hardware stop (one reporting 40
+    // sat at 54). The fleet carries the shape on purpose, so the browser suite
+    // can prove a row stays on the full scale.
     volume: 35,
     status: 'stop',
     mode: '99',
     input: 'wifi',
-    maxVolume: 100,
+    maxVolume: 30,
     mute: false,
     sleepSeconds: null,
     inputs: ['wifi', 'bluetooth', 'line-in', 'optical', 'udisk'],
@@ -519,7 +523,7 @@ const settings = new Map<string, DeviceSettings>([
   ],
   [
     '192.0.2.23',
-    { name: 'Hallway', ledOn: false, buttonsOn: true, balance: 0.2, maxVolume: 100, fade: true },
+    { name: 'Hallway', ledOn: false, buttonsOn: true, balance: 0.2, maxVolume: 30, fade: true },
   ],
 ])
 
