@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.31] - 2026-11-16
+
 ### Fixed
 
 - A level is no longer capped by the `max_volume` a speaker reports. That field is a setting the
@@ -823,7 +825,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.30...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.31...HEAD
+[0.9.31]: https://github.com/openhoat/wiim-hub/compare/v0.9.30...v0.9.31
 [0.9.30]: https://github.com/openhoat/wiim-hub/compare/v0.9.29...v0.9.30
 [0.9.29]: https://github.com/openhoat/wiim-hub/compare/v0.9.28...v0.9.29
 [0.9.28]: https://github.com/openhoat/wiim-hub/compare/v0.9.27...v0.9.28
