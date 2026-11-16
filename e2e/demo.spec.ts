@@ -61,20 +61,26 @@ test('renders a group as one card, and an offline speaker beside it', async ({ p
   await expect(art.first()).toHaveAttribute('src', /uri=demo%3A%2F%2Fcover%2F/)
 })
 
-// The card answers what is playing now; the favourites the speaker saved live one
-// tap away, in a sheet. The demo saves a radio and a YouTube Music playlist, and
-// the offline speaker saved nothing, so it gets no trigger at all.
+// The card answers what is playing now; the favourites the speaker saved live in
+// that speaker's sheet, one tap away, because the group card carries no tool of
+// a single speaker. The demo saves a radio and a YouTube Music playlist on the
+// master, and the offline speaker saved nothing, so it gets no trigger at all.
 test('offers every favourite the speaker saved, whatever the service', async ({ page }) => {
   await openHub(page)
 
-  // Nothing of the list sits on the card before the sheet is opened.
+  // Nothing of the list sits on the card before the sheet is opened, and the
+  // trigger is the speaker's own: the group card carries none, the row of the
+  // speaker that drives it does.
   await expect(page.getByRole('button', { name: /Sunday Jazz/ })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Favorites', exact: true })).toHaveCount(1)
+  await expect(page.getByRole('button', { name: 'Favorites', exact: true })).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Settings for Living Room' }).click()
+  const speaker = page.getByRole('dialog', { name: 'Living Room' })
 
   // The trigger is named after what the sheet holds, and the sheet is not a
   // playlist picker: the radio and the service list are both offered.
-  await page.getByRole('button', { name: 'Favorites', exact: true }).click()
-  const sheet = page.getByRole('dialog')
+  await speaker.getByRole('button', { name: 'Favorites', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: 'Favorites' })
   await expect(sheet.getByRole('button', { name: 'Morning Radio, vTuner · Slot 1' })).toBeVisible()
   await expect(
     sheet.getByRole('button', { name: 'Sunday Jazz, YouTubeMusic · Slot 3' })
@@ -101,6 +107,31 @@ test('offers every favourite the speaker saved, whatever the service', async ({ 
   await sheet.getByRole('button', { name: /Sunday Jazz/ }).click()
   await expect(sheet).toHaveCount(0)
   expect(sent).toEqual({ action: 'preset', slot: 3 })
+})
+
+// A group plays; its sleep timer, its output, its stream and its presets belong
+// to the speakers, not to the group: the card carries the transport and the group
+// volume only, and each row opens its speaker's own tools.
+test('keeps the tools of a speaker out of the group card', async ({ page }) => {
+  await openHub(page)
+
+  const group = page.getByTestId('playing-192.0.2.21')
+  await expect(group.getByRole('button', { name: 'Sleep timer', exact: true })).toHaveCount(0)
+  await expect(group.getByRole('button', { name: 'Stream URL', exact: true })).toHaveCount(0)
+  await expect(group.getByRole('button', { name: 'Favorites', exact: true })).toHaveCount(0)
+  await expect(group.getByRole('button', { name: 'Previous' })).toBeVisible()
+
+  // The row of the speaker that drives the group opens them, in its sheet.
+  await page.getByRole('button', { name: 'Settings for Living Room' }).click()
+  const sheet = page.getByRole('dialog', { name: 'Living Room' })
+  await expect(sheet.getByRole('button', { name: 'Sleep timer', exact: true })).toBeVisible()
+  await expect(sheet.getByRole('button', { name: 'Stream URL', exact: true })).toBeVisible()
+  await expect(sheet.getByRole('button', { name: 'Favorites', exact: true })).toBeVisible()
+
+  // A speaker alone still carries its tools on its own card.
+  await page.keyboard.press('Escape')
+  const solo = page.getByTestId('playing-192.0.2.22')
+  await expect(solo.getByRole('button', { name: 'Sleep timer', exact: true })).toBeVisible()
 })
 
 test('shows the group a speaker drives, and hides the one an offline speaker remembers', async ({
@@ -234,10 +265,12 @@ test('switches the source from the settings of its speaker', async ({ page }) =>
   const sheet = page.getByRole('dialog')
   // A network stream is the network input: the row lights it rather than
   // leaving every entry looking inactive, which is what a cast used to do.
-  const wifi = sheet.getByRole('button', { name: 'Wi-Fi' })
+  const wifi = sheet.getByRole('button', { name: 'Wi-Fi', exact: true })
   await expect(wifi).toHaveAttribute('aria-pressed', 'true')
 
-  const optical = sheet.getByRole('button', { name: 'Optical' })
+  // Named exactly, since the output menu of the same sheet is labelled
+  // "Output: Optical" and a loose match would hit both.
+  const optical = sheet.getByRole('button', { name: 'Optical', exact: true })
   await expect(optical).toHaveAttribute('aria-pressed', 'false')
   await optical.click()
   await expect(optical).toHaveAttribute('aria-pressed', 'true')

@@ -10,6 +10,17 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.34] - 2026-11-16
+
+### Changed
+
+- The sleep timer, the output route, the stream URL and the presets left the player of the group
+  card. Each one acts on a single speaker, so they now sit in that speaker's own sheet, beside its
+  volume, equalizer, source and settings, the master included, where the vendor app keeps them. A
+  card of a speaker that drives no group keeps them under its player, since that card is the
+  speaker. The output menu of a sheet is announced as "Output: Optical" rather than "Optical", which
+  tells it apart from a source of the same name.
+
 ## [0.9.33] - 2026-11-16
 
 ### Fixed
@@ -845,7 +856,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.33...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.34...HEAD
+[0.9.34]: https://github.com/openhoat/wiim-hub/compare/v0.9.33...v0.9.34
 [0.9.33]: https://github.com/openhoat/wiim-hub/compare/v0.9.32...v0.9.33
 [0.9.32]: https://github.com/openhoat/wiim-hub/compare/v0.9.31...v0.9.32
 [0.9.31]: https://github.com/openhoat/wiim-hub/compare/v0.9.30...v0.9.31

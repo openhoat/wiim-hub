@@ -253,28 +253,111 @@ const SeekBar = ({ controls, now }: Readonly<{ controls: Controls; now: number }
   )
 }
 
+// What a speaker does on its own: stop after a timer, pick its output, be handed
+// a stream, replay one of its presets. Those belong to one speaker, never to a
+// group: a group card leaves them out, and each speaker opens them in its sheet.
+export const DeviceToolsRow = ({ controls }: Readonly<{ controls: Controls }>) => {
+  const { t } = useSettings()
+  const device = controls.device
+  const online = device.online
+  const sleepSeconds = device.sleepSeconds ?? 0
+  const sleepMinutes = Math.ceil(sleepSeconds / 60)
+  const outputName =
+    device.outputs.find(output => output.hardware === device.outputHardware)?.name ??
+    t('controls.outputs')
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm" disabled={!online} className="gap-1.5">
+            <Timer className="size-3.5" />
+            {sleepSeconds > 0
+              ? t('controls.sleepMinutes', { n: sleepMinutes })
+              : t('controls.sleep')}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>{t('controls.sleep')}</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={sleepSeconds > 0 ? String(sleepMinutes) : '0'}
+            onValueChange={value =>
+              void controls.run({ action: 'sleep', seconds: Number(value) * 60 })
+            }
+          >
+            {sleepOptions.map(minutes => (
+              <DropdownMenuRadioItem key={minutes} value={String(minutes)}>
+                {minutes === 0
+                  ? t('controls.sleepOff')
+                  : t('controls.sleepMinutes', { n: minutes })}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {device.outputs.length > 1 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!online}
+              className="gap-1.5"
+              // The visible label is the output's own name, which the source
+              // picker of the same sheet can carry too: the name says what the
+              // menu sets, so a reader hears the difference.
+              aria-label={`${t('controls.outputs')}: ${outputName}`}
+            >
+              <Speaker className="size-3.5" />
+              {outputName}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuLabel>{t('controls.outputs')}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={device.outputHardware === null ? '' : String(device.outputHardware)}
+              onValueChange={value =>
+                void controls.run({ action: 'output', hardware: Number(value) })
+              }
+            >
+              {device.outputs.map(output => (
+                <DropdownMenuRadioItem key={output.hardware} value={String(output.hardware)}>
+                  {output.name}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+      <PlayUrlDialog controls={controls} />
+      <FavoritesSheet controls={controls} />
+    </div>
+  )
+}
+
 export const PlayerControls = ({
   controls,
   now,
   volume,
+  tools = true,
 }: Readonly<{
   controls: Controls
   now: number
   // The group card names the level its slider carries and the gesture every row
   // follows; a solo player leaves both out.
   volume?: { painted?: number | null; live?: VolumeLive }
+  // A group card draws the transport and the group volume: the tools of the
+  // speaker driving it belong to that speaker, in its own sheet.
+  tools?: boolean
 }>) => {
   const { t } = useSettings()
   const device = controls.device
   const online = device.online
   const playing = device.status === 'play'
   const busy = controls.pending
-  const sleepSeconds = device.sleepSeconds ?? 0
-  const sleepMinutes = Math.ceil(sleepSeconds / 60)
   const external = isExternalInput(device.input)
-  const outputName =
-    device.outputs.find(output => output.hardware === device.outputHardware)?.name ??
-    t('controls.outputs')
 
   return (
     <div className="mt-5 space-y-3">
@@ -324,64 +407,7 @@ export const PlayerControls = ({
         <VolumeControl controls={controls} painted={volume?.painted ?? null} live={volume?.live} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" disabled={!online} className="gap-1.5">
-              <Timer className="size-3.5" />
-              {sleepSeconds > 0
-                ? t('controls.sleepMinutes', { n: sleepMinutes })
-                : t('controls.sleep')}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuLabel>{t('controls.sleep')}</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={sleepSeconds > 0 ? String(sleepMinutes) : '0'}
-              onValueChange={value =>
-                void controls.run({ action: 'sleep', seconds: Number(value) * 60 })
-              }
-            >
-              {sleepOptions.map(minutes => (
-                <DropdownMenuRadioItem key={minutes} value={String(minutes)}>
-                  {minutes === 0
-                    ? t('controls.sleepOff')
-                    : t('controls.sleepMinutes', { n: minutes })}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {device.outputs.length > 1 && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" disabled={!online} className="gap-1.5">
-                <Speaker className="size-3.5" />
-                {outputName}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuLabel>{t('controls.outputs')}</DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                value={device.outputHardware === null ? '' : String(device.outputHardware)}
-                onValueChange={value =>
-                  void controls.run({ action: 'output', hardware: Number(value) })
-                }
-              >
-                {device.outputs.map(output => (
-                  <DropdownMenuRadioItem key={output.hardware} value={String(output.hardware)}>
-                    {output.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
-        <PlayUrlDialog controls={controls} />
-        <FavoritesSheet controls={controls} />
-      </div>
+      {tools && <DeviceToolsRow controls={controls} />}
 
       <p
         role="status"

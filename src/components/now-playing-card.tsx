@@ -713,7 +713,7 @@ export const NowPlayingCard = ({
         />
       )}
 
-      <PlayerControls controls={controls} now={now} volume={volume} />
+      <PlayerControls controls={controls} now={now} volume={volume} tools={!driven} />
 
       <p
         role="status"

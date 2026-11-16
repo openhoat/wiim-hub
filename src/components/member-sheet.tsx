@@ -1,7 +1,7 @@
 import { LogOut, SlidersHorizontal } from 'lucide-react'
 import { useState } from 'react'
 import { DeviceSettingsBody } from '@/components/device-settings'
-import { VolumeControl } from '@/components/player-controls'
+import { DeviceToolsRow, VolumeControl } from '@/components/player-controls'
 import { EqualizerPanel, QualityChip } from '@/components/sound-card'
 import { Button } from '@/components/ui/button'
 import {
@@ -131,6 +131,12 @@ export const MemberSheet = ({
             label={t('group.volumeOf', { name: device.name })}
             speaker={device.name}
           />
+        </div>
+
+        {/* The sleep timer, the output, the stream and the presets are this
+            speaker's own: the group card carries none of them. */}
+        <div className="mt-3">
+          <DeviceToolsRow controls={controls} />
         </div>
 
         <div className="mt-4 border-t border-border/60 pt-4">
