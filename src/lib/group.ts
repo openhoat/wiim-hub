@@ -28,11 +28,13 @@ export const groupActionFor = (action: Action): GroupAction | null => {
 //
 // A speaker the fleet cannot read keeps its last value on screen but cannot
 // carry the gesture: nothing would move it, and its ratio would set the pace of
-// every other speaker from a level that no longer exists.
+// every other speaker from a level that no longer exists. A muted speaker is
+// left out for the same reason, which is the rule the server applies when it
+// plans the writes (`server/group-commands.ts`).
 export const groupAnchor = (speakers: readonly Device[]): Device | null => {
   let anchor: Device | null = null
   for (const device of speakers) {
-    if (!device.online || device.volume === null) continue
+    if (!device.online || device.mute || device.volume === null) continue
     if (anchor === null || (anchor.volume ?? 0) < device.volume) anchor = device
   }
   return anchor

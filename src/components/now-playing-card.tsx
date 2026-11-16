@@ -459,7 +459,13 @@ const SpeakerRow = ({
         <p className="truncate text-[11px] text-muted-foreground">{state}</p>
       </div>
       <div className="flex min-w-0 basis-full items-center gap-1.5 sm:basis-auto sm:w-56">
-        <VolumeControl controls={controls} label={label} speaker={device.name} painted={painted} />
+        <VolumeControl
+          controls={controls}
+          label={label}
+          speaker={device.name}
+          painted={painted}
+          silent={live.mute}
+        />
         <MemberSheet device={device} master={master} onChanged={onChanged} />
       </div>
     </li>
@@ -612,8 +618,10 @@ export const NowPlayingCard = ({
     }
     return levels
   }
+  // A muted row is not painted: no volume will be written to it, so showing the
+  // level it would land on would promise a move that does not happen.
   const projected = (device: Device): number | null =>
-    groupVolume.drag === null
+    groupVolume.drag === null || device.mute
       ? null
       : scaledGroupLevel(
           groupVolume.drag.level,

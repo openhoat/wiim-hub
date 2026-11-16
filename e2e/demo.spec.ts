@@ -615,6 +615,41 @@ test('writes the volume of the group master without moving the group', async ({ 
   expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(35)
 })
 
+// A muted speaker is out of the group gesture: it keeps the level the reader
+// left it at, and the group moves on the speakers that can still be heard. The
+// vendor app behaves this way, and a write under the mute would make the unmute
+// land somewhere the reader never chose.
+test('keeps a muted member out of the group volume', async ({ page }) => {
+  await openHub(page)
+
+  const card = page.getByTestId('playing-192.0.2.21')
+  const member = card.getByRole('slider', { name: 'Volume of Hallway' })
+  await expect(member).toHaveValue('35')
+  await card.getByRole('button', { name: 'Mute Hallway' }).click()
+  // Silence greys the slider and leaves the mute button as the only way out.
+  await expect(member).toBeDisabled()
+  const unmute = card.getByRole('button', { name: 'Unmute Hallway' })
+  await expect(unmute).toBeEnabled()
+
+  // The group follows the room that can still be heard, and only it is written.
+  const group = card.getByRole('slider', { name: 'Volume', exact: true })
+  await expect(group).toHaveValue('44')
+  await group.press('ArrowRight')
+  await expect(group).toHaveValue('45')
+  await page.waitForTimeout(4000)
+  await expect(group).toHaveValue('45')
+
+  const response = await page.request.get('/api/state')
+  const state: { devices: { name: string; volume: number | null }[] } = await response.json()
+  expect(state.devices.find(device => device.name === 'Living Room')?.volume).toBe(45)
+  expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(35)
+
+  // Unmuted, the room is back at the level it kept, and takes gestures again.
+  await unmute.click()
+  await expect(member).toBeEnabled()
+  await expect(member).toHaveValue('35')
+})
+
 // Dragging writes once, on release, but the readout follows the thumb: the value
 // the device reported only lands with the next poll, and a number that waits for
 // it answers on release while the thumb has already moved.

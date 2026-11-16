@@ -53,6 +53,11 @@ const sleepOptions = [0, 15, 30, 45, 60, 90]
 // carries the loudest speaker's level, and while the hand moves every row shows
 // the level it will land on; the device reading is not what the thumb should
 // show then.
+//
+// A row can finally be silenced: its slider stays on screen as the level the
+// speaker will come back to, greyed and out of reach, because a group gesture
+// writes no volume to a muted member and the mute button is the one control
+// left.
 export type VolumeLive = {
   onChange: (level: number) => void
   onRelease: (level: number) => void
@@ -65,6 +70,7 @@ export const VolumeControl = ({
   speaker,
   painted = null,
   ceiling: ceilingLimit = null,
+  silent = false,
   live,
 }: Readonly<{
   controls: Controls
@@ -75,6 +81,8 @@ export const VolumeControl = ({
   // where the gesture would be refused, which is not always where this device
   // stops.
   ceiling?: number | null
+  // A speaker under mute: the slider is drawn but not draggable.
+  silent?: boolean
   live?: VolumeLive
 }>) => {
   const { t } = useSettings()
@@ -158,7 +166,7 @@ export const VolumeControl = ({
           max={ceiling}
           step={1}
           value={Math.min(level, ceiling)}
-          disabled={!device.online}
+          disabled={!device.online || silent}
           aria-label={label ?? t('controls.volume')}
           onChange={event => change(Number(event.currentTarget.value))}
           onPointerUp={commit}
@@ -166,7 +174,12 @@ export const VolumeControl = ({
           onBlur={abandon}
           className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-accent disabled:cursor-not-allowed disabled:opacity-50"
         />
-        <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+        <span
+          className={cn(
+            'w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground',
+            silent && 'opacity-50'
+          )}
+        >
           {device.volume === null && painted === null ? '—' : Math.min(level, ceiling)}
         </span>
       </div>

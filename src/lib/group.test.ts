@@ -101,6 +101,15 @@ describe('groupAnchor', () => {
     expect(groupAnchor([master, offline, unread])).toEqual(master)
     expect(groupAnchor([offline, unread])).toBeNull()
   })
+
+  test('leaves a muted speaker out, the master included', () => {
+    // A silenced room has no audible level to scale the others against, so the
+    // gesture belongs to the loudest room that can still be heard.
+    const master = device({ ip: '192.0.2.10', volume: 40 })
+    const silenced = device({ ip: '192.0.2.20', volume: 80, mute: true })
+    expect(groupAnchor([master, silenced])).toEqual(master)
+    expect(groupAnchor([device({ ip: '192.0.2.10', volume: 40, mute: true }), silenced])).toBeNull()
+  })
 })
 
 describe('scaledGroupLevel', () => {

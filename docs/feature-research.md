@@ -441,7 +441,9 @@ Three consequences the implementation has to carry:
 
 - **There is no group volume.** The hub fans the value out: `setPlayerCmd:vol` to the master and one
   `multiroom:SlaveVolume` per member, each in its own coalescing family (`volume:<ip>`) so a drag
-  leaves one pending value per speaker instead of forty.
+  leaves one pending value per speaker instead of forty. A muted member is skipped on both counts: it
+  receives no write (its volume would move under the mute) and it does not carry the anchor, so a
+  silenced room keeps the level the reader left it at.
 - **There is a group mute**, because the master's own mute propagates. One write, no fan-out, and
   the measured propagation is what the code relies on rather than a documented behaviour.
 - The two paths disagree on purpose, so the code says which measurement each one follows.

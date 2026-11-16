@@ -148,6 +148,8 @@ gestures do not take the same path. Both follow the measurements in
   clamped at that speaker's own ceiling rather than refused, a speaker at zero stays at zero, and a
   gesture with nothing to scale against (no speaker read yet) lands as asked. A speaker the fleet
   cannot read keeps its last level on screen but never carries the gesture: nothing would move it.
+  A muted room leaves the gesture the same way: its slider stays on screen, greyed, and keeps the
+  level it will come back to, because nothing is written to a silenced speaker while the group moves.
   There is no level the group knows; the row of each speaker settles that room alone.
 - **Mute is one write.** The master's own mute reaches the members and the list it keeps, so one
   command silences the group, and one command restores it. Every row carries a mute button, the

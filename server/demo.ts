@@ -926,7 +926,7 @@ const applyVolume = (level: number, entry: DeviceState, bases?: Record<string, n
   const baseOf = (speaker: DeviceState): number | null => bases?.[speaker.ip] ?? speaker.volume
   let anchor: DeviceState | null = null
   for (const speaker of speakers) {
-    if (!speaker.online || baseOf(speaker) === null) continue
+    if (!speaker.online || speaker.mute || baseOf(speaker) === null) continue
     if (anchor === null || (baseOf(anchor) ?? 0) < (baseOf(speaker) ?? 0)) anchor = speaker
   }
   const from = anchor === null ? null : baseOf(anchor)
@@ -935,7 +935,10 @@ const applyVolume = (level: number, entry: DeviceState, bases?: Record<string, n
   const levels = speakers.map(speaker =>
     scaledGroupLevel(level, from, baseOf(speaker), speaker.maxVolume ?? 100)
   )
+  // The demo follows the plan the real server builds: a muted member keeps its
+  // level, the master keeps its write.
   speakers.forEach((speaker, index) => {
+    if (speaker !== entry && speaker.mute) return
     speaker.volume = levels[index]
   })
 }

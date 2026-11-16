@@ -344,6 +344,47 @@ describe('groupPlanFor, volume', () => {
       error: 'this speaker does not drive a group',
     })
   })
+
+  test('leaves a muted member out of the anchor and writes nothing to it', () => {
+    // The silenced room stays where the reader put it: it does not carry the
+    // level, and its volume does not move under the mute (the vendor app keeps
+    // it there too).
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const silenced = follower()
+    silenced.state.volume = 80
+    silenced.state.mute = true
+    expect(groupPlanFor({ intent: 'volume', level: 30 }, two, [two, silenced])).toEqual({
+      writes: [{ key: '192.0.2.10', command: 'setPlayerCmd:vol:30', family: 'volume' }],
+    })
+  })
+
+  test('turns on the loudest member that is not muted when the master is', () => {
+    // A muted master silences the group, so it cannot name the level either: the
+    // gesture follows the loudest room that is still audible, and the master
+    // keeps its own write.
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const loud = follower()
+    two.state.mute = true
+    two.state.volume = 60
+    loud.state.volume = 20
+    const plan = groupPlanFor({ intent: 'volume', level: 10 }, two, [two, loud])
+    if ('error' in plan) throw new Error(plan.error)
+    expect(plan.writes.map(write => write.command)).toEqual([
+      'setPlayerCmd:vol:30',
+      'multiroom:SlaveVolume:192.0.2.20:10',
+    ])
+  })
+
+  test('falls back to the level itself when every speaker is muted', () => {
+    const two = master([member('Bedroom', '192.0.2.20')])
+    const silenced = follower()
+    two.state.mute = true
+    silenced.state.mute = true
+    silenced.state.volume = 55
+    expect(groupPlanFor({ intent: 'volume', level: 30 }, two, [two, silenced])).toEqual({
+      writes: [{ key: '192.0.2.10', command: 'setPlayerCmd:vol:30', family: 'volume' }],
+    })
+  })
 })
 
 describe('groupPlanFor, mute', () => {

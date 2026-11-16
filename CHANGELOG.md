@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Changed
+
+- A muted room leaves the group volume. It no longer carries the anchor (a silenced speaker has no
+  audible level to scale the others against) and it receives no volume write, so unmuting it brings
+  back the level the reader left it at. Its row greys the slider and keeps the mute button as the
+  only control. The master keeps its own write and, when it is muted, the gesture follows the
+  loudest member that is not.
+
 ## [0.9.29] - 2026-11-14
 
 ### Changed

@@ -171,8 +171,14 @@ const requireMember = (target: FleetUnit, member: string): string | null => {
   return null
 }
 
-const memberWrites = (target: FleetUnit, command: (ip: string) => GroupWrite): GroupWrite[] =>
-  target.state.group.members.filter(member => member.ip !== '').map(member => command(member.ip))
+const memberWrites = (
+  target: FleetUnit,
+  command: (ip: string) => GroupWrite | null
+): GroupWrite[] =>
+  target.state.group.members
+    .filter(member => member.ip !== '')
+    .map(member => command(member.ip))
+    .filter((write): write is GroupWrite => write !== null)
 
 // A speaker's level, from the one that carries the gesture: the ratio the reader
 // set room by room. A room kept at half of the loudest stays at half, whatever
@@ -206,6 +212,10 @@ const baseOf = (unit: FleetUnit, bases?: Record<string, number>): number | null 
 // A speaker the fleet cannot read keeps its last value on screen but cannot
 // carry the gesture: nothing would move it, and its ratio would set the pace of
 // every other speaker from a level that no longer exists.
+//
+// A muted speaker is left out of it for the same reason: a room under mute has
+// no audible level to scale the others against. The vendor app keeps a muted
+// room where the reader put it, and this does too.
 const anchorOf = (
   target: FleetUnit,
   fleet: readonly FleetUnit[],
@@ -216,7 +226,7 @@ const anchorOf = (
     .filter((unit): unit is FleetUnit => unit !== null)
   let anchor: FleetUnit | null = null
   for (const unit of [target, ...members]) {
-    if (!unit.state.online) continue
+    if (!unit.state.online || unit.state.mute) continue
     const level = baseOf(unit, bases)
     if (level === null) continue
     if (anchor === null || (baseOf(anchor, bases) ?? 0) < level) anchor = unit
@@ -229,6 +239,11 @@ const anchorOf = (
 // write. Each member gets its own coalescing family: a drag then leaves one
 // pending value per speaker instead of forty, and the master's own value is not
 // overwritten by a member's.
+//
+// A muted member receives nothing. Its volume would move under the mute, and
+// the reader who unmutes it expects to find it where it was left; the master
+// keeps its write in every case, since it carries the transport and its own
+// level is what the card shows.
 const volumeWrites = (
   intent: Extract<GroupIntent, { intent: 'volume' }>,
   target: FleetUnit,
@@ -249,11 +264,17 @@ const volumeWrites = (
   return {
     writes: [
       own,
-      ...memberWrites(target, ip => ({
-        key: target.key,
-        command: `multiroom:SlaveVolume:${ip}:${scaledFor(unitAt(fleet, ip))}`,
-        family: `volume:${ip}`,
-      })),
+      ...memberWrites(target, ip => {
+        const member = unitAt(fleet, ip)
+        // A member the fleet does not read is not proven muted: it keeps the
+        // write, which is what it got before this rule.
+        if (member?.state.mute) return null
+        return {
+          key: target.key,
+          command: `multiroom:SlaveVolume:${ip}:${scaledFor(member)}`,
+          family: `volume:${ip}`,
+        }
+      }),
     ],
   }
 }
