@@ -744,6 +744,59 @@ test('lists the addresses it polls, and says which ones it does not own', async 
   await expect(dialog.getByText('The hub refused: the demo does not manage hosts')).toBeVisible()
 })
 
+// A phone in a room is 360 CSS pixels wide, and the card has to fit in it. The
+// track title never wraps, so a grid whose column has no explicit width sizes
+// itself on that title: the card grows past the screen, the page scrolls
+// sideways, and the transport row is cut off at the right edge. The title is
+// patched into a real answer because the demo's own titles are short enough to
+// hide the bug.
+test('keeps a long track title inside a phone screen', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 })
+  const long = '(FREE) TIF x Ino Casablanca Type Beat - "Némésis" [Prod. by Nayz]'
+  const state: { devices: Record<string, unknown>[] } = await (
+    await page.request.get('/api/state')
+  ).json()
+  const devices = state.devices.map((device, index) =>
+    index === 0 ? { ...device, title: long, artist: `${long} (remix)` } : device
+  )
+  await page.route('**/api/state', route => route.fulfill({ json: { ...state, devices } }))
+
+  await openHub(page)
+
+  // What the reader can scroll past, in CSS pixels: zero means the page and the
+  // screen are the same width.
+  const sideways = (): Promise<number> =>
+    page.evaluate(() => {
+      const doc = document.documentElement
+      return Math.max(doc.scrollWidth, document.body.scrollWidth) - doc.clientWidth
+    })
+
+  await expect(page.getByText(long, { exact: true })).toBeVisible()
+  expect(await sideways()).toBe(0)
+
+  // Truncated, not wrapped: the title stays on one line and its hidden tail is
+  // the price of the card fitting the screen.
+  const tail = await page.getByText(long, { exact: true }).evaluate(el => ({
+    hidden: el.scrollWidth - el.clientWidth,
+    lines: el.getClientRects().length,
+  }))
+  expect(tail.hidden).toBeGreaterThan(0)
+  expect(tail.lines).toBe(1)
+
+  // The diagnostic view lists the same speakers with longer labels.
+  await page.getByRole('button', { name: 'Diagnostic' }).click()
+  expect(await sideways()).toBe(0)
+
+  // French labels are the longer ones, and the grid must hold them too.
+  await page.evaluate(() => window.localStorage.setItem('wiim-hub:lang', 'fr'))
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fr')
+  await page.getByRole('button', { name: 'En lecture' }).click()
+  expect(await sideways()).toBe(0)
+  await page.getByRole('button', { name: 'Diagnostic' }).click()
+  expect(await sideways()).toBe(0)
+})
+
 test('lifts a sheet above the on-screen keyboard on a phone', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 760 })
   await openHub(page)

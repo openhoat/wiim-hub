@@ -161,7 +161,7 @@ const Hub = () => {
           {hub.error !== null && <HubBanner onRetry={hub.refresh} since={hub.shownAt} now={now} />}
 
           {hub.loading && hub.state === null && (
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
               <LoadingCards />
             </div>
           )}
@@ -174,10 +174,13 @@ const Hub = () => {
 
           {ordered.length > 0 &&
             (view === 'user' ? (
+              // `grid-cols-1` is load-bearing: without it the implicit column
+              // follows the min-content width of the card, and the nowrap track
+              // title stretches the whole page sideways on a phone.
               <div
                 className={cn(
                   ordered.length > 1
-                    ? 'grid items-start gap-4 xl:grid-cols-2'
+                    ? 'grid grid-cols-1 items-start gap-4 xl:grid-cols-2'
                     : 'mx-auto max-w-3xl space-y-4'
                 )}
               >
