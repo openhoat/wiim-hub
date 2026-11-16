@@ -10,6 +10,16 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.32] - 2026-11-16
+
+### Changed
+
+- The maximum volume of a speaker is described as the setting it is, not as a slider ceiling, in
+  the speaker's sheet.
+- The demo fleet carries a member whose reported maximum volume sits below its own level: that is
+  the shape that pinned a row to the right of a short slider in 0.9.31, and a browser test now
+  holds the full scale and a write above the setting.
+
 ## [0.9.31] - 2026-11-16
 
 ### Fixed
@@ -825,7 +835,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.31...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.32...HEAD
+[0.9.32]: https://github.com/openhoat/wiim-hub/compare/v0.9.31...v0.9.32
 [0.9.31]: https://github.com/openhoat/wiim-hub/compare/v0.9.30...v0.9.31
 [0.9.30]: https://github.com/openhoat/wiim-hub/compare/v0.9.29...v0.9.30
 [0.9.29]: https://github.com/openhoat/wiim-hub/compare/v0.9.28...v0.9.29
