@@ -24,12 +24,13 @@ the normal case.
 
 ## Two views, one dataset
 
-A **now playing** view for everyday use: art, track, progress, volume, presets, sleep timer, audio
-route, and a stream URL the speaker fetches itself. A running group is one card, with its speakers
-as rows, each carrying its own volume. A **diagnostic** view for support: raw fields, signal
-history, event log, and findings that quote the number they come from. A card folds to its header
-in the diagnostic view, and the arrows in a now playing header set an order the page keeps per
-browser, so the speaker you care about stays first.
+A **now playing** view for everyday use: art, track, progress and volume, and on each speaker's own
+sheet its presets, sleep timer, audio route, and a stream URL the speaker fetches itself. A running
+group is one card, with its speakers as rows, each carrying its own volume and opening its sheet.
+A **diagnostic** view for support: raw fields, signal history, event log, and findings that quote
+the number they come from. A card folds to its header in the diagnostic view, and the arrows in a
+now playing header set an order the page keeps per browser, so the speaker you care about stays
+first.
 
 |                                       |                                               |
 | ------------------------------------- | --------------------------------------------- |

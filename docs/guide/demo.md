@@ -25,9 +25,9 @@ state. All three report a deterministic signal history, so the sparkline has a s
 noise, and the offline card carries the findings a real one would: a device that does not answer,
 and a group that is saved without running.
 
-Living Room drives a group, so its equalizer and its settings open from its own row, one gesture
-under the room's name; the card above keeps the player. Bedroom drives nothing and keeps the sound
-card under its player, which the capture below shows on the right.
+Living Room drives a group, so its own controls, its equalizer and its settings open from its row,
+one gesture under the room's name; the card above keeps the player. Bedroom drives nothing and
+keeps its controls and the sound card under its player, which the capture below shows on the right.
 
 What is **not** faked is the path a write takes. The demo goes through the same action parser and
 the same command builder as the hub: the volume ceiling, the available inputs and outputs and the
