@@ -158,8 +158,8 @@ gestures take the same path. Each follows a measurement in
   level it will come back to, because nothing is written to a silenced speaker while the group moves.
   There is no level the group knows; the row of each speaker settles that room alone.
 - **Mute has two scopes, and two wires.** The button above the list carries the group: one LinkPlay
-  write on the master, because its mute reaches the members and the list it keeps, and its state is
-  the one every online speaker reports rather than the master's own. Every row carries a mute of its
+  write on the master, because that mute reaches the members, and its state is the one every online
+  speaker reports rather than the master's own. Every row carries a mute of its
   own, the master's included, and each of them silences one room: sent over LinkPlay, the master's
   row mute would have reached the whole group, so a room mute leaves by UPnP
   `RenderingControl.SetMute`, which silences the speaker it is addressed to and nobody else
