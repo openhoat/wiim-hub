@@ -10,6 +10,15 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The card the page plays is published to the lock screen of a phone: the track, the artist, the
+  cover and the card's name, with play, pause, previous, next, stop and the three seeks reaching the
+  fleet through the same writes as the buttons of the page. One card is published, the first in the
+  page's order that plays, otherwise the first that carries a track, so a paused stream stays
+  resumable and a title that empties between two tracks does not blink the player away. A browser
+  without the Media Session API keeps the page it had.
+
 ## [0.10.0] - 2026-11-20
 
 ### Added

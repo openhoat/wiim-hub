@@ -109,6 +109,24 @@ export const fleetCards = (devices: readonly Device[]): FleetCard[] => {
 export const drivesGroup = (card: FleetCard): boolean =>
   card.master.group.role === 'master' && card.members.length > 0
 
+// The card the page publishes to the lock screen. A phone shows one player, so
+// the selection is the page's own order, not a second layout: the first card
+// whose speaker plays, else the first that carries a track (a paused Cast keeps
+// its title, and stays resumable from the lock screen), and nothing when the
+// fleet plays nothing, because a transport on a track that stopped lies.
+//
+// A track that ends empties the title for a few seconds before the next one
+// arrives (measured): the playing card keeps its place, and the title it had
+// stays on the lock screen until the next one is known.
+export const mediaCard = (cards: readonly FleetCard[]): FleetCard | null => {
+  const online = cards.filter(card => card.master.online)
+  return (
+    online.find(card => card.master.status === 'play') ??
+    online.find(card => card.master.title !== '') ??
+    null
+  )
+}
+
 // The name the card announces: the group's when the speaker drives one, since
 // that is the thing the reader sees in the room, and the speaker's otherwise.
 export const cardTitle = (card: FleetCard): string => {

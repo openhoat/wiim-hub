@@ -15,6 +15,7 @@ and the behaviours measured on a real player are recorded in the
 | [Controls that answer first](/how-it-works#the-page)        | A control paints the value you asked for, and the next poll confirms or reverts it                        |
 | [The fleet pushed, not polled](/how-it-works#the-poll-loop) | One frame per hub tick, with the three-second poll kept as the fallback                                   |
 | [A phone, really](/how-it-works#the-page)                   | Sheets sit above the on screen keyboard instead of under it                                               |
+| [The lock screen follows the card](/how-it-works#the-page)  | Track, artist and cover on the lock screen, with play, pause, next and seek reaching the same fleet       |
 | [Language and theme](/how-it-works#the-page)                | English or French, light or dark, following the browser unless you say otherwise                          |
 | [Installed like an app](/how-it-works#updates)              | The shell opens without a network, the last state stays readable and its clock stops                      |
 | [Updates without a reinstall](/how-it-works#updates)        | A new worker waits for your click, then reloads once, keeping the view and the last state                 |

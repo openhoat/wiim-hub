@@ -218,6 +218,17 @@ engines that ignore the hint, publishing `--keyboard-inset` and `--visible-heigh
 above the keyboard and never grows past the visible screen, so the field that was just focused
 stays on screen with its button.
 
+The playing card also reaches the lock screen of a phone, through the Media Session API
+(`src/lib/media-session.ts`, `src/lib/use-media-session.ts`). The session carries the track, the
+artist, the cover and the card's name in the album slot, so a group is announced as the room rather
+than as the speaker driving it. The transport the lock screen shows sends the same writes as the
+buttons of the card, through the same hook, including the three seek gestures. Exactly one card is
+published: the first in the page's order that plays, otherwise the first that carries a track, so a
+paused stream stays resumable and a track title that empties between two tracks does not blink the
+player away. The cover is resolved to an absolute address, because the speaker serves plain http on
+another origin and the lock screen cannot fetch that. A browser without the API keeps the page it
+had: nothing to configure.
+
 ## Updates
 
 Deploying a new image reaches the installed app on its next launch: the document is served network

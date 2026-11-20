@@ -8,8 +8,3 @@ Detailed requirements live in `docs/feature-research.md`; cards stay coarse and 
 Fine grained work in progress goes to the gitignored `.scratch/<slug>/` directory, never here.
 
 ## Backlog
-
-### #2 [UX] Add media session controls, from the lock screen of a phone (P3)
-
-- [ ] Publish the transport of the card the page drives as a media session, so play, pause and
-      next reach the group from the lock screen while the PWA is open

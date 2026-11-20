@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { cardTitle, drivesGroup, fleetCards, sameMember } from './cards.ts'
+import { cardTitle, drivesGroup, fleetCards, mediaCard, sameMember } from './cards.ts'
 import type { Device, GroupState } from './types'
 
 // A speaker as the hub serves it, minimal: only the group fields and the track
@@ -226,5 +226,37 @@ describe('cardTitle', () => {
     expect(cardTitle(unnamed[0])).toBe('Living Room')
     const alone = fleetCards([device('192.0.2.22', 'Bedroom')])
     expect(cardTitle(alone[0])).toBe('Bedroom')
+  })
+})
+
+describe('mediaCard', () => {
+  test('publishes the card that plays, wherever it sits in the order', () => {
+    const cards = fleetCards([
+      device('192.0.2.22', 'Bedroom', { title: 'Paper Lanterns', status: 'pause' }),
+      device('192.0.2.21', 'Living Room', { title: 'Late Ferry', status: 'play' }),
+    ])
+    expect(mediaCard(cards)?.master.name).toBe('Living Room')
+  })
+
+  test('keeps a paused track, which is what the lock screen resumes', () => {
+    const cards = fleetCards([
+      device('192.0.2.21', 'Living Room', { title: '', status: 'stop' }),
+      device('192.0.2.22', 'Bedroom', { title: 'Paper Lanterns', status: 'pause' }),
+    ])
+    expect(mediaCard(cards)?.master.name).toBe('Bedroom')
+  })
+
+  test('publishes a playing card whose title just emptied between two tracks', () => {
+    const cards = fleetCards([device('192.0.2.21', 'Living Room', { title: '', status: 'play' })])
+    expect(mediaCard(cards)?.master.name).toBe('Living Room')
+  })
+
+  test('publishes nothing when the fleet is silent, or when the speaker is offline', () => {
+    expect(mediaCard(fleetCards([device('192.0.2.21', 'Living Room')]))).toBeNull()
+    const offline = fleetCards([
+      device('192.0.2.21', 'Living Room', { title: 'Late Ferry', online: false }),
+    ])
+    expect(mediaCard(offline)).toBeNull()
+    expect(mediaCard([])).toBeNull()
   })
 })

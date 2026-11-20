@@ -4,13 +4,14 @@ import { DiagnosticCard } from '@/components/diagnostic-card'
 import { EmptyState } from '@/components/empty-state'
 import { Header } from '@/components/header'
 import { HubBanner } from '@/components/hub-banner'
+import { MediaSession } from '@/components/media-session'
 import { NowPlayingCard } from '@/components/now-playing-card'
 import { SoundCard } from '@/components/sound-card'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Toaster } from '@/components/ui/toaster'
 import { UpdateBanner } from '@/components/update-banner'
-import { drivesGroup, fleetCards } from '@/lib/cards'
+import { drivesGroup, fleetCards, mediaCard } from '@/lib/cards'
 import { cn } from '@/lib/cn'
 import { inputLabel, isExternalInput } from '@/lib/labels'
 import { sortDevices } from '@/lib/layout'
@@ -76,6 +77,9 @@ const Hub = () => {
   // and with the members appended.
   const layout = useLayout(cards)
   const ordered = layout.devices
+  // The card the lock screen shows: one player, chosen from the same order the
+  // page draws, so a phone and the page never disagree about what plays.
+  const onAir = mediaCard(ordered)
   const orderedDevices = sortDevices(
     devices,
     ordered.map(card => card.ip)
@@ -151,6 +155,10 @@ const Hub = () => {
       />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+        {/* Nothing to draw: the component publishes the transport of the card
+            the fleet is playing, whichever view the reader sits in. */}
+        <MediaSession card={onAir} now={clock} />
+
         <p className="sr-only" aria-live="polite">
           {announce}
         </p>

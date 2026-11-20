@@ -32,6 +32,7 @@ export default defineConfig({
         'src/lib/group.ts',
         'src/lib/i18n.ts',
         'src/lib/labels.ts',
+        'src/lib/media-session.ts',
         'src/lib/optimistic.ts',
         'src/lib/services.ts',
         'src/lib/snapshot.ts',
