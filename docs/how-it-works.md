@@ -231,12 +231,14 @@ lock screen cannot fetch that. A browser without the API keeps the page it had: 
 configure.
 
 Android only builds that player for a tab that makes a sound: a page that stays silent is a remote
-control, not a player, and no notification is created however complete the session is. The music
-leaves by the speakers, so the page carries the quietest track that keeps it a player: two seconds
-of a sine, about -72 dBFS, looped and played at a volume nobody hears, while the published card
-plays (`src/lib/speaker.ts`, `src/components/invisible-speaker.tsx`). A browser that has not seen a
-gesture yet refuses to start a sound, so the page arms the first pointer down instead of asking for
-one. The tab has to stay open: closing it closes the player, as it would for any page.
+control, not a player, and no notification is created however complete the session is. Chrome
+decides on the output power, against a line drawn at `kSilenceThresholdDBFS`, -72.24719896 dBFS, and
+a quiet track below it counts as silence. The music leaves by the speakers, so the page carries a
+track that clears the meter and not the ear: two seconds of a forty hertz sine, about -53 dBFS,
+looped and played at a volume nobody hears, while the published card plays (`src/lib/speaker.ts`,
+`src/components/invisible-speaker.tsx`). A browser that has not seen a gesture yet refuses to start
+a sound, so the page arms the first pointer down instead of asking for one. The tab has to stay
+open: closing it closes the player, as it would for any page.
 
 ## Updates
 

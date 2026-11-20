@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- The lock screen player still did not appear on Android: the inaudible track sat at about -72
+  dBFS, just under the line Chrome draws for silence (`kSilenceThresholdDBFS`, -72.24719896 dBFS in
+  `services/audio/output_stream.cc`), so the tab was still reported silent and no notification was
+  built. The track is now forty hertz at about -53 dBFS, a frequency no phone speaker renders,
+  nineteen decibels clear of that line.
+
 ## [0.11.2] - 2026-11-20
 
 ### Fixed

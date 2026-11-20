@@ -7,6 +7,10 @@ const text = (bytes: Uint8Array, offset: number, length: number): string =>
 const view = (bytes: Uint8Array): DataView =>
   new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
 
+// The line Chrome draws between a silent stream and a page that plays:
+// kSilenceThresholdDBFS in services/audio/output_stream.cc.
+const silenceThresholdDbfs = -72.24719896
+
 describe('the quiet track', () => {
   test('is a mono 16 bit WAV a browser can decode', () => {
     const bytes = quietTrack()
@@ -26,21 +30,27 @@ describe('the quiet track', () => {
     expect(header.getUint32(4, true)).toBe(36 + 32000)
   })
 
-  test('is quiet, and not silent: Chrome drops a tab that plays nothing', () => {
+  test('clears the silence detector that decides whether a tab is a player', () => {
     const bytes = quietTrack()
     const header = view(bytes)
     const frames = header.getUint32(40, true) / 2
+    let sum = 0
     let loudest = 0
-    let nonZero = 0
     for (let frame = 0; frame < frames; frame += 1) {
       const sample = header.getInt16(44 + frame * 2, true)
+      sum += sample * sample
       loudest = Math.max(loudest, Math.abs(sample))
-      if (sample !== 0) nonZero += 1
     }
-    expect(loudest).toBeLessThanOrEqual(8)
-    expect(loudest).toBeGreaterThan(0)
+    const level = (gain: number): number =>
+      10 * Math.log10((sum / frames / (32768 * 32768)) * gain * gain)
+    // Ten decibels of margin, whichever side of the mixer the meter reads: a
+    // stream under the line is silence, and silence is the bug this track fixes.
+    expect(level(1)).toBeGreaterThan(silenceThresholdDbfs + 10)
+    expect(level(speakerVolume)).toBeGreaterThan(silenceThresholdDbfs + 10)
     // A sine spends most of its samples away from zero, unlike a silence.
-    expect(nonZero).toBeGreaterThan(frames / 2)
+    expect(loudest).toBeGreaterThan(0)
+    // Still a whisper of full scale, and far below the band a phone renders.
+    expect(loudest / 32768).toBeLessThan(0.01)
   })
 
   test('loops on a zero crossing, so the seam does not click', () => {
@@ -48,10 +58,10 @@ describe('the quiet track', () => {
     const header = view(bytes)
     const frames = header.getUint32(40, true) / 2
     expect(header.getInt16(44, true)).toBe(0)
-    expect(header.getInt16(44 + (frames - 1) * 2, true)).toBe(-1)
-    // One more frame of the same sine would be the first sample again.
-    const next = Math.round(8 * Math.sin((2 * Math.PI * frames * 200) / 8000))
-    expect(next).toBeCloseTo(0, 6)
+    // The last frame is one sample short of closing the cycle, and the frame
+    // after it would be the first sample again.
+    expect(Math.abs(header.getInt16(44 + (frames - 1) * 2, true))).toBeLessThan(12)
+    expect(Math.round(260 * Math.sin((2 * Math.PI * frames * 40) / 8000))).toBeCloseTo(0, 6)
   })
 
   test('is played below the speaker level the page applies', () => {

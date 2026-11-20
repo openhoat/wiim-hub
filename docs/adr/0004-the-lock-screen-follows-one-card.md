@@ -52,13 +52,22 @@ Android phone. Measured cause: Chrome builds the media notification for a tab th
 for a page that merely describes one. The hub makes no sound, because the music leaves by the
 speakers, so the phone treated the tab as a remote control and never built a player.
 
-The page now carries an inaudible one: `quietTrack()` builds two seconds of a 200 Hz sine at about
--72 dBFS as a mono WAV, played by a looping `<audio>` element at volume `0.4`, so the phone renders
-nothing at any volume setting of its own. The element plays while the published card plays and
-stays paused otherwise, which keeps the notification of a paused stream and stops the page from
-pretending to play when nothing does. The signal is not digital silence: Chrome discards a silent
-tab. Two seconds hold four hundred whole cycles, so the loop seam falls on a zero crossing and does
-not click.
+The page now carries an inaudible one: `quietTrack()` builds two seconds of a sine as a mono WAV,
+played by a looping `<audio>` element at volume `0.4`, so the phone renders nothing at any volume
+setting of its own. The element plays while the published card plays and stays paused otherwise,
+which keeps the notification of a paused stream and stops the page from pretending to play when
+nothing does.
+
+The level is the whole difficulty, and the first attempt missed it. A track at about -72 dBFS still
+showed nothing: Chrome does not test for digital silence, it watches the output power.
+`services/audio/output_stream.cc` holds the line at `kSilenceThresholdDBFS`, -72.24719896 dBFS, and
+a stream under it is reported silent, so the tab never becomes a player.
+`media/base/audio_power_monitor.cc` averages the raw samples and filters nothing, so the frequency
+of the signal does not matter to the meter. The track therefore sits at forty hertz, a frequency no
+phone speaker renders, at about -53 dBFS with the element volume applied: nineteen decibels above
+the line, and twenty-seven without the volume, so it passes whichever side of the mixer the meter
+reads. The ear stays out of it. Two seconds hold eighty whole cycles, so the loop seam falls on a
+zero crossing and does not click.
 
 A browser that has not seen a gesture refuses to start a sound, so the page arms the first pointer
 down rather than asking the reader for one: the music is already playing, nothing on screen should

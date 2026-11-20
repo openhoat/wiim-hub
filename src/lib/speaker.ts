@@ -2,15 +2,23 @@
 // sound: a tab that stays silent is a remote control, not a player, and no
 // notification is ever created, however complete the media session is. The hub
 // makes no sound of its own, because the music leaves by the speakers, so the
-// page carries the quietest track that keeps it a player: two seconds of a
-// plain sine, looped, played at a volume nobody hears. Measured on Chrome for
-// Android, recorded in ADR 0004.
+// page carries a track loud enough for the meter and silent to the ear: two
+// seconds of a plain sine, looped, played at a volume nobody hears.
+//
+// "Silent" is measured, not declared. services/audio/output_stream.cc compares
+// the output power with kSilenceThresholdDBFS, -72.24719896 dBFS, and a stream
+// below that line never wakes the notification; media/base/audio_power_monitor
+// averages the raw samples, so the frequency itself is not filtered out. Forty
+// hertz is a frequency no phone speaker renders, which leaves the meter as the
+// only listener. Measured on Chrome for Android, recorded in ADR 0004.
 const rate = 8000
-const frequency = 200
+const frequency = 40
 const seconds = 2
-// Sixteen bits of a sine, about -72 dBFS: below what a phone speaker renders,
-// and nowhere near digital silence, which Chrome discards.
-const amplitude = 8
+// Sixteen bits of a sine: about -53 dBFS once the element volume below applies,
+// nineteen decibels clear of the line Chrome draws. The same signal without the
+// volume applied clears it by twenty-seven, so the track passes whichever side
+// of the mixer the meter reads.
+const amplitude = 260
 
 // The element volume applied on top of the quiet track: the two multiply, so
 // the phone stays silent even with its own volume up.
@@ -22,9 +30,9 @@ const ascii = (view: DataView, offset: number, text: string): void => {
   }
 }
 
-// A 2 second mono WAV. 200 Hz at 8 kHz is exactly forty samples a cycle, so two
-// seconds hold four hundred whole cycles and the loop seam falls on a zero
-// crossing: no click once a second, which would be audible even this quiet.
+// A 2 second mono WAV. 40 Hz at 8 kHz is exactly two hundred samples a cycle, so
+// two seconds hold eighty whole cycles and the loop seam falls on a zero
+// crossing: no click twice a second, which would be audible even this quiet.
 export const quietTrack = (): Uint8Array<ArrayBuffer> => {
   const frames = rate * seconds
   const bytes = new Uint8Array(44 + frames * 2)
