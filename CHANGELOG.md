@@ -10,6 +10,16 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Changed
+
+- The level of a row now opens a pop-in with a track wide enough for a thumb: a drag lands on the
+  next multiple of five, a tap on either side of the thumb moves one step, and a tap on the thumb
+  itself moves nothing. The keyboard carries both steps (arrows one, Page Up and Page Down a crank,
+  Home and End the bounds), the readout follows the gesture before the write leaves, and past the
+  loud level nothing is written until the reader confirms. The row keeps the level it shows; the
+  inline track is no longer a control of its own. Groups keep their fan-out: a gesture paints every
+  row from the levels it started from, and a muted speaker stays out of it.
+
 ## [0.9.34] - 2026-11-16
 
 ### Changed

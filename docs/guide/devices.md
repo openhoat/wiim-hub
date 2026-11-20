@@ -103,8 +103,8 @@ remembered on the speaker that drives it, and its transport reads `mode 99, stop
 because the stream runs on the master. Read alone, such a speaker looks like a stopped player in no
 group. The hub polls the whole fleet, so it completes the picture from the master's own answer, and
 draws the group as one card: the group's name heads it, the speaker that drives it sits under it,
-and every speaker is a row with its own volume, the master included — the slider at the top of the
-card is the group's level, fanned out, so the room that drives the group needs a level of its own.
+and every speaker is a row with its own level, the master included — the level at the top of the
+card is the group's, fanned out, so the room that drives the group needs a level of its own.
 A member that plays something of its own keeps its own card, because its answer wins over the group
 it is supposed to follow. The copy lives in a separate `mirror`, so the diagnostic view and the
 exported report still say what the device itself answered.
@@ -146,7 +146,7 @@ gestures do not take the same path. Both follow the measurements in
 [the research notes](../feature-research.md), section 5.8.1:
 
 - **Volume fans out, in proportion, from the loudest room.** `setPlayerCmd:vol` on the master moves
-  the master alone, and `setPlayerCmd:slave_vol` does no better. The slider carries the level of the
+  the master alone, and `setPlayerCmd:slave_vol` does no better. The level carries that of the
   loudest speaker the hub still reads, so a group kept at 40 in one room and 60 in another turns on
   the room at 60. The hub sends every speaker its level, each scaled from that anchor's level before
   the write: a room kept at two thirds of it stays at two thirds, so moving the group keeps the
@@ -154,7 +154,7 @@ gestures do not take the same path. Both follow the measurements in
   clamped at that speaker's own ceiling rather than refused, a speaker at zero stays at zero, and a
   gesture with nothing to scale against (no speaker read yet) lands as asked. A speaker the fleet
   cannot read keeps its last level on screen but never carries the gesture: nothing would move it.
-  A muted room leaves the gesture the same way: its slider stays on screen, greyed, and keeps the
+  A muted room leaves the gesture the same way: its row stays on screen, greyed, and keeps the
   level it will come back to, because nothing is written to a silenced speaker while the group moves.
   There is no level the group knows; the row of each speaker settles that room alone.
 - **Mute is one write.** The master's own mute reaches the members and the list it keeps, so one
@@ -167,6 +167,17 @@ sends the level as it changes, one write in flight and a short beat between two,
 instead of waiting for the release; above the confirmation threshold nothing is sent until the reader
 agrees. Releasing sends the level once more, and the hub reads the fleet back, which is where the
 painted levels give way to what the speakers report.
+
+### Setting a level
+
+Every level on the page is a row that opens a track wide enough for a thumb. A drag lands on the
+next multiple of five, a tap on either side of the thumb moves one step, and a tap on the thumb
+itself moves nothing. The keyboard carries both steps: the arrows move one, Page Up and Page Down a
+crank, Home and End the bounds. The readout above the track follows the gesture before the write
+leaves, and past the loud level it shows the level asked for while nothing is written until the
+reader confirms. A row-wide track was too narrow to aim at on a phone, and one step at a time was
+too slow across the scale; the pop-in is the dial the vendor app opens, with the two gestures on one
+track.
 
 ### Forming and breaking a group
 
