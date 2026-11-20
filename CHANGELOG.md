@@ -10,6 +10,15 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- The lock screen player still did not appear on Android, even with the track clear of the silence
+  line: Chrome discards a sound it reads as too short to be playback, and the inaudible track lasted
+  two seconds. Measured on a phone, with a probe served from the hub's own origin: a thirty second
+  file showed the player, whether served over the network or handed over as a blob, a two second
+  loop showed nothing, and the media session, the sample rate and the `loop` attribute changed
+  nothing. The track now lasts thirty seconds at the same level and the same forty hertz.
+
 ## [0.11.3] - 2026-11-20
 
 ### Fixed

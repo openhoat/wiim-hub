@@ -24,10 +24,20 @@ describe('the quiet track', () => {
     expect(header.getUint32(28, true)).toBe(16000)
     expect(header.getUint16(34, true)).toBe(16)
     expect(text(bytes, 36, 4)).toBe('data')
-    // Two seconds, and the sizes the header announces are the ones on disk.
-    expect(header.getUint32(40, true)).toBe(32000)
-    expect(bytes.byteLength).toBe(44 + 32000)
-    expect(header.getUint32(4, true)).toBe(36 + 32000)
+    // Thirty seconds, and the sizes the header announces are the ones in memory.
+    expect(header.getUint32(40, true)).toBe(480000)
+    expect(bytes.byteLength).toBe(44 + 480000)
+    expect(header.getUint32(4, true)).toBe(36 + 480000)
+  })
+
+  test('lasts long enough for chrome to treat the tab as a player', () => {
+    const header = view(quietTrack())
+    const frames = header.getUint32(40, true) / 2
+    const seconds = frames / header.getUint32(24, true)
+    // Measured on Chrome for Android: two seconds at the same level showed no
+    // lock screen player, thirty seconds showed one every time. The threshold
+    // sits between the two, so the track keeps a wide margin over it.
+    expect(seconds).toBeGreaterThanOrEqual(30)
   })
 
   test('clears the silence detector that decides whether a tab is a player', () => {

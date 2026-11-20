@@ -52,7 +52,7 @@ Android phone. Measured cause: Chrome builds the media notification for a tab th
 for a page that merely describes one. The hub makes no sound, because the music leaves by the
 speakers, so the phone treated the tab as a remote control and never built a player.
 
-The page now carries an inaudible one: `quietTrack()` builds two seconds of a sine as a mono WAV,
+The page now carries an inaudible one: `quietTrack()` builds half a minute of a sine as a mono WAV,
 played by a looping `<audio>` element at volume `0.4`, so the phone renders nothing at any volume
 setting of its own. The element plays while the published card plays and stays paused otherwise,
 which keeps the notification of a paused stream and stops the page from pretending to play when
@@ -66,10 +66,25 @@ a stream under it is reported silent, so the tab never becomes a player.
 of the signal does not matter to the meter. The track therefore sits at forty hertz, a frequency no
 phone speaker renders, at about -53 dBFS with the element volume applied: nineteen decibels above
 the line, and twenty-seven without the volume, so it passes whichever side of the mixer the meter
-reads. The ear stays out of it. Two seconds hold eighty whole cycles, so the loop seam falls on a
-zero crossing and does not click.
+reads. The ear stays out of it.
+
+The length then cost a third attempt. With the level fixed, the player still never appeared, and a
+probe served from the hub's own origin narrowed it in one pass: a thirty second file served over the
+network showed the player, the same file handed over as a blob showed it too, a two second blob in a
+loop showed nothing, and repeating the experiment with and without a media session, at 8 and 48 kHz,
+with and without the `loop` attribute, changed nothing. Duration was the only variable left: Chrome
+discards a sound it reads as too short to be playback. Two seconds fail, thirty pass, and the
+threshold lies between the two; the track takes the wide side of that gap rather than chase the
+frontier. Half a minute holds twelve hundred whole cycles of forty hertz, so the loop seam still
+falls on a zero crossing and does not click.
 
 A browser that has not seen a gesture refuses to start a sound, so the page arms the first pointer
 down rather than asking the reader for one: the music is already playing, nothing on screen should
 have to be pressed. The tab must stay open, which every page that publishes a media session
 inherits.
+
+The lock screen of the test phone (Pixel 9 Pro) showed no media player for any application, YouTube
+Music included, while the unlocked shade showed the same players. That is a setting of the phone
+rather than something a page can change: the player exists, and the phone chooses where to display
+it. The session and the track are therefore validated in the shade, and the lock screen follows the
+device's own policy.
