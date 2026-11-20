@@ -477,6 +477,11 @@ test('shows an external input as a source instead of an empty player', async ({ 
   // reference player (mode 43, real transport state, no track, and the position
   // residue the firmware keeps sending) is patched into a real /api/state
   // answer, so the rest of the card still comes from the demo.
+  //
+  // The stream is cut first: it feeds the page on its own, so a single frame
+  // arriving after the load would replace the patched answer with the demo
+  // fleet, and the optical card would vanish under the assertion.
+  await page.route('**/api/events', route => route.fulfill({ status: 404, body: 'not found' }))
   const state: { devices: Record<string, unknown>[] } = await (
     await page.request.get('/api/state')
   ).json()
