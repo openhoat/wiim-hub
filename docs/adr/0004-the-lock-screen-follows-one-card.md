@@ -44,3 +44,23 @@ play.
   changes what the lock screen announces, and that is the only lever.
 - The browser suite drives the captured handlers and checks the write on `/api/state`, which is why
   the test proves a gesture rather than the shape of a session.
+
+## Addendum: a page has to make a sound to be a player (2026-11-20)
+
+The first release set the session and the handlers and nothing appeared on the lock screen of an
+Android phone. Measured cause: Chrome builds the media notification for a tab that plays audio, not
+for a page that merely describes one. The hub makes no sound, because the music leaves by the
+speakers, so the phone treated the tab as a remote control and never built a player.
+
+The page now carries an inaudible one: `quietTrack()` builds two seconds of a 200 Hz sine at about
+-72 dBFS as a mono WAV, played by a looping `<audio>` element at volume `0.4`, so the phone renders
+nothing at any volume setting of its own. The element plays while the published card plays and
+stays paused otherwise, which keeps the notification of a paused stream and stops the page from
+pretending to play when nothing does. The signal is not digital silence: Chrome discards a silent
+tab. Two seconds hold four hundred whole cycles, so the loop seam falls on a zero crossing and does
+not click.
+
+A browser that has not seen a gesture refuses to start a sound, so the page arms the first pointer
+down rather than asking the reader for one: the music is already playing, nothing on screen should
+have to be pressed. The tab must stay open, which every page that publishes a media session
+inherits.

@@ -10,6 +10,14 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- The lock screen player never appeared on Android, whatever the page published: Chrome builds it
+  for a tab that plays audio, and the hub played none, since the music leaves by the speakers. The
+  page now loops an inaudible track (a 200 Hz sine at about -72 dBFS, at volume 0.4) while the
+  published card plays, paused otherwise, which is what makes the tab a player. A browser that has
+  not seen a gesture starts it on the first pointer down.
+
 ## [0.11.1] - 2026-11-20
 
 ### Fixed

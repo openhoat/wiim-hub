@@ -1,4 +1,6 @@
+import { InvisibleSpeaker } from '@/components/invisible-speaker'
 import { cardTitle, type FleetCard } from '@/lib/cards'
+import { speakerPlays } from '@/lib/speaker'
 import { useControls } from '@/lib/use-controls'
 import { useMediaSession } from '@/lib/use-media-session'
 
@@ -19,5 +21,11 @@ const Published = ({ card, now }: Readonly<{ card: FleetCard; now: number }>) =>
   return null
 }
 
-export const MediaSession = ({ card, now }: Readonly<{ card: FleetCard | null; now: number }>) =>
-  card === null ? null : <Published card={card} now={now} />
+export const MediaSession = ({ card, now }: Readonly<{ card: FleetCard | null; now: number }>) => (
+  <>
+    {/* The phone only grows a lock screen player for a tab that makes a sound,
+        and the hub makes none: the quiet track is its voice. */}
+    <InvisibleSpeaker playing={card !== null && speakerPlays(card.master.status)} />
+    {card === null ? null : <Published card={card} now={now} />}
+  </>
+)

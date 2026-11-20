@@ -55,6 +55,21 @@ const session = {
     }, details),
 }
 
+// The quiet track the page plays so the phone treats the tab as a player: the
+// lock screen is built for pages that make a sound, and the hub's music leaves
+// by the speakers.
+const speaker = (page: Page) =>
+  page.evaluate(() => {
+    const element = document.querySelector<HTMLAudioElement>('[data-testid="invisible-speaker"]')
+    if (element === null) return null
+    return {
+      paused: element.paused,
+      loop: element.loop,
+      volume: element.volume,
+      src: element.currentSrc,
+    }
+  })
+
 const fleet = async (
   page: Page
 ): Promise<{ name: string; status: string; curposMs: number | null }[]> => {
@@ -119,6 +134,32 @@ test('publishes the playing card to the lock screen, and drives the fleet from i
     .toBeGreaterThan(119_000)
 })
 
+test('keeps the page a player, so Android has a player to put on the lock screen', async ({
+  page,
+}) => {
+  await captureSession(page)
+  await openHub(page)
+
+  // A looping track at a volume nobody hears, served as a blob: nothing to
+  // cache, nothing to fetch, and no audio file to ship.
+  await expect.poll(async () => (await speaker(page))?.loop).toBe(true)
+  const track = await speaker(page)
+  expect(track?.src.startsWith('blob:')).toBe(true)
+  expect(track?.volume).toBeCloseTo(0.4, 3)
+
+  // A browser that has not seen a gesture refuses to start a sound, so the page
+  // arms the first one instead of asking for it: the reader touches nothing.
+  await page.mouse.click(5, 5)
+  await expect.poll(async () => (await speaker(page))?.paused).toBe(false)
+
+  // The track follows the card: a pause from the lock screen silences the page
+  // as it silences the speaker, which is what the phone reads.
+  await session.call(page, { action: 'pause' })
+  await expect.poll(async () => (await speaker(page))?.paused).toBe(true)
+  await session.call(page, { action: 'play' })
+  await expect.poll(async () => (await speaker(page))?.paused).toBe(false)
+})
+
 test('clears the lock screen when the fleet stops carrying a track', async ({ page }) => {
   await captureSession(page)
   // The poll answers for this test: the stream would keep publishing the fleet
@@ -136,4 +177,7 @@ test('clears the lock screen when the fleet stops carrying a track', async ({ pa
   await expect.poll(() => session.title(page)).toBe('')
   await expect.poll(() => session.playback(page)).toBe('none')
   await expect.poll(() => session.handlers(page)).toEqual([])
+  // And the page stops making a sound of its own, rather than leaving the phone
+  // with a player that plays nothing.
+  await expect.poll(async () => (await speaker(page))?.paused).toBe(true)
 })
