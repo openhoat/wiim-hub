@@ -142,7 +142,7 @@ check on such a speaker, because the sound does not leave through an output it c
 ### Driving a group
 
 The card of a running group carries the volume and the mute of what the reader hears, and no two
-gestures take the same path. All of them follow the measurements in
+gestures take the same path. Each follows a measurement in
 [the research notes](../feature-research.md), section 5.8.1:
 
 - **Volume fans out, in proportion, from the loudest room.** `setPlayerCmd:vol` on the master moves

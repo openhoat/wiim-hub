@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.11.1] - 2026-11-20
+
 ### Fixed
 
 - Muting the room that drives a group silenced every room: the LinkPlay mute of a group master
@@ -18,6 +20,12 @@ Releases are cut from `package.json`: the version in that file names the section
   own on the player above the list, named after the group and read from every online speaker of the
   group rather than from the master's own state. Both scopes are measured and documented
   (ADR 0005).
+
+### Added
+
+- The HTTP reference documents `POST /api/group`: the intents it accepts, the fields they take and
+  the shape of the answer, beside the mute intent that silences one speaker. The hosts route also
+  keeps a heading of its own instead of sitting under the report.
 
 ## [0.11.0] - 2026-11-20
 
@@ -906,7 +914,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/openhoat/wiim-hub/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/openhoat/wiim-hub/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/openhoat/wiim-hub/compare/v0.9.35...v0.10.0
 [0.9.35]: https://github.com/openhoat/wiim-hub/compare/v0.9.34...v0.9.35

@@ -13,6 +13,7 @@ for the browser.
 | `/api/services?host=<address>`        | GET    | The streaming services the firmware can drive, with the tiers it publishes for each        |
 | `/api/settings?host=<address>`        | GET    | Name, LED, touch controls, balance, maximum volume and fade, read live                     |
 | `/api/command?host=<address>`         | POST   | One intent, written through the per-device queue; answers with the device body             |
+| `/api/group?host=<address>`           | POST   | One group intent, fanned out; answers every device body and the group it reports after     |
 | `/api/discover`                       | POST   | One SSDP pass, then an immediate poll; answers with the number of devices found            |
 | `/api/art?host=<address>&uri=<cover>` | GET    | Album art or preset art, relayed by the hub                                                |
 | `/api/hosts`                          | GET    | The addresses the hub polls: `host`, `ip`, `name`, `online` and the list it came from      |
@@ -98,6 +99,40 @@ An intent that reaches the device and comes back `unknown command` is recorded a
 that device: the page then shows the control as unsupported rather than offering a button that
 never works.
 
+A `mute` intent silences the speaker it names, and that speaker only: it is written over the UPnP
+`RenderingControl` service, because the firmware's own mute on a group master reaches every member.
+Muting a group is a group intent ([below](#group-intents)), and so is every other gesture that has to
+reach more than one speaker.
+
+## Group intents
+
+`POST /api/group` takes a group intent, never a list of commands. The body is JSON, the
+`content-type` must say so, and the `host` parameter names the speaker the gesture starts from.
+
+| Intent         | Fields                      |
+| -------------- | --------------------------- |
+| `volume`       | `level`, optional `bases`   |
+| `mute`         | `muted`                     |
+| `memberVolume` | `member` (address), `level` |
+| `memberMute`   | `member` (address), `muted` |
+| `join`         | `master` (address or uuid)  |
+| `leave`        | none                        |
+| `kick`         | `member` (address)          |
+| `ungroup`      | none                        |
+
+The server builds the plan from the fleet it polls, not from the request: a gesture is refused when
+the speaker does not drive a group, when the member is not one of its members, or when a join would
+add a speaker another master already lists. The answer is
+`{ ts, host, results, group }`, with one result per write (`ok`, `unsupported`, `command`, `body`),
+so a member that refused is named with what it said instead of a single "the group did not change".
+`group` is the group the speakers report after the writes, read back before answering: a group write
+is not atomic, and a membership change settles for a few seconds before the answer.
+
+`bases` carries the levels the drag started from, so the fan-out scales every speaker from the same
+reference instead of drifting on its own rounding. A volume sent with `live=1` is a drag in
+progress: it answers the acknowledgements alone, without reading the fleet back, because a poll
+between two cranks would replace the levels the page is painting.
+
 ## The streaming tiers
 
 `GET /api/services?host=<address>` answers `{ts, host, services}`. Each service is
@@ -114,13 +149,15 @@ published, and an offline player is not probed at all (`services: []`). The leve
 normalised by the API either: the page translates the vendor enums that have a documented mapping
 and prints the rest as published.
 
-## The report
+## Hosts
 
 `GET /api/hosts` answers the list the devices dialog shows. Only a `saved` entry can be changed or
 removed: `env` comes from `DEVICE_HOSTS`, which the hub reads and never writes, and `discovered`
 comes back on the next SSDP pass, so removing it would not hold. Writes take a JSON body, for the
 same reason the command route does: an HTML form cannot send that content type, so a cross-site
 post cannot make the hub poll an address of someone else's choosing.
+
+## The report
 
 `GET /api/report?host=<address>` answers a JSON object with the findings, the guided checks, the
 inventory, the resolution path and a `markdown` field. The Markdown is English and self-contained:
