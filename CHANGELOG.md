@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-11-20
+
 ### Fixed
 
 - The lock screen player never appeared on Android, whatever the page published: Chrome builds it
@@ -922,7 +924,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.2...HEAD
+[0.11.2]: https://github.com/openhoat/wiim-hub/compare/v0.11.1...v0.11.2
 [0.11.1]: https://github.com/openhoat/wiim-hub/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/openhoat/wiim-hub/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/openhoat/wiim-hub/compare/v0.9.35...v0.10.0
