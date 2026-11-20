@@ -422,7 +422,7 @@ const MoveButtons = ({
 // without this row the room that drives the group had no level of its own, which
 // the vendor app does offer.
 //
-// Every row is the same row, the master's included: same slider, same mute, same
+// Every row is the same row, the master's included: same level, same mute, same
 // sheet. A member's mute silences that member, while the master's reaches the
 // whole group (measured); the group's own level and mute stay on the player
 // above the list, where the reader also finds the fan-out.
@@ -463,6 +463,7 @@ const SpeakerRow = ({
           controls={controls}
           label={label}
           speaker={device.name}
+          sheetTitle={device.name}
           painted={painted}
           silent={live.mute}
         />
@@ -596,6 +597,10 @@ export const NowPlayingCard = ({
 }>) => {
   const { t, resolvedLang } = useSettings()
   const driven = drivesGroup(card)
+  // The card is a group when its title is the group's: the pop-in that carries
+  // its level is named after it, so a group's fan-out is not announced as the
+  // master's own speaker.
+  const title = cardTitle(card)
   const controls = useControls(card.master, { group: driven })
   const live = controls.device
   const groupRun = useGroupRun(onGroupChanged)
@@ -630,6 +635,7 @@ export const NowPlayingCard = ({
         )
   const volume = driven
     ? {
+        title,
         painted: groupLevel,
         live: {
           onChange: (level: number) => groupVolume.paint(anchorLevel, bases(), level),
@@ -642,7 +648,6 @@ export const NowPlayingCard = ({
     : undefined
   const error = groupVolume.error ?? groupRun.error
   const [groupOpen, setGroupOpen] = useState(false)
-  const title = cardTitle(card)
   // The card is a group when its title is the group's: the reader then needs to
   // know which speaker drives it, and the sub-line says so instead of repeating
   // the model under a name that is not the speaker's.

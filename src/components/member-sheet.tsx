@@ -124,12 +124,13 @@ export const MemberSheet = ({
         </DialogDescription>
 
         <div className="mt-4 flex items-center gap-2">
-          {/* Its mute lives beside this slider, in the row of the group card: the
+          {/* Its mute lives beside this level, in the row of the group card: the
               same control twice would be one too many. */}
           <VolumeControl
             controls={controls}
             label={t('group.volumeOf', { name: device.name })}
             speaker={device.name}
+            sheetTitle={device.name}
           />
         </div>
 

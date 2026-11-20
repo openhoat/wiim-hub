@@ -215,6 +215,7 @@
     "mute": "Mute",
     "unmute": "Unmute",
     "volume": "Volume",
+    "volumeHint": "Drag to move by {crank}. Tap either side of the thumb to move by {fine}.",
     "seek": "Position",
     "live": "live",
     "outputs": "Output",

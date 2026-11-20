@@ -215,6 +215,7 @@
     "mute": "Couper le son",
     "unmute": "Rétablir le son",
     "volume": "Volume",
+    "volumeHint": "Glissez pour avancer par {crank}. Touchez à gauche ou à droite du curseur pour un pas de {fine}.",
     "seek": "Position",
     "live": "direct",
     "outputs": "Sortie",

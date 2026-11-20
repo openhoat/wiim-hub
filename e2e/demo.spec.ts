@@ -178,12 +178,12 @@ test('draws a running group as one card, with its members as rows', async ({ pag
   // The members are rows of that card: one the fleet polls, with its own
   // volume, and one the master remembers and nothing confirms. The speaker that
   // drives the group is a row too, and comes first: it is the room the others
-  // follow, and the slider at the top of the card is the group's level, not its.
+  // follow, and the level at the top of the card is the group's, not its.
   await expect(group.getByText('Speakers', { exact: true })).toBeVisible()
-  await expect(group.getByRole('slider', { name: 'Volume of Living Room' })).toHaveValue('44')
+  await expect(group.getByRole('button', { name: 'Volume of Living Room' })).toContainText('44')
   await expect(group.getByText('WiiM Pro · drives the group')).toBeVisible()
   await expect(group.getByText('Hallway')).toBeVisible()
-  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
+  await expect(group.getByRole('button', { name: 'Volume of Hallway' })).toContainText('35')
   await expect(group.getByText('Bathroom')).toBeVisible()
   await expect(group.getByText('state unknown')).toBeVisible()
   // Every row is the same row, the master's included: its mute sits next to its
@@ -202,10 +202,10 @@ test('folds the speakers of a group, and keeps the fold across a reload', async 
   await openHub(page)
 
   const group = page.getByTestId('playing-192.0.2.21')
-  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toBeVisible()
+  await expect(group.getByRole('button', { name: 'Volume of Hallway' })).toBeVisible()
 
   await group.getByRole('button', { name: 'Collapse' }).click()
-  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveCount(0)
+  await expect(group.getByRole('button', { name: 'Volume of Hallway' })).toHaveCount(0)
   await expect(group.getByRole('button', { name: 'Expand' })).toHaveAttribute(
     'aria-expanded',
     'false'
@@ -213,10 +213,10 @@ test('folds the speakers of a group, and keeps the fold across a reload', async 
 
   await page.reload()
   await expect(page.locator('[data-testid^="playing-"]').first()).toBeVisible()
-  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveCount(0)
+  await expect(group.getByRole('button', { name: 'Volume of Hallway' })).toHaveCount(0)
 
   await group.getByRole('button', { name: 'Expand' }).click()
-  await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toBeVisible()
+  await expect(group.getByRole('button', { name: 'Volume of Hallway' })).toBeVisible()
 })
 
 // The equalizer of a speaker that drives a group lives in that speaker's own
@@ -588,15 +588,20 @@ test('keeps a volume written from the page across a poll', async ({ page }) => {
   await openHub(page)
 
   const card = page.getByTestId('playing-192.0.2.21')
-  const volume = card.getByRole('slider', { name: 'Volume', exact: true })
-  await expect(volume).toHaveValue('44')
+  const level = card.getByRole('button', { name: 'Volume', exact: true })
+  await expect(level).toContainText('44')
+  await level.click()
+  const sheet = page.getByRole('dialog')
+  const volume = sheet.getByRole('slider', { name: 'Apartment' })
   await volume.press('ArrowRight')
   await expect(volume).toHaveValue('45')
+  await page.keyboard.press('Escape')
+  await expect(level).toContainText('45')
 
   // One poll is three seconds: the value must survive it, which is what proves
   // the write reached the state instead of only the optimistic override.
   await page.waitForTimeout(4000)
-  await expect(volume).toHaveValue('45')
+  await expect(level).toContainText('45')
 
   const response = await page.request.get('/api/state')
   expect(response.ok()).toBe(true)
@@ -612,12 +617,16 @@ test('writes the volume of a group member from its row', async ({ page }) => {
   await openHub(page)
 
   const card = page.getByTestId('playing-192.0.2.21')
-  const volume = card.getByRole('slider', { name: 'Volume of Hallway' })
-  await expect(volume).toHaveValue('35')
+  const row = card.getByRole('button', { name: 'Volume of Hallway' })
+  await expect(row).toContainText('35')
+  await row.click()
+  const sheet = page.getByRole('dialog')
+  const volume = sheet.getByRole('slider', { name: 'Hallway' })
   await volume.press('ArrowRight')
   await expect(volume).toHaveValue('36')
+  await page.keyboard.press('Escape')
   await page.waitForTimeout(4000)
-  await expect(volume).toHaveValue('36')
+  await expect(row).toContainText('36')
 
   const response = await page.request.get('/api/state')
   const state: { devices: { name: string; volume: number | null }[] } = await response.json()
@@ -629,17 +638,21 @@ test('writes the volume of a group member from its row', async ({ page }) => {
 // The speaker that drives the group has a level of its own, and it is a device
 // write like any other: measured, `setPlayerCmd:vol` on the master does not
 // reach the members. That is what lets a reader settle one room while the group
-// runs, which the vendor app offers and the group slider alone could not.
+// runs, which the vendor app offers and the group level alone could not.
 test('writes the volume of the group master without moving the group', async ({ page }) => {
   await openHub(page)
 
   const card = page.getByTestId('playing-192.0.2.21')
-  const volume = card.getByRole('slider', { name: 'Volume of Living Room' })
-  await expect(volume).toHaveValue('44')
+  const row = card.getByRole('button', { name: 'Volume of Living Room' })
+  await expect(row).toContainText('44')
+  await row.click()
+  const sheet = page.getByRole('dialog')
+  const volume = sheet.getByRole('slider', { name: 'Living Room' })
   await volume.press('ArrowRight')
   await expect(volume).toHaveValue('45')
+  await page.keyboard.press('Escape')
   await page.waitForTimeout(4000)
-  await expect(volume).toHaveValue('45')
+  await expect(row).toContainText('45')
 
   const response = await page.request.get('/api/state')
   const state: { devices: { name: string; volume: number | null }[] } = await response.json()
@@ -656,21 +669,25 @@ test('keeps a muted member out of the group volume', async ({ page }) => {
   await openHub(page)
 
   const card = page.getByTestId('playing-192.0.2.21')
-  const member = card.getByRole('slider', { name: 'Volume of Hallway' })
-  await expect(member).toHaveValue('35')
+  const member = card.getByRole('button', { name: 'Volume of Hallway' })
+  await expect(member).toContainText('35')
   await card.getByRole('button', { name: 'Mute Hallway' }).click()
-  // Silence greys the slider and leaves the mute button as the only way out.
+  // Silence greys the row's level and leaves the mute button as the only way out.
   await expect(member).toBeDisabled()
   const unmute = card.getByRole('button', { name: 'Unmute Hallway' })
   await expect(unmute).toBeEnabled()
 
   // The group follows the room that can still be heard, and only it is written.
-  const group = card.getByRole('slider', { name: 'Volume', exact: true })
-  await expect(group).toHaveValue('44')
-  await group.press('ArrowRight')
-  await expect(group).toHaveValue('45')
+  const level = card.getByRole('button', { name: 'Volume', exact: true })
+  await expect(level).toContainText('44')
+  await level.click()
+  const sheet = page.getByRole('dialog')
+  const volume = sheet.getByRole('slider', { name: 'Apartment' })
+  await volume.press('ArrowRight')
+  await expect(volume).toHaveValue('45')
+  await page.keyboard.press('Escape')
   await page.waitForTimeout(4000)
-  await expect(group).toHaveValue('45')
+  await expect(level).toContainText('45')
 
   const response = await page.request.get('/api/state')
   const state: { devices: { name: string; volume: number | null }[] } = await response.json()
@@ -680,23 +697,26 @@ test('keeps a muted member out of the group volume', async ({ page }) => {
   // Unmuted, the room is back at the level it kept, and takes gestures again.
   await unmute.click()
   await expect(member).toBeEnabled()
-  await expect(member).toHaveValue('35')
+  await expect(member).toContainText('35')
 })
 
-// Dragging writes once, on release, but the readout follows the thumb: the value
-// the device reported only lands with the next poll, and a number that waits for
-// it answers on release while the thumb has already moved.
+// Dragging in the pop-in writes once, on release, but the readout follows the
+// thumb: the value the device reported only lands with the next poll, and a
+// number that waits for it answers on release while the thumb has already moved.
 test('follows the thumb in the volume readout, before the write is sent', async ({ page }) => {
   await openHub(page)
 
   const group = page.getByTestId('playing-192.0.2.21')
-  const slider = group.getByRole('slider', { name: 'Volume of Hallway' })
-  const readout = slider.locator('xpath=following-sibling::span[1]')
-  await slider.scrollIntoViewIfNeeded()
+  const row = group.getByRole('button', { name: 'Volume of Hallway' })
+  await expect(row).toContainText('35')
+  await row.click()
+  const sheet = page.getByRole('dialog')
+  const slider = sheet.getByRole('slider', { name: 'Hallway' })
+  const readout = sheet.getByTestId('volume-level')
   await expect(readout).toHaveText('35')
 
   const box = await slider.boundingBox()
-  if (box === null) throw new Error('the slider has no box')
+  if (box === null) throw new Error('the volume track has no box')
   const y = box.y + box.height / 2
   await page.mouse.move(box.x + box.width * 0.35, y)
   await page.mouse.down()
@@ -719,6 +739,88 @@ test('follows the thumb in the volume readout, before the write is sent', async 
       return state.devices.find(device => device.name === 'Hallway')?.volume
     })
     .toBe(target)
+})
+
+// The row is a readout a finger can grab, and the track that moves the room is
+// one gesture deeper: wide enough for a thumb, and carrying the two gestures of
+// the vendor app, a drag by crank and a tap on either side of the thumb by one.
+test('opens a generous volume track, a crank at a time', async ({ page }) => {
+  await openHub(page)
+
+  const card = page.getByTestId('playing-192.0.2.21')
+  await card.getByRole('button', { name: 'Volume of Hallway' }).click()
+  const sheet = page.getByRole('dialog')
+  await expect(sheet.getByRole('heading', { name: 'Hallway' })).toBeVisible()
+  const volume = sheet.getByRole('slider', { name: 'Hallway' })
+  const readout = sheet.getByTestId('volume-level')
+  await expect(readout).toHaveText('35')
+
+  const box = await volume.boundingBox()
+  if (box === null) throw new Error('the volume track has no box')
+  const y = box.y + box.height / 2
+
+  // 52 % of the scale is 52, and the marks sit at 50 and 55: the thumb lands on
+  // 50, and the write follows it.
+  await page.mouse.move(box.x + box.width * 0.35, y)
+  await page.mouse.down()
+  await page.mouse.move(box.x + box.width * 0.52, y, { steps: 6 })
+  await page.mouse.up()
+  await expect(readout).toHaveText('50')
+
+  // A tap names a side of the thumb, not a distance: right of it one step up,
+  // left of it one step down, and on the thumb itself nothing at all.
+  await page.mouse.click(box.x + box.width * 0.8, y)
+  await expect(readout).toHaveText('51')
+  await page.mouse.click(box.x + box.width * 0.2, y)
+  await expect(readout).toHaveText('50')
+  await page.mouse.click(box.x + box.width * 0.5, y)
+  await expect(readout).toHaveText('50')
+
+  // The keyboard keeps both steps: the arrows move one, the page keys a crank.
+  await volume.press('ArrowUp')
+  await expect(readout).toHaveText('51')
+  await volume.press('PageDown')
+  await expect(readout).toHaveText('46')
+
+  const response = await page.request.get('/api/state')
+  const state: { devices: { name: string; volume: number | null }[] } = await response.json()
+  expect(state.devices.find(device => device.name === 'Hallway')?.volume).toBe(46)
+})
+
+// Past the loud level a stray crank becomes a physical event on an amp: the
+// sheet shows the level the reader asked for and writes nothing until the
+// decision is confirmed.
+test('asks before taking a room past the loud level', async ({ page }) => {
+  await openHub(page)
+
+  const card = page.getByTestId('playing-192.0.2.21')
+  await card.getByRole('button', { name: 'Volume of Hallway' }).click()
+  const sheet = page.getByRole('dialog')
+  const volume = sheet.getByRole('slider', { name: 'Hallway' })
+  const readout = sheet.getByTestId('volume-level')
+
+  // Eleven cranks from 35: 85 is written, and 90 waits for the answer.
+  const cranks = async (count: number): Promise<void> => {
+    for (let step = 0; step < count; step++) await volume.press('PageUp')
+  }
+  await cranks(10)
+  await expect(readout).toHaveText('85')
+  await cranks(1)
+  await expect(readout).toHaveText('90')
+  await expect(sheet.getByText('Set the volume to 90?')).toBeVisible()
+
+  const held = await page.request.get('/api/state')
+  const heldState: { devices: { name: string; volume: number | null }[] } = await held.json()
+  expect(heldState.devices.find(device => device.name === 'Hallway')?.volume).toBe(85)
+
+  await sheet.getByRole('button', { name: 'Apply' }).click()
+  await expect
+    .poll(async () => {
+      const answer = await page.request.get('/api/state')
+      const state: { devices: { name: string; volume: number | null }[] } = await answer.json()
+      return state.devices.find(device => device.name === 'Hallway')?.volume
+    })
+    .toBe(90)
 })
 
 test('remembers the view, the language and the theme', async ({ page }) => {
@@ -1021,14 +1123,22 @@ test.describe('multiroom', () => {
     await openHub(page)
 
     const group = page.getByTestId('playing-192.0.2.21')
-    const volume = group.getByRole('slider', { name: 'Volume', exact: true })
-    await expect(volume).toHaveValue('44')
+    const level = group.getByRole('button', { name: 'Volume', exact: true })
+    await expect(level).toContainText('44')
     // Hallway sits at 35 of the group's 44, so one step up takes it to 36: the
     // level it keeps is the ratio the reader set, not the driver's own level.
-    await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
+    const hallway = group.getByRole('button', { name: 'Volume of Hallway' })
+    await expect(hallway).toContainText('35')
+    await level.click()
+    const sheet = page.getByRole('dialog')
+    const volume = sheet.getByRole('slider', { name: 'Apartment' })
     await volume.press('ArrowRight')
     await expect(volume).toHaveValue('45')
-    await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('36')
+    // While the sheet is open the page behind it leaves the accessibility tree,
+    // so the painted row is read from the DOM it still is.
+    await expect(group.locator('[aria-label="Volume of Hallway"]')).toContainText('36')
+    await page.keyboard.press('Escape')
+    await expect(hallway).toContainText('36')
 
     const response = await page.request.get('/api/state')
     expect(response.ok()).toBe(true)
@@ -1042,20 +1152,24 @@ test.describe('multiroom', () => {
     await openHub(page)
 
     // `max_volume` is a setting the vendor app exposes, not a hardware stop:
-    // Hallway reports 30 while sitting at 35, so a row that took it as a bound
-    // pinned its thumb to the right of a slider that stopped at 30 and showed
-    // the wrong level.
+    // Hallway reports 30 while sitting at 35, so a track that took it as a bound
+    // pinned its thumb to the right of a scale that stopped at 30 and showed the
+    // wrong level.
     const hallway = page
       .getByTestId('playing-192.0.2.21')
-      .getByRole('slider', { name: 'Volume of Hallway' })
-    await expect(hallway).toHaveAttribute('max', '100')
-    await expect(hallway).toHaveValue('35')
+      .getByRole('button', { name: 'Volume of Hallway' })
+    await expect(hallway).toContainText('35')
+    await hallway.click()
+    const sheet = page.getByRole('dialog')
+    const volume = sheet.getByRole('slider', { name: 'Hallway' })
+    await expect(volume).toHaveAttribute('max', '100')
+    await expect(volume).toHaveValue('35')
 
-    // The write above the setting is what proves the bound is gone: 40 is past
+    // The write above the setting is what proves the bound is gone: 36 is past
     // the 30 the speaker reports, and the demo answers the same plan the hub
     // builds.
-    await hallway.press('ArrowRight')
-    await expect(hallway).toHaveValue('36')
+    await volume.press('ArrowRight')
+    await expect(volume).toHaveValue('36')
     const response = await page.request.get('/api/state')
     const state: { devices: { name: string; volume: number | null; maxVolume: number | null }[] } =
       await response.json()
@@ -1070,10 +1184,16 @@ test.describe('multiroom', () => {
     await openHub(page)
 
     const group = page.getByTestId('playing-192.0.2.21')
-    const volume = group.getByRole('slider', { name: 'Volume', exact: true })
-    const hallway = group.getByRole('slider', { name: 'Volume of Hallway' })
+    const trigger = group.getByRole('button', { name: 'Volume', exact: true })
+    await trigger.click()
+    const sheet = page.getByRole('dialog')
+    const volume = sheet.getByRole('slider', { name: 'Apartment' })
+    // The page behind the sheet leaves the accessibility tree while it is open,
+    // so the painted rows are read from the DOM they still are.
+    const hallway = group.locator('[aria-label="Volume of Hallway"]')
+    await expect(hallway).toContainText('35')
     const box = await volume.boundingBox()
-    if (box === null) throw new Error('the group slider has no box')
+    if (box === null) throw new Error('the group volume track has no box')
 
     // A real drag: the thumb goes past the middle of the track and stays there,
     // so nothing is released while the assertions run.
@@ -1083,12 +1203,12 @@ test.describe('multiroom', () => {
 
     // The rows follow the thumb before the reader lets go: Hallway sits at 35 of
     // the group's 44, so it lands on its share of whatever level the hand
-    // reached. The track is not a ruler (its thumb has a width), so the level is
-    // read back rather than assumed from the pointer's position.
+    // reached. The drag lands on a crank, so the level is a multiple of five.
     const level = Number(await volume.inputValue())
     expect(level).toBeGreaterThan(60)
+    expect(level % 5).toBe(0)
     const expected = Math.round((level * 35) / 44)
-    await expect(hallway).toHaveValue(String(expected))
+    await expect(hallway).toContainText(String(expected))
 
     // The writes leave during the drag, not on release: the demo answers the
     // same plan the hub sends, so `/api/state` already carries the new levels.
@@ -1102,7 +1222,7 @@ test.describe('multiroom', () => {
 
     await page.mouse.up()
     await expect(volume).toHaveValue(String(level))
-    await expect(hallway).toHaveValue(String(expected))
+    await expect(hallway).toContainText(String(expected))
   })
 
   test('mutes the whole group, and the member row reports the member muted', async ({ page }) => {
@@ -1136,7 +1256,7 @@ test.describe('multiroom', () => {
     // The kicked speaker is on its own again, and the card of the group stops
     // offering its row and its group volume.
     await expect(page.getByTestId('playing-192.0.2.23')).toBeVisible()
-    await expect(group.getByRole('slider', { name: 'Volume of Hallway' })).toHaveCount(0)
+    await expect(group.getByRole('button', { name: 'Volume of Hallway' })).toHaveCount(0)
   })
 
   test('dissolves the group, then drafts a speaker back into it', async ({ page }) => {
@@ -1166,6 +1286,6 @@ test.describe('multiroom', () => {
     await expect(page.locator('[data-testid^="playing-"]')).toHaveCount(2)
     const restored = page.getByTestId('playing-192.0.2.21')
     await expect(restored.getByRole('heading', { level: 2, name: 'Living Room' })).toBeVisible()
-    await expect(restored.getByRole('slider', { name: 'Volume of Hallway' })).toHaveValue('35')
+    await expect(restored.getByRole('button', { name: 'Volume of Hallway' })).toContainText('35')
   })
 })

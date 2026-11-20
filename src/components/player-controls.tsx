@@ -13,6 +13,7 @@ import { useState } from 'react'
 import { FavoritesSheet } from '@/components/favorites-sheet'
 import { PlayUrlDialog } from '@/components/play-url-dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogTrigger } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,50 +22,44 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { VolumeSheet } from '@/components/volume-sheet'
 import { cn } from '@/lib/cn'
 import { formatDuration, positionOf } from '@/lib/format'
 import { controlErrorLabel, isExternalInput, muteLabel } from '@/lib/labels'
 import { useSettings } from '@/lib/settings'
 import type { Controls } from '@/lib/use-controls'
-
-// Above this level a single stray drag becomes a physical event on a 100 W
-// amp: the write is worth one confirmation.
-const loudLevel = 85
-
-const maxLevel = 100
+import { type VolumeLive, volumeMax } from '@/lib/volume'
 
 const sleepOptions = [0, 15, 30, 45, 60, 90]
 
-// Dragging is local state; the write happens once, on release. The server queue
-// coalesces too, but the cheapest request is the one never sent.
+// The row keeps the level and opens the pop-in that adjusts it: the inline track
+// is a readout a reader can grab with one finger, and the generous control lives
+// one gesture deeper, where a thumb fits and the two gestures of the vendor app
+// (a drag by crank, a tap either side of the thumb by one) have room.
 //
-// The number next to the slider reads the same local state: the value the device
-// reports only comes back with the next poll, and a readout that waits for it
-// answers on release while the thumb has already moved.
+// The number next to the track reads the same level: the value the device reports
+// only comes back with the next poll, and a readout that waits for it answers on
+// release while the thumb has already moved.
 //
-// The label names the speaker the slider drives when it is drawn outside the
-// player: a group card shows one row per speaker, and two sliders announced as
-// "Volume" tell a screen reader nothing about which one it just moved.
+// The label names the speaker the control drives when it is drawn outside the
+// player: a group card shows one row per speaker, and two controls announced as
+// "Volume" tell a screen reader nothing about which one it just opened.
 //
-// A slider can also show a level another gesture paints on it. The group card
+// A track can also show a level another gesture paints on it. The group card
 // carries the loudest speaker's level, and while the hand moves every row shows
 // the level it will land on; the device reading is not what the thumb should
 // show then.
 //
-// A row can finally be silenced: its slider stays on screen as the level the
+// A row can finally be silenced: its track stays on screen as the level the
 // speaker will come back to, greyed and out of reach, because a group gesture
 // writes no volume to a muted member and the mute button is the one control
 // left.
-export type VolumeLive = {
-  onChange: (level: number) => void
-  onRelease: (level: number) => void
-  onCancel: () => void
-}
 
 export const VolumeControl = ({
   controls,
   label,
   speaker,
+  sheetTitle,
   painted = null,
   silent = false,
   live,
@@ -72,67 +67,26 @@ export const VolumeControl = ({
   controls: Controls
   label?: string
   speaker?: string
+  // The pop-in names what it drives: a card passes its title, so a group's level
+  // is not announced as the master's own.
+  sheetTitle?: string
   painted?: number | null
-  // A speaker under mute: the slider is drawn but not draggable.
+  // A speaker under mute: the track is drawn but not reachable.
   silent?: boolean
   live?: VolumeLive
 }>) => {
   const { t } = useSettings()
   const device = controls.device
-  const [dragging, setDragging] = useState<number | null>(null)
-  const [confirmLevel, setConfirmLevel] = useState<number | null>(null)
-  // The level a gesture starts from, which is what the confirmation threshold
-  // compares with: the painted level when a group carries the gesture, the
-  // device's own otherwise.
-  const base = painted ?? device.volume ?? 0
-  const level = dragging ?? painted ?? device.volume ?? 0
-
-  const guarded = (value: number): boolean => value > loudLevel && base <= loudLevel
-
-  const send = (value: number): void => {
-    setDragging(null)
-    if (live === undefined) void controls.run({ action: 'volume', level: value })
-    else live.onRelease(value)
-  }
-
-  const commit = (): void => {
-    if (dragging === null) return
-    if (guarded(dragging)) {
-      setConfirmLevel(dragging)
-      // Nothing was written beyond the threshold, so nothing is painted as if it
-      // had been: the rows fall back to the speakers' reading until the reader
-      // confirms.
-      live?.onCancel()
-      return
-    }
-    send(dragging)
-  }
-
-  const change = (value: number): void => {
-    setDragging(value)
-    // Above the threshold the write waits for a confirmation, so the thumb moves
-    // alone: no level beyond it reaches the speakers on its own.
-    if (live === undefined || guarded(value)) return
-    live.onChange(value)
-  }
-
-  const abandon = (): void => {
-    if (dragging === null) return
-    setDragging(null)
-    live?.onCancel()
-  }
-
-  const cancel = (): void => {
-    setConfirmLevel(null)
-    setDragging(null)
-    live?.onCancel()
-  }
-
+  const [open, setOpen] = useState(false)
+  const level = Math.min(painted ?? device.volume ?? 0, volumeMax)
+  const percent = `${level}%`
+  const readout = device.volume === null && painted === null ? '—' : String(level)
   const muted = device.mute
   // The name of the speaker the button mutes, where the row already names it: a
   // group card draws one mute button per speaker, and two of them announced as
   // "Mute" tell a screen reader nothing about which one it just silenced.
   const muteName = muteLabel(t, muted, speaker)
+  const name = label ?? t('controls.volume')
 
   return (
     <div className="min-w-0 flex-1">
@@ -151,46 +105,41 @@ export const VolumeControl = ({
         >
           {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
         </Button>
-        <input
-          type="range"
-          min={0}
-          max={maxLevel}
-          step={1}
-          value={Math.min(level, maxLevel)}
-          disabled={!device.online || silent}
-          aria-label={label ?? t('controls.volume')}
-          onChange={event => change(Number(event.currentTarget.value))}
-          onPointerUp={commit}
-          onKeyUp={commit}
-          onBlur={abandon}
-          className="h-1.5 min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-muted accent-accent disabled:cursor-not-allowed disabled:opacity-50"
-        />
-        <span
-          className={cn(
-            'w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground',
-            silent && 'opacity-50'
-          )}
-        >
-          {device.volume === null && painted === null ? '—' : Math.min(level, maxLevel)}
-        </span>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              disabled={!device.online || silent}
+              aria-label={name}
+              title={name}
+              className={cn(
+                'flex h-8 min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg px-1 text-left outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-accent/50 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                silent && 'opacity-50'
+              )}
+            >
+              <span className="relative h-1.5 min-w-0 flex-1 rounded-full bg-muted">
+                <span
+                  className="absolute inset-y-0 left-0 rounded-full bg-accent"
+                  style={{ width: percent }}
+                />
+                <span
+                  className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-accent ring-2 ring-card"
+                  style={{ left: percent }}
+                />
+              </span>
+              <span className="w-8 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                {readout}
+              </span>
+            </button>
+          </DialogTrigger>
+          <VolumeSheet
+            controls={controls}
+            title={sheetTitle ?? label ?? device.name}
+            painted={painted}
+            live={live}
+          />
+        </Dialog>
       </div>
-      {confirmLevel !== null && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded-lg border border-warning/40 bg-warning/10 px-2 py-1 text-[11px]">
-          <span className="text-warning">{t('controls.confirmVolume', { n: confirmLevel })}</span>
-          <Button size="sm" variant="ghost" onClick={cancel}>
-            {t('controls.cancel')}
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => {
-              setConfirmLevel(null)
-              send(confirmLevel)
-            }}
-          >
-            {t('controls.apply')}
-          </Button>
-        </div>
-      )}
     </div>
   )
 }
@@ -345,9 +294,10 @@ export const PlayerControls = ({
 }: Readonly<{
   controls: Controls
   now: number
-  // The group card names the level its slider carries and the gesture every row
-  // follows; a solo player leaves both out.
-  volume?: { painted?: number | null; live?: VolumeLive }
+  // The group card names the level its control carries and the gesture every row
+  // follows, and the pop-in is titled with the card's own name; a solo player
+  // leaves the gesture out and names its speaker.
+  volume?: { painted?: number | null; live?: VolumeLive; title?: string }
   // A group card draws the transport and the group volume: the tools of the
   // speaker driving it belong to that speaker, in its own sheet.
   tools?: boolean
@@ -404,7 +354,12 @@ export const PlayerControls = ({
             <Square className="size-3.5" />
           </Button>
         </div>
-        <VolumeControl controls={controls} painted={volume?.painted ?? null} live={volume?.live} />
+        <VolumeControl
+          controls={controls}
+          sheetTitle={volume?.title}
+          painted={volume?.painted ?? null}
+          live={volume?.live}
+        />
       </div>
 
       {tools && <DeviceToolsRow controls={controls} />}
