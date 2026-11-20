@@ -48,9 +48,14 @@ import { createGroupReconciler } from './groups.ts'
 import { guidesFor } from './guides.ts'
 import { buildInventory, type Inventory, type Resolution } from './inventory.ts'
 import { parseServicesCapability } from './services.ts'
+import { createStreamRegistry, heartbeatFrame, openStream, stateFrame } from './stream.ts'
 
 const port = Number.parseInt(process.env.PORT ?? '8090', 10)
 const tickMs = 3000
+// Same stream as the hub: the demo is what the browser tests drive, so the fast
+// path has to exist here too, with the same fallback behind it.
+const streams = createStreamRegistry()
+const streamHeartbeatMs = 15_000
 const distDir = resolve(import.meta.dirname, '..', 'dist', 'app')
 
 // A cover is drawn from its own uri, so the same track always gets the same
@@ -1110,7 +1115,7 @@ const reseed = (): void => {
   reconcileGroups(states.values())
 }
 
-const sendState = (res: ServerResponse): void => {
+const hubPayload = () => {
   // Same ordering as the hub: reachable first, then by name.
   const devices = [...states.values()]
     .sort(
@@ -1124,7 +1129,16 @@ const sendState = (res: ServerResponse): void => {
       findings: findingsFor({ state, diagnostics: state.diagnostics }),
       guides: guidesFor({ state, diagnostics: state.diagnostics }),
     }))
-  sendJson(res, 200, { ts: Date.now(), pollMs: tickMs, devices })
+  return { ts: Date.now(), pollMs: tickMs, devices }
+}
+
+const sendState = (res: ServerResponse): void => {
+  sendJson(res, 200, hubPayload())
+}
+
+const broadcastState = (): void => {
+  if (streams.size() === 0) return
+  streams.push(stateFrame(hubPayload()))
 }
 
 // The demo serves the same report so the copy and download buttons can be
@@ -1199,11 +1213,15 @@ type Route = (url: URL, req: IncomingMessage, res: ServerResponse) => boolean | 
 
 const routes: Record<string, Route> = {
   '/health': (_url, _req, res) => {
-    sendJson(res, 200, { ok: true, devices: states.size, demo: true })
+    sendJson(res, 200, { ok: true, devices: states.size, demo: true, streams: streams.size() })
     return true
   },
   '/api/state': (_url, _req, res) => {
     sendState(res)
+    return true
+  },
+  '/api/events': (_url, req, res) => {
+    openStream(req, res, streams, stateFrame(hubPayload()))
     return true
   },
   '/api/report': (url, _req, res) => {
@@ -1279,7 +1297,13 @@ const servePage = async (pathname: string, res: ServerResponse): Promise<void> =
 const handle = async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
   const url = new URL(req.url ?? '/', 'http://localhost')
   const route = Object.hasOwn(routes, url.pathname) ? routes[url.pathname] : null
-  if (route !== null && (await route(url, req, res))) return
+  if (route !== null && (await route(url, req, res))) {
+    // A write changed the simulated fleet: the readers of the stream see it now
+    // instead of at the next simulated tick, which is what makes the browser
+    // test prove the stream rather than the poll behind it.
+    if (req.method !== 'GET' && req.method !== 'HEAD') broadcastState()
+    return
+  }
   if (url.pathname.startsWith('/api/')) {
     sendJson(res, 404, { error: 'not found' })
     return
@@ -1327,4 +1351,7 @@ setInterval(() => {
   // The same fleet pass the hub runs: a simulated member would read its group
   // and its playback off the simulated master, with nothing special-cased here.
   reconcileGroups(states.values())
+  broadcastState()
 }, tickMs)
+
+setInterval(() => streams.push(heartbeatFrame(Date.now())), streamHeartbeatMs)

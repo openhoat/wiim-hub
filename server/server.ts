@@ -28,6 +28,7 @@ import { findDevice } from './lookup.ts'
 import { notifierFromEnv } from './notify.ts'
 import { createWriteQueue } from './queue.ts'
 import { readServices } from './services.ts'
+import { createStreamRegistry, heartbeatFrame, openStream, stateFrame } from './stream.ts'
 import { settlePolls } from './tick.ts'
 import { createEventHub, type EventPatch } from './upnp.ts'
 
@@ -77,6 +78,12 @@ const hosts = new Set(envHosts)
 const hostsFile =
   (process.env.HOSTS_FILE ?? '').trim() || resolve(import.meta.dirname, '..', 'data', 'hosts.json')
 const states = new Map<string, DeviceState>()
+// The readers of `/api/events`: one entry per open response, dropped when the
+// peer leaves or stops reading. The route is the fast path; `/api/state` stays
+// the contract and the fallback.
+const streams = createStreamRegistry()
+// An idle stream is what a proxy and a sleeping phone drop first.
+const streamHeartbeatMs = 15_000
 // One reconciler for the life of the process: it is what remembers the last
 // truthful group answer, so a hollow poll can reuse it instead of dissolving a
 // group that still runs.
@@ -315,6 +322,9 @@ const pollAll = async (): Promise<void> => {
         findings: findingsFor({ state, diagnostics: state.diagnostics }),
       })
     }
+    // One frame per tick, once the pass has completed: a reader must never see
+    // a speaker patched and the group pass that makes sense of it not yet run.
+    broadcastState()
   } finally {
     polling = false
   }
@@ -755,7 +765,11 @@ const serveFile = async (pathname: string, res: ServerResponse): Promise<boolean
 // speaker answers or renames itself, and a reachable speaker comes before a
 // silent one. Findings are derived, never stored: they are a reading of the
 // state at the moment it is served, so a counter that recovered stops showing.
-const sendState = (res: ServerResponse): void => {
+//
+// The fleet is published by two routes: a poll answer and a stream frame carry
+// the same body, so the page decodes one shape whichever way the fleet reached
+// it, and a slow poll behind a live stream cannot disagree with it.
+const hubPayload = () => {
   const devices = [...states.values()]
     .sort(
       (left, right) =>
@@ -768,7 +782,16 @@ const sendState = (res: ServerResponse): void => {
       findings: findingsFor({ state, diagnostics: state.diagnostics }),
       guides: guidesFor({ state, diagnostics: state.diagnostics }),
     }))
-  sendJson(res, 200, { ts: Date.now(), pollMs, devices })
+  return { ts: Date.now(), pollMs, devices }
+}
+
+const sendState = (res: ServerResponse): void => {
+  sendJson(res, 200, hubPayload())
+}
+
+const broadcastState = (): void => {
+  if (streams.size() === 0) return
+  streams.push(stateFrame(hubPayload()))
 }
 
 // The report is what a user pastes into a support thread: the findings, the
@@ -832,11 +855,19 @@ type Route = (url: URL, req: IncomingMessage, res: ServerResponse) => boolean | 
 
 const routes: Record<string, Route> = {
   '/health': (_url, _req, res) => {
-    sendJson(res, 200, { ok: true, devices: states.size })
+    sendJson(res, 200, { ok: true, devices: states.size, streams: streams.size() })
     return true
   },
   '/api/state': (_url, _req, res) => {
     sendState(res)
+    return true
+  },
+  // The fast path the page reads instead of polling. Same guard as the rest of
+  // `/api/*` (`server/auth.ts`), same body as `/api/state`; a client that cannot
+  // take a stream keeps polling that route, which is why this one replaces
+  // nothing.
+  '/api/events': (_url, req, res) => {
+    openStream(req, res, streams, stateFrame(hubPayload()))
     return true
   },
   '/api/report': (url, _req, res) => sendReport(url, res).then(() => true),
@@ -976,11 +1007,13 @@ const main = async (): Promise<void> => {
   }
   await pollAll()
   scheduleNextPoll()
+  setInterval(() => streams.push(heartbeatFrame(Date.now())), streamHeartbeatMs)
   void refreshHosts().then(() => pollAll())
   setInterval(() => void refreshHosts().then(() => pollAll()), discoveryIntervalMs)
 }
 
 const shutdown = (): void => {
+  streams.close()
   void hub.close().finally(() => process.exit(0))
 }
 process.once('SIGTERM', shutdown)

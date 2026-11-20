@@ -9,6 +9,10 @@ const port = 8091
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
+  // One demo server holds one fleet in memory, and it counts the streams it is
+  // holding open: two spec files running side by side would reset each other's
+  // speakers and answer for each other's counts. Files run one after another.
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI === undefined ? 0 : 1,
   reporter: process.env.CI === undefined ? 'list' : [['github'], ['list']],

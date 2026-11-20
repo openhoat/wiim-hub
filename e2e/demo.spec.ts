@@ -1084,6 +1084,10 @@ test('serves the manifest of this release, not the cached one', async ({ page })
 })
 
 test('keeps the last state it received, dated, when the hub goes quiet', async ({ page }) => {
+  // On the poll alone: a live stream keeps the page fed, so this is the reader
+  // that has to survive the silence. The route is intercepted before the load,
+  // because routing does not reach a response the page already holds open.
+  await page.route('**/api/events', route => route.fulfill({ status: 404, body: 'not found' }))
   await openHub(page)
   await expect(page.getByText('Late Ferry', { exact: true })).toBeVisible()
 

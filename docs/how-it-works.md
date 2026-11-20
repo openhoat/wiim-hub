@@ -42,10 +42,15 @@ run: with an offline speaker in the fleet, that is most of the tick, and a maste
 answered hollow in that window is drawn as a speaker that drives no group until the next pass, which
 splits the card in two.
 
-The page polls `/api/state` on the same period, one request at a time, chained from the previous
-answer so a slow hub stretches the interval instead of stacking requests. The loop stops while the
-tab is hidden and reads immediately on return. `pollMs` travels in the answer, so the page and the
-hub never disagree on the cadence.
+The page reads `/api/events` instead of asking: one frame per tick, carrying the same body, with the
+three-second poll kept behind it as the fallback every other client uses. The poll still runs one
+request at a time, chained from the previous answer, stops while the tab is hidden and reads
+immediately on return, and `pollMs` still travels in the body, so the page and the hub never
+disagree on the cadence. What the stream changes is that cadence: while it delivers, the poll
+relaxes to a thirty-second backstop. When it cannot start, stays silent for five seconds or breaks
+three times in a row, the page goes back to the answer's own period. A reverse proxy that buffers
+the stream costs the fast path, not the page; [ADR 0003](/adr/0003-the-page-reads-a-stream) holds
+the decision.
 
 ## Names
 

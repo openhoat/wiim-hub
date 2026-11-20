@@ -13,6 +13,7 @@ and the behaviours measured on a real player are recorded in the
 | [Two views, one dataset](/how-it-works#the-page)            | A now playing view for everyday use, a diagnostic view for support, switched from the header              |
 | [An order that stays](/how-it-works#the-page)               | The arrows in a card header set the order you chose, per browser; a diagnostic card folds to its header   |
 | [Controls that answer first](/how-it-works#the-page)        | A control paints the value you asked for, and the next poll confirms or reverts it                        |
+| [The fleet pushed, not polled](/how-it-works#the-poll-loop) | One frame per hub tick, with the three-second poll kept as the fallback                                   |
 | [A phone, really](/how-it-works#the-page)                   | Sheets sit above the on screen keyboard instead of under it                                               |
 | [Language and theme](/how-it-works#the-page)                | English or French, light or dark, following the browser unless you say otherwise                          |
 | [Installed like an app](/how-it-works#updates)              | The shell opens without a network, the last state stays readable and its clock stops                      |
@@ -63,7 +64,7 @@ and the behaviours measured on a real player are recorded in the
 | [Alerts](/guide/notifications)                                     | A webhook or an ntfy topic, one message as a rule appears, then silence for an hour           |
 | [Key or forward auth](/guide/configuration#behind-a-reverse-proxy) | A bearer key for scripts and agents, or the identity a reverse proxy leaves behind            |
 | [Agents, over MCP](/guide/mcp)                                     | Four read and control tools for an MCP client, with no state of its own                       |
-| [A small HTTP API](/reference/http-api)                            | State, report, services, settings, command, discover, art, hosts and health                   |
+| [A small HTTP API](/reference/http-api)                            | State, events, report, services, settings, command, discover, art, hosts and health           |
 | [Demo mode](/guide/demo)                                           | Three simulated speakers behind the same interface, which is what the end to end suite drives |
 
 ## Deliberate limits

@@ -6,8 +6,9 @@ for the browser.
 
 | Route                                 | Method | Answer                                                                                     |
 | ------------------------------------- | ------ | ------------------------------------------------------------------------------------------ |
-| `/health`                             | GET    | `ok`, for container healthchecks. Reads no device.                                         |
+| `/health`                             | GET    | `ok`, for container healthchecks, with the devices polled and the streams open             |
 | `/api/state`                          | GET    | Devices with their state, samples, events and the findings of the moment                   |
+| `/api/events`                         | GET    | The same fleet as `/api/state`, as a `text/event-stream` of `state` frames                 |
 | `/api/report?host=<address>`          | GET    | The diagnostic report as Markdown (English), with the raw answers and the findings as JSON |
 | `/api/services?host=<address>`        | GET    | The streaming services the firmware can drive, with the tiers it publishes for each        |
 | `/api/settings?host=<address>`        | GET    | Name, LED, touch controls, balance, maximum volume and fade, read live                     |
@@ -23,6 +24,38 @@ The `host` parameter is the key the hub polls a device under, the address it cur
 or the name the device reports. A name is not an identity: two speakers of the same model can report
 the same one, so a name carried by more than one device is refused and the address is the way to
 say which machine is meant.
+
+## The event stream
+
+`GET /api/events` answers `text/event-stream` and keeps the response open. Each frame is one hub
+tick, with the body `/api/state` would have answered:
+
+```text
+event: state
+data: {"ts":1795188112393,"pollMs":3000,"devices":[ … ]}
+
+```
+
+A comment line follows every fifteen seconds, so an idle connection is not what a proxy or a
+sleeping phone drops first:
+
+```text
+: heartbeat 1795188127393
+
+```
+
+The route is guarded like the rest of `/api/*` (bearer or the identity header of a forward auth).
+Nothing else changes: `/api/state` stays the contract, and a client that cannot read a stream keeps
+polling it.
+
+The page prefers the stream and keeps the poll behind it. It reads the body with `fetch` rather than
+`EventSource`, which cannot carry an `Authorization` header, and it gives up on the stream when the
+route answers anything but 200, when no frame arrives within five seconds, or when a connection
+breaks three times in a row without delivering. A proxy that buffers the response is exactly that
+case: the hub asks it not to (`X-Accel-Buffering: no`), and a proxy that does anyway costs the fast
+path, not the page, because the fallback is automatic and there is nothing to configure. While the
+stream delivers, the page still polls `/api/state`, but at thirty seconds, as a backstop for an
+event a cut connection swallowed.
 
 ## Intents
 

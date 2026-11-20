@@ -10,6 +10,16 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- The page reads the fleet from `/api/events`, a `text/event-stream` that carries one frame per hub
+  tick, so a volume changed on another phone or a speaker that drops out is drawn as it happens
+  instead of at the next three-second poll. The poll stays: it is the documented contract, it runs
+  every thirty seconds behind a live stream as a backstop, and the page falls back to its three
+  seconds by itself when the route is not served, when no frame arrives within five seconds, or when
+  the connection breaks three times in a row, which is what a buffering reverse proxy looks like.
+  Nothing to configure, and the MCP client keeps reading `/api/state`.
+
 ## [0.9.35] - 2026-11-20
 
 ### Changed

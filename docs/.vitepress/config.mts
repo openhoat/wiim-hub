@@ -61,6 +61,10 @@ export default withMermaid(
               text: 'The demo drives the suite',
               link: '/adr/0002-demo-mode-drives-the-end-to-end-suite',
             },
+            {
+              text: 'The page reads a stream',
+              link: '/adr/0003-the-page-reads-a-stream',
+            },
           ],
         },
       ],
