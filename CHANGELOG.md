@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-20
+
 ### Added
 
 - The card the page plays is published to the lock screen of a phone: the track, the artist, the
@@ -895,7 +897,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/openhoat/wiim-hub/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/openhoat/wiim-hub/compare/v0.9.35...v0.10.0
 [0.9.35]: https://github.com/openhoat/wiim-hub/compare/v0.9.34...v0.9.35
 [0.9.34]: https://github.com/openhoat/wiim-hub/compare/v0.9.33...v0.9.34
