@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-20
+
 ### Added
 
 - The page reads the fleet from `/api/events`, a `text/event-stream` that carries one frame per hub
@@ -19,6 +21,12 @@ Releases are cut from `package.json`: the version in that file names the section
   seconds by itself when the route is not served, when no frame arrives within five seconds, or when
   the connection breaks three times in a row, which is what a buffering reverse proxy looks like.
   Nothing to configure, and the MCP client keeps reading `/api/state`.
+
+### Fixed
+
+- A reader that cannot take a frame right away skips it instead of losing its stream: backpressure
+  now costs one frame, where it used to end the response on the first body larger than the socket
+  buffer.
 
 ## [0.9.35] - 2026-11-20
 
@@ -878,7 +886,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.35...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/openhoat/wiim-hub/compare/v0.9.35...v0.10.0
 [0.9.35]: https://github.com/openhoat/wiim-hub/compare/v0.9.34...v0.9.35
 [0.9.34]: https://github.com/openhoat/wiim-hub/compare/v0.9.33...v0.9.34
 [0.9.33]: https://github.com/openhoat/wiim-hub/compare/v0.9.32...v0.9.33
