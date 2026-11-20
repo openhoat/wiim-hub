@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.9.35] - 2026-11-20
+
 ### Changed
 
 - The level of a row now opens a pop-in with a track wide enough for a thumb: a drag lands on the
@@ -866,7 +868,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.34...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.9.35...HEAD
+[0.9.35]: https://github.com/openhoat/wiim-hub/compare/v0.9.34...v0.9.35
 [0.9.34]: https://github.com/openhoat/wiim-hub/compare/v0.9.33...v0.9.34
 [0.9.33]: https://github.com/openhoat/wiim-hub/compare/v0.9.32...v0.9.33
 [0.9.32]: https://github.com/openhoat/wiim-hub/compare/v0.9.31...v0.9.32
