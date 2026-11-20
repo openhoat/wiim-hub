@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { type Action, sendCommand, sendGroupAction } from './api'
-import { groupActionFor, groupFailure } from './group'
+import { type Action, sendCommand } from './api'
 import { type Override, optimisticFor, overrideLifetimeMs, withOverride } from './optimistic'
 import type { Device } from './types'
 
@@ -12,21 +11,11 @@ export type Controls = {
   run: (action: Action) => Promise<boolean>
 }
 
-// `group` changes the path of two gestures, not their meaning: on the card of a
-// speaker that drives a group, the volume and the mute belong to what the reader
-// hears, which is the whole group. Everything else stays a write on the master,
-// where the stream actually runs.
-//
-// Measured (docs/feature-research.md §5.8.1): the master's own volume moves the
-// master alone, so a group volume is a fan-out; the master's mute propagates, so
-// a group mute is one write. The server owns both plans, and this hook only says
-// which route to take.
-export const useControls = (device: Device, options?: { group?: boolean }): Controls => {
+export const useControls = (device: Device): Controls => {
   const [override, setOverride] = useState<{ value: Override; at: number } | null>(null)
   const [pending, setPending] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const mounted = useRef(true)
-  const grouped = options?.group === true
 
   useEffect(() => {
     mounted.current = true
@@ -64,21 +53,10 @@ export const useControls = (device: Device, options?: { group?: boolean }): Cont
         if (mounted.current) setOverride(null)
         return false
       }
-      const runGroup = async (): Promise<boolean | null> => {
-        if (!grouped) return null
-        const group = groupActionFor(action)
-        if (group === null) return null
-        const answer = await sendGroupAction(device, group)
-        const failure = groupFailure(answer.results)
-        return failure === null ? true : failed(failure)
-      }
-
       setError(null)
       setOverride({ value: optimisticFor(device, action), at: Date.now() })
       setPending(count => count + 1)
       try {
-        const throughGroup = await runGroup()
-        if (throughGroup !== null) return throughGroup
         const result = await sendCommand(device, action)
         if (!result.ok) return failed(result.unsupported ? 'unsupported' : result.body || 'failed')
         return true
@@ -90,7 +68,7 @@ export const useControls = (device: Device, options?: { group?: boolean }): Cont
         if (mounted.current) setPending(count => Math.max(0, count - 1))
       }
     },
-    [device, grouped]
+    [device]
   )
 
   const clearError = useCallback(() => setError(null), [])

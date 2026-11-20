@@ -141,8 +141,8 @@ check on such a speaker, because the sound does not leave through an output it c
 
 ### Driving a group
 
-The card of a running group carries the volume and the mute of what the reader hears, and the two
-gestures do not take the same path. Both follow the measurements in
+The card of a running group carries the volume and the mute of what the reader hears, and no two
+gestures take the same path. All of them follow the measurements in
 [the research notes](../feature-research.md), section 5.8.1:
 
 - **Volume fans out, in proportion, from the loudest room.** `setPlayerCmd:vol` on the master moves
@@ -157,10 +157,13 @@ gestures do not take the same path. Both follow the measurements in
   A muted room leaves the gesture the same way: its row stays on screen, greyed, and keeps the
   level it will come back to, because nothing is written to a silenced speaker while the group moves.
   There is no level the group knows; the row of each speaker settles that room alone.
-- **Mute is one write.** The master's own mute reaches the members and the list it keeps, so one
-  command silences the group, and one command restores it. Every row carries a mute button, the
-  master's included: the button on a member's row silences that member alone, while the group's own
-  silences every room, which is what the firmware does.
+- **Mute has two scopes, and two wires.** The button above the list carries the group: one LinkPlay
+  write on the master, because its mute reaches the members and the list it keeps, and its state is
+  the one every online speaker reports rather than the master's own. Every row carries a mute of its
+  own, the master's included, and each of them silences one room: sent over LinkPlay, the master's
+  row mute would have reached the whole group, so a room mute leaves by UPnP
+  `RenderingControl.SetMute`, which silences the speaker it is addressed to and nobody else
+  (measured 20/11, the members stay at `mute=0`).
 
 A drag writes while the thumb moves. The page paints every row from the anchor as the hand goes and
 sends the level as it changes, one write in flight and a short beat between two, so the rooms follow

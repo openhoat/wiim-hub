@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { groupActionFor, groupAnchor, groupFailure, joinTargets, scaledGroupLevel } from './group'
+import { groupAnchor, groupFailure, joinTargets, scaledGroupLevel } from './group'
 import type { Device } from './types'
 
 const device = (overrides: Partial<Device> = {}): Device => ({
@@ -48,27 +48,6 @@ const device = (overrides: Partial<Device> = {}): Device => ({
   findings: [],
   guides: [],
   ...overrides,
-})
-
-describe('groupActionFor', () => {
-  test('answers the one group gesture that is a single write', () => {
-    expect(groupActionFor({ action: 'mute', muted: true })).toEqual({ intent: 'mute', muted: true })
-  })
-
-  test('leaves every other gesture on the device path, the group volume included', () => {
-    // The group volume is a card-level gesture now: it carries the loudest
-    // speaker's level and paints every row, so it does not go through the
-    // device path of `useControls`.
-    for (const action of [
-      { action: 'volume', level: 30 },
-      { action: 'play' },
-      { action: 'next' },
-      { action: 'seek', seconds: 30 },
-      { action: 'source', input: 'optical' },
-    ] as const) {
-      expect(groupActionFor(action)).toBeNull()
-    }
-  })
 })
 
 describe('groupAnchor', () => {

@@ -6,6 +6,7 @@ import { commandFor, parseAction } from './commands.ts'
 import { fetchAlbumArt } from './device/art.ts'
 import { readDiagnostics } from './device/diagnostics.ts'
 import { type DevicePatch, type DeviceState, pollDevice } from './device/index.ts'
+import { setLocalMute } from './device/mute.ts'
 import { artUri, cleanTitle } from './device/payload.ts'
 import { resolveTarget } from './device/resolve.ts'
 import { readSettings } from './device/settings.ts'
@@ -332,9 +333,11 @@ const pollAll = async (): Promise<void> => {
 
 // The device address follows the state entry, so a host that moved to another
 // DHCP lease still receives its queued writes on the address the last poll saw.
-const writes = createWriteQueue((key, command) => {
-  const state = states.get(key)
-  return fetchCommand(state?.ip ?? key, command)
+const writes = createWriteQueue((key, write) => {
+  const ip = states.get(key)?.ip ?? key
+  return write.kind === 'upnp-mute'
+    ? setLocalMute(ip, write.muted)
+    : fetchCommand(ip, write.command)
 })
 
 // A write changes the state the hub renders: read it back quickly instead of
@@ -631,7 +634,7 @@ const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse)
     sendJson(res, 422, command)
     return
   }
-  const outcome = await writes.enqueue(entry.key, command.command, command.family)
+  const outcome = await writes.enqueue(entry.key, command.write, command.family)
   pollSoon(400)
   sendJson(res, 200, outcome)
 }
@@ -698,7 +701,7 @@ const groupRoute = async (url: URL, req: IncomingMessage, res: ServerResponse): 
   }
   const before = JSON.stringify(entry.state.group)
   const results = await Promise.all(
-    plan.writes.map(write => writes.enqueue(write.key, write.command, write.family))
+    plan.writes.map(write => writes.enqueue(write.key, write.write, write.family))
   )
   // A group write is not atomic: the members apply at slightly different times
   // and one of them may refuse. Read every speaker back before answering, so the

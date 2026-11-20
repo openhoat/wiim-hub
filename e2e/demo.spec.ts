@@ -187,9 +187,11 @@ test('draws a running group as one card, with its members as rows', async ({ pag
   await expect(group.getByText('Bathroom')).toBeVisible()
   await expect(group.getByText('state unknown')).toBeVisible()
   // Every row is the same row, the master's included: its mute sits next to its
-  // volume. Measured, the master's mute reaches every speaker, and the group's
-  // own control stays on the player above.
+  // volume and silences that speaker alone (measured 20/11, the write leaves by
+  // UPnP), while the player above carries the group's mute, named after the
+  // group so the two scopes cannot be confused.
   await expect(group.getByRole('button', { name: 'Mute Living Room' })).toBeVisible()
+  await expect(group.getByRole('button', { name: 'Mute Apartment' })).toBeVisible()
 
   // The offline speaker keeps its own card and draws no row of the group.
   const bedroom = page.getByTestId('playing-192.0.2.22')
@@ -1120,8 +1122,9 @@ test.describe('on a phone', () => {
 
 // The group gestures, on the demo fleet. The demo applies the same plan the hub
 // sends (`server/demo.ts`), so what the page reads back is what a group of real
-// speakers reports: a group volume fans out, a group mute is one write, and the
-// two teardown gestures belong to the speaker that owns the group.
+// speakers reports: a group volume fans out, a group mute is one write, a room's
+// own mute silences that room alone, and the two teardown gestures belong to the
+// speaker that owns the group.
 test.describe('multiroom', () => {
   test('carries every speaker of the group along, in proportion', async ({ page }) => {
     await openHub(page)
@@ -1229,22 +1232,53 @@ test.describe('multiroom', () => {
     await expect(hallway).toContainText(String(expected))
   })
 
-  test('mutes the whole group, and the member row reports the member muted', async ({ page }) => {
+  test('mutes the whole group, and every row reports it', async ({ page }) => {
     await openHub(page)
 
     const group = page.getByTestId('playing-192.0.2.21')
     // Every mute button on one card is named: the group's own, and one per row.
-    await expect(group.getByRole('button', { name: 'Mute', exact: true })).toHaveCount(1)
+    await expect(group.getByRole('button', { name: 'Mute Apartment' })).toBeVisible()
     await expect(group.getByRole('button', { name: 'Mute Hallway' })).toBeVisible()
-    await group.getByRole('button', { name: 'Mute', exact: true }).click()
-    await expect(group.getByRole('button', { name: 'Unmute', exact: true })).toBeVisible()
+    await group.getByRole('button', { name: 'Mute Apartment' }).click()
+    await expect(group.getByRole('button', { name: 'Unmute Apartment' })).toBeVisible()
 
-    // Measured: the master's mute reaches the members, so one write silences the
-    // group and the member's own row reports it.
+    // The group mute is the one gesture that reaches the members, so one write
+    // silences them all and every row reports it.
     await expect(group.getByRole('button', { name: 'Unmute Hallway' })).toHaveAttribute(
       'aria-pressed',
       'true'
     )
+    await expect(group.getByRole('button', { name: 'Unmute Living Room' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+  })
+
+  // The gesture the bug was about: muting the room that drives the group used to
+  // silence the whole group, because the master's LinkPlay mute propagates. It
+  // now leaves by UPnP, where the speaker is silenced alone (measured 20/11).
+  test('mutes the room that drives the group, and only that room', async ({ page }) => {
+    await openHub(page)
+
+    const group = page.getByTestId('playing-192.0.2.21')
+    await group.getByRole('button', { name: 'Mute Living Room' }).click()
+
+    await expect(group.getByRole('button', { name: 'Unmute Living Room' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    )
+    await expect(group.getByRole('button', { name: 'Mute Hallway' })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    )
+    // The group is still heard: the button above the list does not claim it is
+    // muted, which is what the master's own state alone would have said.
+    await expect(group.getByRole('button', { name: 'Mute Apartment' })).toBeVisible()
+
+    const response = await page.request.get('/api/state')
+    const state: { devices: { name: string; mute: boolean }[] } = await response.json()
+    expect(state.devices.find(device => device.name === 'Living Room')?.mute).toBe(true)
+    expect(state.devices.find(device => device.name === 'Hallway')?.mute).toBe(false)
   })
 
   test('takes a member out of the group, from the sheet of that member', async ({ page }) => {

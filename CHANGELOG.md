@@ -10,6 +10,15 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- Muting the room that drives a group silenced every room: the LinkPlay mute of a group master
+  propagates to its members, and the row's button used it. A room's mute now goes over UPnP
+  `RenderingControl.SetMute`, which silences that speaker alone, while the group keeps a mute of its
+  own on the player above the list, named after the group and read from every online speaker of the
+  group rather than from the master's own state. Both scopes are measured and documented
+  (ADR 0005).
+
 ## [0.11.0] - 2026-11-20
 
 ### Added

@@ -4,23 +4,12 @@
 // answers a result per write, and the page has to name the speaker that failed
 // rather than say "the command failed" over a group of two. Measured on a real
 // group (documented in docs/feature-research.md §5.8.1): the master's volume
-// moves alone, its mute reaches the group, so those two gestures do not travel
-// the same path.
-import type { Action, CommandResult, GroupAction } from './api'
+// moves alone, its LinkPlay mute reaches the group, so those two gestures do not
+// travel the same path. A room's own mute does not travel either: it leaves by
+// UPnP and silences that speaker only (measured 20/11), which is why the group
+// keeps a mute of its own.
+import type { CommandResult } from './api'
 import type { Device } from './types'
-
-// The two gestures the group card carries. Everything else stays a device write:
-// the transport runs on the master, and a member has no stream of its own.
-//
-// The group volume is not here: it is a card-level gesture, because the level it
-// carries is the loudest speaker's and every row has to follow the thumb while it
-// moves (`useGroupVolume`). `groupActionFor` answers the one group gesture that
-// is a single write, the mute, and both callers of this module know the
-// difference.
-export const groupActionFor = (action: Action): GroupAction | null => {
-  if (action.action === 'mute') return { intent: 'mute', muted: action.muted }
-  return null
-}
 
 // The speaker a group gesture turns: the loudest one the hub still reads. A
 // group whose rooms sit at 40 and 60 belongs to the room at 60, which is the

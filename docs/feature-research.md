@@ -436,6 +436,8 @@ commands are sent to the master unless the row says otherwise.
 | `setPlayerCmd:vol:<0-100>` on the master                               | the master alone, **no propagation to the members**                       |
 | `setPlayerCmd:vol:<0-100>` on the member                               | the member alone, and the master's list follows                           |
 | `setPlayerCmd:mute:<0\|1>` on the master                               | **the whole group**, member and list included                             |
+| `RenderingControl.SetMute` (UPnP, 49152) on any speaker                | that speaker alone, `getPlayerStatus` reports it at the next poll         |
+| `multiroom:SlaveMute:<master ip>:<0\|1>`                               | `OK` and no effect at all: the master ignores it                          |
 | `setPlayerCmd:slave_vol:<0-100>` on the master                         | the master's own volume only, despite the documented "overall volume"     |
 | `setPlayerCmd:slave_mute:mute` on the master                           | `OK` and no effect at all: accepted, then ignored                         |
 
@@ -448,6 +450,11 @@ Three consequences the implementation has to carry:
   silenced room keeps the level the reader left it at.
 - **There is a group mute**, because the master's own mute propagates. One write, no fan-out, and
   the measured propagation is what the code relies on rather than a documented behaviour.
+- **A room's own mute is not that write.** Because the master's mute reaches the members, a row's
+  mute sent over LinkPlay would silence the group from the master's row. The hub therefore sends a
+  room mute over UPnP `RenderingControl.SetMute`, which silences the speaker it is addressed to and
+  nobody else (measured 20/11, members left at `mute=0`). Two scopes, two wires, and the group keeps
+  the propagating one (ADR 0005).
 - The two paths disagree on purpose, so the code says which measurement each one follows.
 
 Destructive actions (`kick`, `leave`, `ungroup`) need a confirmation naming the member and must

@@ -1,5 +1,10 @@
 import { describe, expect, test } from 'vitest'
+import { type DeviceWrite, writeLabel } from './commands.ts'
 import { createWriteQueue } from './queue.ts'
+
+// The queue carries the write whole: a plain LinkPlay command in every test but
+// the mute, which is the one write that leaves by the UPnP port.
+const lp = (command: string): DeviceWrite => ({ kind: 'linkplay', command })
 
 type Call = { key: string; command: string; answer: (body: string | null) => void }
 
@@ -7,9 +12,9 @@ type Call = { key: string; command: string; answer: (body: string | null) => voi
 // shows up while a command is in flight.
 const controlled = () => {
   const calls: Call[] = []
-  const send = (key: string, command: string): Promise<string | null> =>
+  const send = (key: string, write: DeviceWrite): Promise<string | null> =>
     new Promise(resolve => {
-      calls.push({ key, command, answer: resolve })
+      calls.push({ key, command: writeLabel(write), answer: resolve })
     })
   return { calls, queue: createWriteQueue(send) }
 }
@@ -17,8 +22,8 @@ const controlled = () => {
 describe('createWriteQueue', () => {
   test('sends one command at a time, in the order they were queued', async () => {
     const { calls, queue } = controlled()
-    const first = queue.enqueue('lab', 'setPlayerCmd:pause', null)
-    const second = queue.enqueue('lab', 'setPlayerCmd:next', null)
+    const first = queue.enqueue('lab', lp('setPlayerCmd:pause'), null)
+    const second = queue.enqueue('lab', lp('setPlayerCmd:next'), null)
 
     expect(calls.map(call => call.command)).toEqual(['setPlayerCmd:pause'])
     calls[0].answer('OK')
@@ -41,9 +46,9 @@ describe('createWriteQueue', () => {
 
   test('replaces a pending job of the same family and answers every caller once', async () => {
     const { calls, queue } = controlled()
-    const first = queue.enqueue('lab', 'setPlayerCmd:vol:10', 'volume')
-    const second = queue.enqueue('lab', 'setPlayerCmd:vol:20', 'volume')
-    const third = queue.enqueue('lab', 'setPlayerCmd:vol:30', 'volume')
+    const first = queue.enqueue('lab', lp('setPlayerCmd:vol:10'), 'volume')
+    const second = queue.enqueue('lab', lp('setPlayerCmd:vol:20'), 'volume')
+    const third = queue.enqueue('lab', lp('setPlayerCmd:vol:30'), 'volume')
 
     expect(calls).toHaveLength(1)
     calls[0].answer('OK')
@@ -59,9 +64,9 @@ describe('createWriteQueue', () => {
 
   test('never coalesces jobs of different families', async () => {
     const { calls, queue } = controlled()
-    const volume = queue.enqueue('lab', 'setPlayerCmd:vol:10', 'volume')
-    const seek = queue.enqueue('lab', 'setPlayerCmd:seek:10', 'seek')
-    const balance = queue.enqueue('lab', 'setChannelBalance:0.5', 'balance')
+    const volume = queue.enqueue('lab', lp('setPlayerCmd:vol:10'), 'volume')
+    const seek = queue.enqueue('lab', lp('setPlayerCmd:seek:10'), 'seek')
+    const balance = queue.enqueue('lab', lp('setChannelBalance:0.5'), 'balance')
 
     calls[0].answer('OK')
     await volume
@@ -79,8 +84,8 @@ describe('createWriteQueue', () => {
 
   test('never coalesces a command that carries no family', async () => {
     const { calls, queue } = controlled()
-    const first = queue.enqueue('lab', 'setPlayerCmd:pause', null)
-    const second = queue.enqueue('lab', 'setPlayerCmd:pause', null)
+    const first = queue.enqueue('lab', lp('setPlayerCmd:pause'), null)
+    const second = queue.enqueue('lab', lp('setPlayerCmd:pause'), null)
 
     calls[0].answer('OK')
     await first
@@ -92,15 +97,15 @@ describe('createWriteQueue', () => {
 
   test('runs one writer per key, so two speakers write in parallel', () => {
     const { calls, queue } = controlled()
-    void queue.enqueue('lab', 'setPlayerCmd:pause', null)
-    void queue.enqueue('kitchen', 'setPlayerCmd:pause', null)
+    void queue.enqueue('lab', lp('setPlayerCmd:pause'), null)
+    void queue.enqueue('kitchen', lp('setPlayerCmd:pause'), null)
 
     expect(calls.map(call => call.key)).toEqual(['lab', 'kitchen'])
   })
 
   test('reports an unreachable device as a failed write with an empty body', async () => {
     const { calls, queue } = controlled()
-    const result = queue.enqueue('lab', 'setPlayerCmd:pause', null)
+    const result = queue.enqueue('lab', lp('setPlayerCmd:pause'), null)
 
     calls[0].answer(null)
     await expect(result).resolves.toEqual({
@@ -113,11 +118,11 @@ describe('createWriteQueue', () => {
 
   test('restarts the writer once the queue drained', async () => {
     const { calls, queue } = controlled()
-    const first = queue.enqueue('lab', 'setPlayerCmd:pause', null)
+    const first = queue.enqueue('lab', lp('setPlayerCmd:pause'), null)
     calls[0].answer('OK')
     await first
 
-    const second = queue.enqueue('lab', 'setPlayerCmd:next', null)
+    const second = queue.enqueue('lab', lp('setPlayerCmd:next'), null)
     expect(calls).toHaveLength(2)
     calls[1].answer('OK')
     await expect(second).resolves.toMatchObject({ ok: true, command: 'setPlayerCmd:next' })

@@ -69,6 +69,10 @@ export default withMermaid(
               text: 'The lock screen follows one card',
               link: '/adr/0004-the-lock-screen-follows-one-card',
             },
+            {
+              text: "A room's mute goes over UPnP",
+              link: '/adr/0005-a-room-s-mute-goes-over-upnp',
+            },
           ],
         },
       ],

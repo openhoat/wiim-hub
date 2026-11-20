@@ -12,10 +12,13 @@
 //     alone, and the documented `setPlayerCmd:slave_vol` moves the master too.
 //     So a group volume is one write for the master plus one per member.
 //   - there is a group mute, because the master's own mute propagates to the
-//     members and to the member list. One write, no fan-out.
+//     members and to the member list. One write, no fan-out. It is the only
+//     gesture that mutes more than one room: muting a room (the device command
+//     route) goes over UPnP, which silences that speaker alone (measured 20/11).
 //
 // The two paths disagree on purpose: each follows its measurement, and neither
 // follows the documentation.
+import type { DeviceWrite } from './commands.ts'
 import type { DeviceState } from './device/index.ts'
 import type { GroupMember } from './device/multiroom.ts'
 
@@ -32,7 +35,9 @@ export type GroupIntent =
 // One request on the speaker that receives it. `key` is the write queue key of
 // that speaker, so the two spellings of one machine never run two writers; for
 // every command but `join` and `leave` the receiving speaker is the master.
-export type GroupWrite = { key: string; command: string; family: string | null }
+export type GroupWrite = { key: string; write: DeviceWrite; family: string | null }
+
+const linkplay = (command: string): DeviceWrite => ({ kind: 'linkplay', command })
 export type GroupPlan = { writes: GroupWrite[] } | { error: string }
 
 // A speaker and the key the hub polls it under.
@@ -253,7 +258,7 @@ const volumeWrites = (
     unit === null ? level : scaledGroupLevel(level, from, baseOf(unit, bases))
   const own: GroupWrite = {
     key: target.key,
-    command: `setPlayerCmd:vol:${scaledFor(target)}`,
+    write: linkplay(`setPlayerCmd:vol:${scaledFor(target)}`),
     family: 'volume',
   }
   return {
@@ -266,7 +271,7 @@ const volumeWrites = (
         if (member?.state.mute) return null
         return {
           key: target.key,
-          command: `multiroom:SlaveVolume:${ip}:${scaledFor(member)}`,
+          write: linkplay(`multiroom:SlaveVolume:${ip}:${scaledFor(member)}`),
           family: `volume:${ip}`,
         }
       }),
@@ -278,7 +283,7 @@ const volumeWrites = (
 // and the next poll reads what each member did with it.
 const muteWrite = (muted: boolean, target: FleetUnit): GroupWrite => ({
   key: target.key,
-  command: `setPlayerCmd:mute:${muted ? 1 : 0}`,
+  write: linkplay(`setPlayerCmd:mute:${muted ? 1 : 0}`),
   family: null,
 })
 
@@ -313,7 +318,7 @@ const joinWrites = (
     writes: [
       {
         key: target.key,
-        command: `multiroom:JoinGroup:IP=${master.state.ip}:uuid=${master.state.uuid}`,
+        write: linkplay(`multiroom:JoinGroup:IP=${master.state.ip}:uuid=${master.state.uuid}`),
         family: null,
       },
     ],
@@ -357,7 +362,7 @@ const memberVolumePlan = (
     writes: [
       {
         key: target.key,
-        command: `multiroom:SlaveVolume:${intent.member}:${intent.level}`,
+        write: linkplay(`multiroom:SlaveVolume:${intent.member}:${intent.level}`),
         family: `volume:${intent.member}`,
       },
     ],
@@ -366,7 +371,9 @@ const memberVolumePlan = (
 
 const leavePlan = (target: FleetUnit): GroupPlan => {
   if (target.state.group.role !== 'member') return { error: 'this speaker follows no group' }
-  return { writes: [{ key: target.key, command: 'multiroom:LeaveGroup', family: null }] }
+  return {
+    writes: [{ key: target.key, write: linkplay('multiroom:LeaveGroup'), family: null }],
+  }
 }
 
 export const groupPlanFor = (
@@ -384,19 +391,19 @@ export const groupPlanFor = (
     case 'memberMute':
       return memberPlan(target, intent.member, () => ({
         key: target.key,
-        command: `multiroom:SlaveMute:${intent.member}:${intent.muted ? 1 : 0}`,
+        write: linkplay(`multiroom:SlaveMute:${intent.member}:${intent.muted ? 1 : 0}`),
         family: null,
       }))
     case 'kick':
       return memberPlan(target, intent.member, () => ({
         key: target.key,
-        command: `multiroom:SlaveKickout:${intent.member}`,
+        write: linkplay(`multiroom:SlaveKickout:${intent.member}`),
         family: null,
       }))
     case 'ungroup':
       return masterPlan(target, () => ({
         key: target.key,
-        command: 'multiroom:Ungroup',
+        write: linkplay('multiroom:Ungroup'),
         family: null,
       }))
     case 'leave':

@@ -18,7 +18,7 @@
 import { readFile } from 'node:fs/promises'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { extname, resolve, sep } from 'node:path'
-import { type Action, commandFor, parseAction } from './commands.ts'
+import { type Action, commandFor, parseAction, writeLabel } from './commands.ts'
 import type { DeviceState } from './device/index.ts'
 import type { GroupMember } from './device/multiroom.ts'
 import type { DeviceSettings } from './device/settings.ts'
@@ -887,7 +887,9 @@ const commandRoute = async (url: URL, req: IncomingMessage, res: ServerResponse)
     'content-type': 'application/json; charset=utf-8',
     'cache-control': 'no-store',
   })
-  res.end(JSON.stringify({ ok: true, unsupported: false, command: command.command, body: 'OK' }))
+  res.end(
+    JSON.stringify({ ok: true, unsupported: false, command: writeLabel(command.write), body: 'OK' })
+  )
 }
 
 // The group writes, on the simulated fleet. The refusals come from the same
@@ -1098,7 +1100,7 @@ const groupRoute = async (url: URL, req: IncomingMessage, res: ServerResponse): 
     results: plan.writes.map(write => ({
       ok: true,
       unsupported: false,
-      command: write.command,
+      command: writeLabel(write.write),
       body: 'OK',
     })),
     group: state.group,

@@ -63,9 +63,13 @@ export const VolumeControl = ({
   painted = null,
   silent = false,
   live,
+  groupMute,
 }: Readonly<{
   controls: Controls
   label?: string
+  // What the mute button silences, when the row already names a speaker: a group
+  // card draws one local mute per row and one group mute above them, and four
+  // buttons announced as "Mute" tell a screen reader nothing about their scope.
   speaker?: string
   // The pop-in names what it drives: a card passes its title, so a group's level
   // is not announced as the master's own.
@@ -74,6 +78,10 @@ export const VolumeControl = ({
   // A speaker under mute: the track is drawn but not reachable.
   silent?: boolean
   live?: VolumeLive
+  // The player above a group's list carries the group's mute, not the master's
+  // own: the state it shows is the one every online speaker reports, and the
+  // gesture is the group intent the server plans as one write.
+  groupMute?: { muted: boolean; pending: boolean; onToggle: () => void }
 }>) => {
   const { t } = useSettings()
   const device = controls.device
@@ -81,27 +89,35 @@ export const VolumeControl = ({
   const level = Math.min(painted ?? device.volume ?? 0, volumeMax)
   const percent = `${level}%`
   const readout = device.volume === null && painted === null ? '—' : String(level)
-  const muted = device.mute
-  // The name of the speaker the button mutes, where the row already names it: a
-  // group card draws one mute button per speaker, and two of them announced as
-  // "Mute" tell a screen reader nothing about which one it just silenced.
+  const muted = groupMute?.muted ?? device.mute
+  // A group mute is not a device command: it is an intent the server fans out,
+  // so it does not go through `controls.run` and does not own a pending count of
+  // its own.
+  const toggleMute = (): void => {
+    if (groupMute !== undefined) {
+      groupMute.onToggle()
+      return
+    }
+    void controls.run({ action: 'mute', muted: !muted })
+  }
   const muteName = muteLabel(t, muted, speaker)
   const name = label ?? t('controls.volume')
 
   return (
     <div className="min-w-0 flex-1">
       <div className="flex items-center gap-2">
-        {/* Every row keeps its mute button, the master's row included: a
-            member's mute silences that member, while the master's reaches the
-            whole group (measured). Identical rows are the point; the player
-            above the list carries the group's own control. */}
+        {/* Every row keeps its mute button, the master's row included, and every
+            one of them silences its own speaker only: the write goes over UPnP,
+            where the master's LinkPlay mute would have reached the whole group
+            (measured 20/11). The player above the list carries the group's own
+            mute, named after the group so the two scopes cannot be confused. */}
         <Button
           variant="ghost"
           size="icon-sm"
-          disabled={!device.online}
+          disabled={!device.online || groupMute?.pending === true}
           aria-label={muteName}
           aria-pressed={muted}
-          onClick={() => void controls.run({ action: 'mute', muted: !muted })}
+          onClick={toggleMute}
         >
           {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
         </Button>
@@ -291,6 +307,7 @@ export const PlayerControls = ({
   now,
   volume,
   tools = true,
+  groupMute,
 }: Readonly<{
   controls: Controls
   now: number
@@ -301,6 +318,7 @@ export const PlayerControls = ({
   // A group card draws the transport and the group volume: the tools of the
   // speaker driving it belong to that speaker, in its own sheet.
   tools?: boolean
+  groupMute?: { muted: boolean; pending: boolean; onToggle: () => void }
 }>) => {
   const { t } = useSettings()
   const device = controls.device
@@ -356,6 +374,8 @@ export const PlayerControls = ({
         </div>
         <VolumeControl
           controls={controls}
+          speaker={volume?.title}
+          groupMute={groupMute}
           sheetTitle={volume?.title}
           painted={volume?.painted ?? null}
           live={volume?.live}

@@ -1,6 +1,16 @@
 import { describe, expect, test } from 'vitest'
-import { commandFor, commandOutcome, eqBandNames, parseAction } from './commands.ts'
+import {
+  commandFor,
+  commandOutcome,
+  type DeviceWrite,
+  eqBandNames,
+  outcomeFor,
+  parseAction,
+  writeLabel,
+} from './commands.ts'
 import type { DeviceState } from './device/index.ts'
+
+const lp = (command: string): DeviceWrite => ({ kind: 'linkplay', command })
 
 // A device that supports one input, one output and one preset: enough to
 // exercise every check `commandFor` makes against the retained state.
@@ -310,12 +320,12 @@ describe('commandFor', () => {
     ['next', 'setPlayerCmd:next'],
     ['prev', 'setPlayerCmd:prev'],
   ] as const)('maps the fixed action %s to its command', (action, command) => {
-    expect(commandFor({ action }, device())).toEqual({ command, family: null })
+    expect(commandFor({ action }, device())).toEqual({ write: lp(command), family: null })
   })
 
   test('builds a seek command and marks it coalescable', () => {
     expect(commandFor({ action: 'seek', seconds: 90 }, device())).toEqual({
-      command: 'setPlayerCmd:seek:90',
+      write: lp('setPlayerCmd:seek:90'),
       family: 'seek',
     })
   })
@@ -324,40 +334,43 @@ describe('commandFor', () => {
     // `max_volume` is a setting the vendor app exposes, not a hardware stop:
     // measured, a Mini reporting 40 sat at 54, so the write is not refused.
     expect(commandFor({ action: 'volume', level: 70 }, device({ maxVolume: 60 }))).toEqual({
-      command: 'setPlayerCmd:vol:70',
+      write: lp('setPlayerCmd:vol:70'),
       family: 'volume',
     })
   })
 
   test('writes a volume when the device reports no max_volume', () => {
     expect(commandFor({ action: 'volume', level: 100 }, device({ maxVolume: null }))).toEqual({
-      command: 'setPlayerCmd:vol:100',
+      write: lp('setPlayerCmd:vol:100'),
       family: 'volume',
     })
   })
 
-  test('maps mute, preset and sleep to their commands', () => {
+  test('maps mute to the local UPnP write, preset and sleep to their commands', () => {
+    // A mute is the one write that leaves by the UPnP port: LinkPlay's own mute
+    // propagates from a group master to its members (measured 20/11), and the
+    // card's mute button silences one room.
     expect(commandFor({ action: 'mute', muted: true }, device())).toEqual({
-      command: 'setPlayerCmd:mute:1',
+      write: { kind: 'upnp-mute', muted: true },
       family: null,
     })
     expect(commandFor({ action: 'mute', muted: false }, device())).toEqual({
-      command: 'setPlayerCmd:mute:0',
+      write: { kind: 'upnp-mute', muted: false },
       family: null,
     })
     expect(commandFor({ action: 'preset', slot: 2 }, device())).toEqual({
-      command: 'MCUKeyShortClick:2',
+      write: lp('MCUKeyShortClick:2'),
       family: null,
     })
     expect(commandFor({ action: 'sleep', seconds: 60 }, device())).toEqual({
-      command: 'setShutdown:60',
+      write: lp('setShutdown:60'),
       family: null,
     })
   })
 
   test('refuses an input the device does not report', () => {
     expect(commandFor({ action: 'source', input: 'optical' }, device())).toEqual({
-      command: 'setPlayerCmd:switchmode:optical',
+      write: lp('setPlayerCmd:switchmode:optical'),
       family: null,
     })
     expect(commandFor({ action: 'source', input: 'bluetooth' }, device())).toEqual({
@@ -367,7 +380,7 @@ describe('commandFor', () => {
 
   test('refuses an output mode the device does not report', () => {
     expect(commandFor({ action: 'output', hardware: 1 }, device())).toEqual({
-      command: 'setAudioOutputHardwareMode:1',
+      write: lp('setAudioOutputHardwareMode:1'),
       family: null,
     })
     expect(commandFor({ action: 'output', hardware: 3 }, device())).toEqual({
@@ -377,15 +390,15 @@ describe('commandFor', () => {
 
   test('maps the equalizer switch and refuses an unknown preset', () => {
     expect(commandFor({ action: 'eq', enabled: true }, device())).toEqual({
-      command: 'EQOn',
+      write: lp('EQOn'),
       family: null,
     })
     expect(commandFor({ action: 'eq', enabled: false }, device())).toEqual({
-      command: 'EQOff',
+      write: lp('EQOff'),
       family: null,
     })
     expect(commandFor({ action: 'eqPreset', name: 'Rock' }, device())).toEqual({
-      command: 'EQLoad:Rock',
+      write: lp('EQLoad:Rock'),
       family: null,
     })
     expect(commandFor({ action: 'eqPreset', name: 'Jazz' }, device())).toEqual({
@@ -404,7 +417,8 @@ describe('commandFor', () => {
     const result = commandFor({ action: 'eqBand', band: 'band31hz', value: 6.04 }, device())
     if ('error' in result) throw new Error(result.error)
     expect(result.family).toBe('eq-band')
-    const payload = JSON.parse(result.command.slice('EQSetLV2SourceBand:'.length))
+    if (result.write.kind !== 'linkplay') throw new Error('expected a LinkPlay write')
+    const payload = JSON.parse(result.write.command.slice('EQSetLV2SourceBand:'.length))
     expect(payload).toEqual({
       source_name: 'wifi',
       pluginURI: 'http://moddevices.com/plugins/caps/Eq10HP',
@@ -415,41 +429,41 @@ describe('commandFor', () => {
 
   test('maps the device name, the LEDs, the buttons, the fade and the maximum volume', () => {
     expect(commandFor({ action: 'rename', name: 'Kitchen' }, device())).toEqual({
-      command: 'setDeviceName:Kitchen',
+      write: lp('setDeviceName:Kitchen'),
       family: null,
     })
     expect(commandFor({ action: 'led', on: true }, device())).toEqual({
-      command: 'LED_SWITCH_SET:1',
+      write: lp('LED_SWITCH_SET:1'),
       family: null,
     })
     expect(commandFor({ action: 'buttons', on: false }, device())).toEqual({
-      command: 'Button_Enable_SET:0',
+      write: lp('Button_Enable_SET:0'),
       family: null,
     })
     expect(commandFor({ action: 'fade', on: true }, device())).toEqual({
-      command: 'SetFadeFeature:1',
+      write: lp('SetFadeFeature:1'),
       family: null,
     })
     expect(commandFor({ action: 'maxVolume', level: 90 }, device())).toEqual({
-      command: 'setMaxVolume:90',
+      write: lp('setMaxVolume:90'),
       family: null,
     })
   })
 
   test('rounds the balance to the tenth and marks it coalescable', () => {
     expect(commandFor({ action: 'balance', value: 0.5 }, device())).toEqual({
-      command: 'setChannelBalance:0.5',
+      write: lp('setChannelBalance:0.5'),
       family: 'balance',
     })
     expect(commandFor({ action: 'balance', value: 0.55 }, device())).toEqual({
-      command: 'setChannelBalance:0.6',
+      write: lp('setChannelBalance:0.6'),
       family: 'balance',
     })
   })
 
   test('pushes a stream address to the player', () => {
     expect(commandFor({ action: 'url', url: 'https://example.com/radio.mp3' }, device())).toEqual({
-      command: 'setPlayerCmd:play:https://example.com/radio.mp3',
+      write: lp('setPlayerCmd:play:https://example.com/radio.mp3'),
       family: null,
     })
   })
@@ -478,5 +492,45 @@ describe('commandOutcome', () => {
 
   test('reads any other body as a success', () => {
     expect(commandOutcome('{"EQStat":"On"}')).toEqual({ ok: true, unsupported: false })
+  })
+})
+
+describe('writeLabel', () => {
+  test('names a LinkPlay command as itself', () => {
+    expect(writeLabel(lp('setPlayerCmd:vol:30'))).toBe('setPlayerCmd:vol:30')
+  })
+
+  test('names the UPnP write so the two wires stay apart', () => {
+    expect(writeLabel({ kind: 'upnp-mute', muted: true })).toBe('upnp:SetMute:1')
+    expect(writeLabel({ kind: 'upnp-mute', muted: false })).toBe('upnp:SetMute:0')
+  })
+})
+
+describe('outcomeFor', () => {
+  test('reads a SOAP answer as a success and a fault as a failure', () => {
+    expect(
+      outcomeFor({ kind: 'upnp-mute', muted: true }, '<s:Envelope>SetMuteResponse</s:Envelope>')
+    ).toEqual({
+      ok: true,
+      unsupported: false,
+    })
+    expect(
+      outcomeFor(
+        { kind: 'upnp-mute', muted: true },
+        '<s:Fault><errorCode>401</errorCode></s:Fault>'
+      )
+    ).toEqual({ ok: false, unsupported: false })
+    expect(outcomeFor({ kind: 'upnp-mute', muted: true }, null)).toEqual({
+      ok: false,
+      unsupported: false,
+    })
+  })
+
+  test('leaves a LinkPlay body to the command reader', () => {
+    expect(outcomeFor(lp('setPlayerCmd:pause'), 'OK')).toEqual({ ok: true, unsupported: false })
+    expect(outcomeFor(lp('setPlayerCmd:pause'), 'unknown command')).toEqual({
+      ok: false,
+      unsupported: true,
+    })
   })
 })

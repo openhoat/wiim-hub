@@ -5,9 +5,14 @@
 // keep the hub from sending a command the device would accept while doing
 // nothing.
 import { describe, expect, test } from 'vitest'
+import { type DeviceWrite, writeLabel } from './commands.ts'
 import type { DeviceState } from './device/index.ts'
 import type { GroupMember } from './device/multiroom.ts'
 import { type FleetUnit, groupPlanFor, parseGroupIntent } from './group-commands.ts'
+
+// The plan carries the write whole: a plain LinkPlay command everywhere, because
+// the group mute is the one gesture that reaches the members through the master.
+const lp = (command: string): DeviceWrite => ({ kind: 'linkplay', command })
 
 const member = (name: string, ip: string): GroupMember => ({
   name,
@@ -149,10 +154,10 @@ describe('groupPlanFor, volume', () => {
     expect(plan).toEqual({
       writes: [
         // The master alone: `setPlayerCmd:vol` does not propagate (measured).
-        { key: '192.0.2.10', command: 'setPlayerCmd:vol:35', family: 'volume' },
+        { key: '192.0.2.10', write: lp('setPlayerCmd:vol:35'), family: 'volume' },
         {
           key: '192.0.2.10',
-          command: 'multiroom:SlaveVolume:192.0.2.20:35',
+          write: lp('multiroom:SlaveVolume:192.0.2.20:35'),
           family: 'volume:192.0.2.20',
         },
       ],
@@ -174,10 +179,10 @@ describe('groupPlanFor, volume', () => {
     quiet.state.volume = 20
     expect(groupPlanFor({ intent: 'volume', level: 30 }, two, [two, quiet])).toEqual({
       writes: [
-        { key: '192.0.2.10', command: 'setPlayerCmd:vol:30', family: 'volume' },
+        { key: '192.0.2.10', write: lp('setPlayerCmd:vol:30'), family: 'volume' },
         {
           key: '192.0.2.10',
-          command: 'multiroom:SlaveVolume:192.0.2.20:15',
+          write: lp('multiroom:SlaveVolume:192.0.2.20:15'),
           family: 'volume:192.0.2.20',
         },
       ],
@@ -192,7 +197,7 @@ describe('groupPlanFor, volume', () => {
     louder.state.volume = 60
     const plan = groupPlanFor({ intent: 'volume', level: 30 }, two, [two, louder])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes.map(write => write.command)).toEqual([
+    expect(plan.writes.map(write => writeLabel(write.write))).toEqual([
       'setPlayerCmd:vol:20',
       'multiroom:SlaveVolume:192.0.2.20:30',
     ])
@@ -203,7 +208,7 @@ describe('groupPlanFor, volume', () => {
     const same = follower()
     const plan = groupPlanFor({ intent: 'volume', level: 30 }, two, [two, same])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes.map(write => write.command)).toEqual([
+    expect(plan.writes.map(write => writeLabel(write.write))).toEqual([
       'setPlayerCmd:vol:30',
       'multiroom:SlaveVolume:192.0.2.20:30',
     ])
@@ -218,7 +223,7 @@ describe('groupPlanFor, volume', () => {
     guest.state.volume = null
     const plan = groupPlanFor({ intent: 'volume', level: 25 }, unread, [unread, guest])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes.map(write => write.command)).toEqual([
+    expect(plan.writes.map(write => writeLabel(write.write))).toEqual([
       'setPlayerCmd:vol:25',
       'multiroom:SlaveVolume:192.0.2.20:25',
     ])
@@ -233,7 +238,7 @@ describe('groupPlanFor, volume', () => {
     offline.state.online = false
     const plan = groupPlanFor({ intent: 'volume', level: 30 }, two, [two, offline])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes.map(write => write.command)).toEqual([
+    expect(plan.writes.map(write => writeLabel(write.write))).toEqual([
       'setPlayerCmd:vol:30',
       'multiroom:SlaveVolume:192.0.2.20:68',
     ])
@@ -253,10 +258,10 @@ describe('groupPlanFor, volume', () => {
     )
     expect(plan).toEqual({
       writes: [
-        { key: '192.0.2.10', command: 'setPlayerCmd:vol:20', family: 'volume' },
+        { key: '192.0.2.10', write: lp('setPlayerCmd:vol:20'), family: 'volume' },
         {
           key: '192.0.2.10',
-          command: 'multiroom:SlaveVolume:192.0.2.20:30',
+          write: lp('multiroom:SlaveVolume:192.0.2.20:30'),
           family: 'volume:192.0.2.20',
         },
       ],
@@ -278,10 +283,10 @@ describe('groupPlanFor, volume', () => {
     expect(second).toEqual(first)
     expect(first).toEqual({
       writes: [
-        { key: '192.0.2.10', command: 'setPlayerCmd:vol:30', family: 'volume' },
+        { key: '192.0.2.10', write: lp('setPlayerCmd:vol:30'), family: 'volume' },
         {
           key: '192.0.2.10',
-          command: 'multiroom:SlaveVolume:192.0.2.20:15',
+          write: lp('multiroom:SlaveVolume:192.0.2.20:15'),
           family: 'volume:192.0.2.20',
         },
       ],
@@ -297,7 +302,7 @@ describe('groupPlanFor, volume', () => {
       quiet,
     ])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes.map(write => write.command)).toEqual([
+    expect(plan.writes.map(write => writeLabel(write.write))).toEqual([
       'setPlayerCmd:vol:30',
       'multiroom:SlaveVolume:192.0.2.20:15',
     ])
@@ -309,7 +314,7 @@ describe('groupPlanFor, volume', () => {
     silent.state.volume = 0
     const plan = groupPlanFor({ intent: 'volume', level: 60 }, two, [two, silent])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:0')
+    expect(writeLabel(plan.writes[1].write)).toBe('multiroom:SlaveVolume:192.0.2.20:0')
   })
 
   test('lets a scaled level pass the max_volume that member reports', () => {
@@ -321,7 +326,7 @@ describe('groupPlanFor, volume', () => {
     small.state.maxVolume = 30
     const plan = groupPlanFor({ intent: 'volume', level: 60 }, two, [two, small])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes[1].command).toBe('multiroom:SlaveVolume:192.0.2.20:60')
+    expect(writeLabel(plan.writes[1].write)).toBe('multiroom:SlaveVolume:192.0.2.20:60')
   })
 
   test('accepts a level above the max_volume the speaker carrying the group reports', () => {
@@ -329,7 +334,7 @@ describe('groupPlanFor, volume', () => {
     quiet.state.maxVolume = 80
     const plan = groupPlanFor({ intent: 'volume', level: 90 }, quiet, [quiet, follower()])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes.map(write => write.command)).toEqual([
+    expect(plan.writes.map(write => writeLabel(write.write))).toEqual([
       'setPlayerCmd:vol:90',
       'multiroom:SlaveVolume:192.0.2.20:90',
     ])
@@ -342,7 +347,7 @@ describe('groupPlanFor, volume', () => {
     capped.state.maxVolume = 50
     const plan = groupPlanFor({ intent: 'volume', level: 60 }, two, [two, capped])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes.map(write => write.command)).toEqual([
+    expect(plan.writes.map(write => writeLabel(write.write))).toEqual([
       'setPlayerCmd:vol:40',
       'multiroom:SlaveVolume:192.0.2.20:60',
     ])
@@ -363,7 +368,7 @@ describe('groupPlanFor, volume', () => {
     silenced.state.volume = 80
     silenced.state.mute = true
     expect(groupPlanFor({ intent: 'volume', level: 30 }, two, [two, silenced])).toEqual({
-      writes: [{ key: '192.0.2.10', command: 'setPlayerCmd:vol:30', family: 'volume' }],
+      writes: [{ key: '192.0.2.10', write: lp('setPlayerCmd:vol:30'), family: 'volume' }],
     })
   })
 
@@ -378,7 +383,7 @@ describe('groupPlanFor, volume', () => {
     loud.state.volume = 20
     const plan = groupPlanFor({ intent: 'volume', level: 10 }, two, [two, loud])
     if ('error' in plan) throw new Error(plan.error)
-    expect(plan.writes.map(write => write.command)).toEqual([
+    expect(plan.writes.map(write => writeLabel(write.write))).toEqual([
       'setPlayerCmd:vol:30',
       'multiroom:SlaveVolume:192.0.2.20:10',
     ])
@@ -391,7 +396,7 @@ describe('groupPlanFor, volume', () => {
     silenced.state.mute = true
     silenced.state.volume = 55
     expect(groupPlanFor({ intent: 'volume', level: 30 }, two, [two, silenced])).toEqual({
-      writes: [{ key: '192.0.2.10', command: 'setPlayerCmd:vol:30', family: 'volume' }],
+      writes: [{ key: '192.0.2.10', write: lp('setPlayerCmd:vol:30'), family: 'volume' }],
     })
   })
 })
@@ -399,10 +404,10 @@ describe('groupPlanFor, volume', () => {
 describe('groupPlanFor, mute', () => {
   test('writes once on the master, which is what propagates', () => {
     expect(groupPlanFor({ intent: 'mute', muted: true }, master(), fleet())).toEqual({
-      writes: [{ key: '192.0.2.10', command: 'setPlayerCmd:mute:1', family: null }],
+      writes: [{ key: '192.0.2.10', write: lp('setPlayerCmd:mute:1'), family: null }],
     })
     expect(groupPlanFor({ intent: 'mute', muted: false }, master(), fleet())).toEqual({
-      writes: [{ key: '192.0.2.10', command: 'setPlayerCmd:mute:0', family: null }],
+      writes: [{ key: '192.0.2.10', write: lp('setPlayerCmd:mute:0'), family: null }],
     })
   })
 })
@@ -415,7 +420,7 @@ describe('groupPlanFor, one member', () => {
       writes: [
         {
           key: '192.0.2.10',
-          command: 'multiroom:SlaveVolume:192.0.2.20:25',
+          write: lp('multiroom:SlaveVolume:192.0.2.20:25'),
           family: 'volume:192.0.2.20',
         },
       ],
@@ -423,7 +428,7 @@ describe('groupPlanFor, one member', () => {
     expect(
       groupPlanFor({ intent: 'memberMute', member: '192.0.2.20', muted: true }, master(), fleet())
     ).toEqual({
-      writes: [{ key: '192.0.2.10', command: 'multiroom:SlaveMute:192.0.2.20:1', family: null }],
+      writes: [{ key: '192.0.2.10', write: lp('multiroom:SlaveMute:192.0.2.20:1'), family: null }],
     })
   })
 
@@ -446,7 +451,7 @@ describe('groupPlanFor, one member', () => {
       writes: [
         {
           key: '192.0.2.10',
-          command: 'multiroom:SlaveVolume:192.0.2.20:60',
+          write: lp('multiroom:SlaveVolume:192.0.2.20:60'),
           family: 'volume:192.0.2.20',
         },
       ],
@@ -461,7 +466,7 @@ describe('groupPlanFor, membership', () => {
       writes: [
         {
           key: '192.0.2.30',
-          command: 'multiroom:JoinGroup:IP=192.0.2.10:uuid=A1B2C3D4E5F60718293A4B5C',
+          write: lp('multiroom:JoinGroup:IP=192.0.2.10:uuid=A1B2C3D4E5F60718293A4B5C'),
           family: null,
         },
       ],
@@ -508,16 +513,16 @@ describe('groupPlanFor, membership', () => {
 
   test('sends the kick and the ungroup to the master', () => {
     expect(groupPlanFor({ intent: 'kick', member: '192.0.2.20' }, master(), fleet())).toEqual({
-      writes: [{ key: '192.0.2.10', command: 'multiroom:SlaveKickout:192.0.2.20', family: null }],
+      writes: [{ key: '192.0.2.10', write: lp('multiroom:SlaveKickout:192.0.2.20'), family: null }],
     })
     expect(groupPlanFor({ intent: 'ungroup' }, master(), fleet())).toEqual({
-      writes: [{ key: '192.0.2.10', command: 'multiroom:Ungroup', family: null }],
+      writes: [{ key: '192.0.2.10', write: lp('multiroom:Ungroup'), family: null }],
     })
   })
 
   test('sends the leave to the member, and only from a member', () => {
     expect(groupPlanFor({ intent: 'leave' }, follower(), fleet())).toEqual({
-      writes: [{ key: '192.0.2.20', command: 'multiroom:LeaveGroup', family: null }],
+      writes: [{ key: '192.0.2.20', write: lp('multiroom:LeaveGroup'), family: null }],
     })
     expect(groupPlanFor({ intent: 'leave' }, master(), fleet())).toEqual({
       error: 'this speaker follows no group',

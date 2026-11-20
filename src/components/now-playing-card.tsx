@@ -601,7 +601,7 @@ export const NowPlayingCard = ({
   // its level is named after it, so a group's fan-out is not announced as the
   // master's own speaker.
   const title = cardTitle(card)
-  const controls = useControls(card.master, { group: driven })
+  const controls = useControls(card.master)
   const live = controls.device
   const groupRun = useGroupRun(onGroupChanged)
   const groupVolume = useGroupVolume(card.master, onGroupChanged)
@@ -612,6 +612,21 @@ export const NowPlayingCard = ({
   const anchor = groupAnchor(speakers)
   const anchorLevel = anchor?.volume ?? null
   const groupLevel = groupVolume.drag?.level ?? anchorLevel
+  // The group's mute is the state of the group, not the master's own: a room can
+  // be silenced alone (its row's mute, over UPnP) while the group keeps playing,
+  // so the button above the list reads every online speaker and writes the group
+  // intent that reaches them all.
+  const online = speakers.filter(device => device.online)
+  const groupMuted = online.length > 0 && online.every(device => device.mute)
+  const groupMute = driven
+    ? {
+        muted: groupMuted,
+        pending: groupRun.pending,
+        onToggle: () => {
+          void groupRun.run(card.master, { intent: 'mute', muted: !groupMuted })
+        },
+      }
+    : undefined
   // The levels the gesture starts from, which the hub scales every crank with:
   // sending them keeps a drag from drifting on its own rounding.
   const bases = (): Record<string, number> => {
@@ -718,7 +733,13 @@ export const NowPlayingCard = ({
         />
       )}
 
-      <PlayerControls controls={controls} now={now} volume={volume} tools={!driven} />
+      <PlayerControls
+        controls={controls}
+        now={now}
+        volume={volume}
+        tools={!driven}
+        groupMute={groupMute}
+      />
 
       <p
         role="status"

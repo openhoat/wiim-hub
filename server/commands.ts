@@ -247,7 +247,17 @@ export const parseAction = (body: unknown): Parsed => {
   return parser(body)
 }
 
-export type Command = { command: string; family: string | null }
+// The wire a write takes. LinkPlay is one GET against `httpapi.asp`; a mute
+// travels over the UPnP RenderingControl service instead, because the LinkPlay
+// mute of a group master reaches the members (measured 20/11) while the UPnP one
+// silences the speaker it is addressed to and nobody else.
+export type DeviceWrite =
+  | { kind: 'linkplay'; command: string }
+  | { kind: 'upnp-mute'; muted: boolean }
+
+export type Command = { write: DeviceWrite; family: string | null }
+
+const linkplay = (command: string): DeviceWrite => ({ kind: 'linkplay', command })
 
 // A write either produces a command or a refusal that names the value it would
 // not accept.
@@ -259,7 +269,7 @@ const sourceCommand = (
 ): Outcome => {
   if (!device.inputs.includes(action.input))
     return { error: `input not available: ${action.input}` }
-  return { command: `setPlayerCmd:switchmode:${action.input}`, family: null }
+  return { write: linkplay(`setPlayerCmd:switchmode:${action.input}`), family: null }
 }
 
 const outputCommand = (
@@ -269,7 +279,7 @@ const outputCommand = (
   if (!device.outputs.some(output => output.hardware === action.hardware)) {
     return { error: `output not available: ${action.hardware}` }
   }
-  return { command: `setAudioOutputHardwareMode:${action.hardware}`, family: null }
+  return { write: linkplay(`setAudioOutputHardwareMode:${action.hardware}`), family: null }
 }
 
 const eqPresetCommand = (
@@ -280,7 +290,7 @@ const eqPresetCommand = (
   // exist on this firmware or was not meant as a preset.
   if (!device.eq.presets.includes(action.name))
     return { error: `unknown eq preset: ${action.name}` }
-  return { command: `EQLoad:${action.name}`, family: null }
+  return { write: linkplay(`EQLoad:${action.name}`), family: null }
 }
 
 const eqBandCommand = (
@@ -296,7 +306,7 @@ const eqBandCommand = (
     channelMode: 'Stereo',
     EQBand: [{ param_name: action.band, value: Math.round(action.value * 10) / 10 }],
   }
-  return { command: `EQSetLV2SourceBand:${JSON.stringify(payload)}`, family: 'eq-band' }
+  return { write: linkplay(`EQSetLV2SourceBand:${JSON.stringify(payload)}`), family: 'eq-band' }
 }
 
 // The three switches that all read `<name>:<0|1>`, by command name.
@@ -314,42 +324,49 @@ const flagCommands: Record<'led' | 'buttons' | 'fade', string> = {
 const statelessCommand = (
   action: Exclude<Action, Extract<Action, { action: 'source' | 'output' | 'eqPreset' | 'eqBand' }>>
 ): Outcome => {
-  if (isFixedName(action.action)) return { command: fixed[action.action], family: null }
+  if (isFixedName(action.action)) return { write: linkplay(fixed[action.action]), family: null }
   switch (action.action) {
     case 'volume':
       // Not bounded by `max_volume`: that field is a setting the vendor app
       // exposes, not a hardware stop (measured, a Mini reporting 40 sat at 54).
       // The parser already keeps the level on the protocol's 0-100 scale.
-      return { command: `setPlayerCmd:vol:${action.level}`, family: 'volume' }
+      return { write: linkplay(`setPlayerCmd:vol:${action.level}`), family: 'volume' }
     case 'seek':
-      return { command: `setPlayerCmd:seek:${action.seconds}`, family: 'seek' }
+      return { write: linkplay(`setPlayerCmd:seek:${action.seconds}`), family: 'seek' }
     case 'mute':
-      return { command: `setPlayerCmd:mute:${action.muted ? 1 : 0}`, family: null }
+      // Every mute is local, the master's included: the LinkPlay mute of a
+      // group master silences the whole group (measured), and a reader who mutes
+      // a room wants that room silent. The group has its own gesture, which the
+      // server plans as one write on the master (`server/group-commands.ts`).
+      return { write: { kind: 'upnp-mute', muted: action.muted }, family: null }
     case 'preset':
-      return { command: `MCUKeyShortClick:${action.slot}`, family: null }
+      return { write: linkplay(`MCUKeyShortClick:${action.slot}`), family: null }
     case 'sleep':
-      return { command: `setShutdown:${action.seconds}`, family: null }
+      return { write: linkplay(`setShutdown:${action.seconds}`), family: null }
     case 'eq':
-      return { command: action.enabled ? 'EQOn' : 'EQOff', family: null }
+      return { write: linkplay(action.enabled ? 'EQOn' : 'EQOff'), family: null }
     case 'rename':
-      return { command: `setDeviceName:${action.name}`, family: null }
+      return { write: linkplay(`setDeviceName:${action.name}`), family: null }
     case 'led':
     case 'buttons':
     case 'fade':
-      return { command: `${flagCommands[action.action]}:${action.on ? 1 : 0}`, family: null }
+      return {
+        write: linkplay(`${flagCommands[action.action]}:${action.on ? 1 : 0}`),
+        family: null,
+      }
     case 'balance':
       // The device takes a decimal: round to the tenth, which is finer than the
       // half step the UI offers and still inside the measured range.
       return {
-        command: `setChannelBalance:${Math.round(action.value * 10) / 10}`,
+        write: linkplay(`setChannelBalance:${Math.round(action.value * 10) / 10}`),
         family: 'balance',
       }
     case 'maxVolume':
-      return { command: `setMaxVolume:${action.level}`, family: null }
+      return { write: linkplay(`setMaxVolume:${action.level}`), family: null }
     case 'url':
       // Measured on the Pro: the player switches to its own push mode, reports
       // the address as the title and plays it, without any account.
-      return { command: `setPlayerCmd:play:${action.url}`, family: null }
+      return { write: linkplay(`setPlayerCmd:play:${action.url}`), family: null }
   }
   // Unreachable while the union above stays covered: it keeps a future action
   // from reaching the writer as an unknown string.
@@ -386,3 +403,19 @@ export const commandOutcome = (body: string | null): { ok: boolean; unsupported:
   if (/"status"\s*:\s*"Failed"/i.test(answer)) return { ok: false, unsupported: false }
   return { ok: true, unsupported: false }
 }
+
+// What the answer calls the write: the command the device received, or the UPnP
+// action, so a reader of `/api/command` can tell the two wires apart.
+export const writeLabel = (write: DeviceWrite): string =>
+  write.kind === 'upnp-mute' ? `upnp:SetMute:${write.muted ? 1 : 0}` : write.command
+
+// A UPnP answer is a SOAP envelope, not a LinkPlay token: a fault carries an
+// `<errorCode>`, and there is no `unknown command` for a service the speaker
+// publishes in its own description.
+export const outcomeFor = (
+  write: DeviceWrite,
+  body: string | null
+): { ok: boolean; unsupported: boolean } =>
+  write.kind === 'upnp-mute'
+    ? { ok: body !== null && !/<errorCode>/.test(body), unsupported: false }
+    : commandOutcome(body)
