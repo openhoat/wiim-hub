@@ -65,6 +65,10 @@ export default withMermaid(
               text: 'The page reads a stream',
               link: '/adr/0003-the-page-reads-a-stream',
             },
+            {
+              text: 'The lock screen follows one card',
+              link: '/adr/0004-the-lock-screen-follows-one-card',
+            },
           ],
         },
       ],

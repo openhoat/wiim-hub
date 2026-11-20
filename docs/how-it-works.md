@@ -225,9 +225,10 @@ than as the speaker driving it. The transport the lock screen shows sends the sa
 buttons of the card, through the same hook, including the three seek gestures. Exactly one card is
 published: the first in the page's order that plays, otherwise the first that carries a track, so a
 paused stream stays resumable and a track title that empties between two tracks does not blink the
-player away. The cover is resolved to an absolute address, because the speaker serves plain http on
-another origin and the lock screen cannot fetch that. A browser without the API keeps the page it
-had: nothing to configure.
+player away; [ADR 0004](/adr/0004-the-lock-screen-follows-one-card) holds the reasoning. The cover
+is resolved to an absolute address, because the speaker serves plain http on another origin and the
+lock screen cannot fetch that. A browser without the API keeps the page it had: nothing to
+configure.
 
 ## Updates
 
