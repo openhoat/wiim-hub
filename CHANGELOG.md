@@ -10,6 +10,15 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Added
+
+- An offline speaker no longer reads as gone when only its control API died. The hub keeps two
+  ports the firmware leaves open probed while the device is silent (8819 and 49152, both measured
+  still accepting a connection on a WiiM Mini whose 443 refused every one), and reads the slave
+  list of the speaker that drives the group. The card now says the control API is silent, that the
+  speaker is still powered and on the network, and which master still lists it, instead of the bare
+  offline line.
+
 ## [0.11.4] - 2026-11-20
 
 ### Fixed

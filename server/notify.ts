@@ -36,6 +36,8 @@ const severityNames: readonly Severity[] = ['info', 'warn', 'alert']
 // the numbers, the title has to survive a notification bar.
 const titles: Record<FindingId, string> = {
   offline: 'player offline',
+  offlineListed: 'group lists a silent member',
+  offlineAlive: 'silent API, speaker alive',
   weakLink: 'weak radio link',
   wifiDrops: 'Wi-Fi drops',
   ethDrops: 'wired link drops',

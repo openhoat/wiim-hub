@@ -113,6 +113,7 @@ const emptyState = (ip: string): DeviceState => ({
   uuid: '',
   group: { role: 'none', name: '', members: [], saved: false, parent: null },
   mirror: null,
+  reach: null,
   rssi: null,
   volume: null,
   status: '',
@@ -1128,7 +1129,7 @@ const hubPayload = () => {
     )
     .map(state => ({
       ...state,
-      findings: findingsFor({ state, diagnostics: state.diagnostics }),
+      findings: findingsFor({ state, diagnostics: state.diagnostics, fleet: states.values() }),
       guides: guidesFor({ state, diagnostics: state.diagnostics }),
     }))
   return { ts: Date.now(), pollMs: tickMs, devices }
@@ -1169,7 +1170,11 @@ const sendReport = (url: URL, res: ServerResponse): void => {
     sendJson(res, 404, { error: 'unknown device' })
     return
   }
-  const findings = findingsFor({ state, diagnostics: state.diagnostics })
+  const findings = findingsFor({
+    state,
+    diagnostics: state.diagnostics,
+    fleet: states.values(),
+  })
   const guides = guidesFor({ state, diagnostics: state.diagnostics })
   const inventory = state.online ? demoInventory() : null
   const report = buildReport({

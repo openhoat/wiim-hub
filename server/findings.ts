@@ -9,6 +9,7 @@
 
 import type { Diagnostics } from './device/diagnostics.ts'
 import type { DeviceState } from './device/index.ts'
+import type { GroupMember } from './device/multiroom.ts'
 import { type Guide, guideSection } from './guides.ts'
 import { type Inventory, inventorySection, type Resolution } from './inventory.ts'
 
@@ -21,6 +22,8 @@ const wornFlashRatio = 0.02
 
 export type FindingId =
   | 'offline'
+  | 'offlineListed'
+  | 'offlineAlive'
   | 'weakLink'
   | 'wifiDrops'
   | 'ethDrops'
@@ -68,6 +71,76 @@ const offlineFinding = (state: DeviceState): Finding => ({
     `last successful poll ${state.lastSeen === null ? 'never' : new Date(state.lastSeen).toISOString()}`,
   ],
 })
+
+const normalizeName = (value: string): string => value.trim().toLowerCase()
+
+// A member is a follower the master names in its own list: the address when the
+// list carries one (a running group), the name otherwise (a saved one), the
+// same order the fleet pass matches them in.
+const namesMember = (member: GroupMember, state: DeviceState): boolean => {
+  if (member.ip !== '') return member.ip === state.ip
+  return state.name !== '' && normalizeName(member.name) === normalizeName(state.name)
+}
+
+type Listing = { master: string; ip: string; group: string }
+
+// The one place a silent member is still named: another speaker's slave list.
+// The master that drives the group is preferred, because a member copies that
+// list in its own state and naming the member would be a lie; the parent field
+// is what tells the two apart. A fleet that names no group stays silent.
+const listingOf = (
+  fleet: Iterable<DeviceState> | undefined,
+  state: DeviceState
+): Listing | null => {
+  if (fleet === undefined) return null
+  const candidates: DeviceState[] = []
+  for (const candidate of fleet) {
+    if (candidate === state || !candidate.online || candidate.group.parent !== null) continue
+    if (candidate.group.name === '' || candidate.group.members.length === 0) continue
+    if (!candidate.group.members.some(member => namesMember(member, state))) continue
+    candidates.push(candidate)
+  }
+  const master =
+    candidates.find(candidate => candidate.group.role === 'master') ??
+    candidates.find(candidate => candidate.group.saved)
+  if (master === undefined) return null
+  return { master: master.name, ip: master.ip, group: master.group.name }
+}
+
+// A silent device is still named by the speaker that drives its group: the
+// fact is the master's, the device itself says nothing.
+const offlineListedFinding = (
+  state: DeviceState,
+  fleet: Iterable<DeviceState> | undefined
+): Finding | null => {
+  const listing = listingOf(fleet, state)
+  if (listing === null) return null
+  const named = state.name === '' ? state.ip : `${state.name} (${state.ip})`
+  return {
+    id: 'offlineListed',
+    severity: 'info',
+    values: { master: listing.master, group: listing.group },
+    evidence: [
+      `multiroom:getSlaveList on ${listing.master} (${listing.ip}) still lists ${named} in the group ${listing.group}`,
+    ],
+  }
+}
+
+// The control API is what the hub polls; a port that still accepts a connection
+// is the same device's own answer that it is powered and on the network. Only
+// the poll loop writes `reach`, never this module.
+const offlineAliveFinding = (state: DeviceState): Finding | null => {
+  const ports = state.reach?.ports ?? []
+  if (ports.length === 0) return null
+  return {
+    id: 'offlineAlive',
+    severity: 'info',
+    values: { port: ports[0], ports: ports.join(', ') },
+    evidence: ports.map(
+      port => `TCP connect to ${state.ip}:${port} was accepted while the control API did not answer`
+    ),
+  }
+}
 
 const weakLinkFinding = (state: DeviceState): Finding | null => {
   const { link, rssi } = state
@@ -237,9 +310,19 @@ const sleepTimerFinding = (state: DeviceState): Finding | null => {
 export const findingsFor = (input: {
   state: DeviceState
   diagnostics: Diagnostics | null
+  // The rest of the fleet, when the caller has it: a group's slave list is the
+  // only place a silent member is still named, and this module never polls on
+  // its own.
+  fleet?: Iterable<DeviceState>
 }): Finding[] => {
-  const { state, diagnostics } = input
-  if (!state.online) return [offlineFinding(state)]
+  const { state, diagnostics, fleet } = input
+  if (!state.online) {
+    return [
+      offlineFinding(state),
+      offlineListedFinding(state, fleet),
+      offlineAliveFinding(state),
+    ].filter((entry): entry is Finding => entry !== null)
+  }
   const health = diagnostics?.health ?? null
   const debug = diagnostics?.debug ?? null
   const hardware = diagnostics?.hardware ?? null
@@ -260,6 +343,10 @@ export const findingsFor = (input: {
 
 const sentences: Record<FindingId, (values: Record<string, string | number>) => string> = {
   offline: values => `The player does not answer: ${values.failures} consecutive poll failure(s).`,
+  offlineListed: values =>
+    `The player does not answer on its control API, but ${values.master} still lists it in the group ${values.group}: the app still shows it, its own settings are out of reach.`,
+  offlineAlive: values =>
+    `The player does not answer on its control API, but it still accepts a connection on port ${values.port}: it is powered and on the network, only its control service stopped.`,
   weakLink: values =>
     `The radio link is weak: ${values.rssi} dBm, ${values.snr} dB SNR, ${values.rate} Mb/s on ${values.band} GHz.`,
   wifiDrops: values =>

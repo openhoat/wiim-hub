@@ -320,6 +320,8 @@
       "info": "info"
     },
     "offline": "The player does not answer: {failures, plural, one {# consecutive poll failure} other {# consecutive poll failures}}.",
+    "offlineListed": "The player does not answer on its control API, but {master} still lists it in the group {group}: the app still shows it, its own settings are out of reach.",
+    "offlineAlive": "The player does not answer on its control API, but it still accepts a connection on port {port}: it is powered and on the network, only its control service stopped.",
     "weakLink": "The radio link is weak: {rssi} dBm, {snr} dB SNR, {rate} Mb/s on {band} GHz.",
     "wifiDrops": "The Wi-Fi dropped {count, plural, one {# time} other {# times}}, the last one {minutes} min ago.",
     "ethDrops": "The wired link dropped {count, plural, one {# time} other {# times}}.",

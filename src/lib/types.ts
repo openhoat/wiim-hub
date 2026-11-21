@@ -83,6 +83,8 @@ export type Finding = {
 // on the server and the `findings.*` locale keys keep the two in step.
 export type FindingId =
   | 'offline'
+  | 'offlineListed'
+  | 'offlineAlive'
   | 'weakLink'
   | 'wifiDrops'
   | 'ethDrops'

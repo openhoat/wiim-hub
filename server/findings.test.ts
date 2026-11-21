@@ -101,6 +101,108 @@ describe('findingsFor', () => {
     expect(findings[0].evidence[1]).toContain('never')
   })
 
+  test('names the master that still lists a silent member, by address', () => {
+    const master = device({
+      ip: '192.0.2.10',
+      name: 'Living Room',
+      group: {
+        role: 'master',
+        name: 'Ground floor',
+        members: [{ name: 'Kitchen', ip: '192.0.2.11', uuid: 'A1B2C3' }],
+        saved: false,
+        parent: null,
+      },
+    })
+    const silent = device({ ip: '192.0.2.11', name: 'Kitchen', online: false, errors: 9 })
+    const findings = findingsFor({ state: silent, diagnostics: null, fleet: [master, silent] })
+    expect(findings.map(finding => finding.id)).toEqual(['offline', 'offlineListed'])
+    expect(findings[1].severity).toBe('info')
+    expect(findings[1].values.master).toBe('Living Room')
+    expect(findings[1].values.group).toBe('Ground floor')
+    expect(findings[1].evidence[0]).toContain('192.0.2.11')
+  })
+
+  test('matches a saved group by name when its list carries no address', () => {
+    const master = device({
+      name: 'Living Room',
+      group: {
+        role: 'none',
+        name: 'Ground floor',
+        members: [{ name: 'Kitchen', ip: '', uuid: 'A1B2C3' }],
+        saved: true,
+        parent: null,
+      },
+    })
+    const silent = device({ ip: '192.0.2.11', name: 'Kitchen', online: false, errors: 9 })
+    expect(ids({ state: silent, diagnostics: null, fleet: [master, silent] })).toEqual([
+      'offline',
+      'offlineListed',
+    ])
+  })
+
+  test('credits neither a silent master nor a member that copied the list', () => {
+    const member = device({
+      group: {
+        role: 'member',
+        name: 'Ground floor',
+        members: [{ name: 'Kitchen', ip: '', uuid: 'A1B2C3' }],
+        saved: true,
+        parent: { name: 'Living Room', ip: '192.0.2.10' },
+      },
+    })
+    const silent = device({ ip: '192.0.2.11', name: 'Kitchen', online: false, errors: 9 })
+    expect(ids({ state: silent, diagnostics: null, fleet: [member] })).toEqual(['offline'])
+    const silentMaster = device({ online: false, group: { ...member.group, role: 'master' } })
+    expect(ids({ state: silent, diagnostics: null, fleet: [silentMaster] })).toEqual(['offline'])
+  })
+
+  test('reports a silent API on a speaker that still accepts a connection', () => {
+    const findings = findingsFor({
+      state: device({
+        online: false,
+        errors: 7,
+        lastSeen: null,
+        reach: { at: 1, ports: [8819, 49152] },
+      }),
+      diagnostics: null,
+    })
+    expect(findings.map(finding => finding.id)).toEqual(['offline', 'offlineAlive'])
+    expect(findings[1].values.port).toBe(8819)
+    expect(findings[1].values.ports).toBe('8819, 49152')
+    expect(findings[1].evidence).toHaveLength(2)
+  })
+
+  test('shows both refinements together, and never on a device that answers', () => {
+    const master = device({
+      name: 'Living Room',
+      group: {
+        role: 'master',
+        name: 'Ground floor',
+        members: [{ name: 'Kitchen', ip: '192.0.2.11', uuid: 'A1B2C3' }],
+        saved: false,
+        parent: null,
+      },
+    })
+    const silent = device({
+      ip: '192.0.2.11',
+      name: 'Kitchen',
+      online: false,
+      errors: 4,
+      reach: { at: 1, ports: [8819] },
+    })
+    expect(ids({ state: silent, diagnostics: null, fleet: [master] })).toEqual([
+      'offline',
+      'offlineListed',
+      'offlineAlive',
+    ])
+    expect(
+      findingsFor({
+        state: device({ reach: { at: 1, ports: [8819] } }),
+        diagnostics: diagnostics(),
+      })
+    ).toEqual([])
+  })
+
   test('flags a weak link from the RSSI alone', () => {
     const findings = findingsFor({
       state: device({ rssi: -74 }),

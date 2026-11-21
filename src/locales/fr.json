@@ -320,6 +320,8 @@
       "info": "info"
     },
     "offline": "L'enceinte ne répond pas : {failures, plural, one {# échec d'interrogation consécutif} other {# échecs d'interrogation consécutifs}}.",
+    "offlineListed": "L'enceinte ne répond pas sur son API de commande, mais {master} la liste encore dans le groupe {group} : l'app la montre encore, ses réglages propres sont hors de portée.",
+    "offlineAlive": "L'enceinte ne répond pas sur son API de commande, mais elle accepte encore une connexion sur le port {port} : elle est sous tension et sur le réseau, seul son service de commande s'est arrêté.",
     "weakLink": "La liaison radio est faible : {rssi} dBm, {snr} dB de SNR, {rate} Mb/s en {band} GHz.",
     "wifiDrops": "Le Wi-Fi a décroché {count} fois, la dernière il y a {minutes} min.",
     "ethDrops": "La liaison filaire a décroché {count} fois.",

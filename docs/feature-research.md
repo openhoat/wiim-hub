@@ -596,22 +596,25 @@ instead of reading as zero.
 that reads a null counter stays silent: the first version of the findings showed nothing on a
 device with 2 Wi-Fi drops and 5 bad blocks. `server/diagnostics.test.ts` now pins both shapes.
 
-Shipped in 0.7.0 (`server/findings.ts`, pure module, one rule per signal):
+Shipped in 0.7.0 (`server/findings.ts`, pure module, one rule per signal); the two offline
+refinements came later:
 
-| Finding            | Trigger                                           | Severity | Evidence                            |
-| ------------------ | ------------------------------------------------- | -------- | ----------------------------------- |
-| `offline`          | the last poll failed; the other rules are skipped | alert    | failure count, last successful poll |
-| `weakLink`         | `RSSI <= -70` or `wlanSnr < 20`                   | warn     | RSSI, SNR, noise, band, rate        |
-| `wifiDrops`        | `disconnectedCount > 0`                           | warn     | count, age, raw disconnect message  |
-| `ethDrops`         | `ethDisconnectedCount > 0`                        | info     | count                               |
-| `pingFailures`     | `pingCheckFailedCount > 0`                        | warn     | count                               |
-| `abnormalReboots`  | `wlanAbnormalRebootTimes > 0`                     | alert    | count                               |
-| `crashCounters`    | the four crash counters sum above zero            | alert    | the four values                     |
-| `upnpActionsLost`  | `upnp_action_lost*` sum above zero                | info     | lost of total                       |
-| `flashWear`        | `badBlockNum / totalBlockNum >= 2 %`              | warn     | bad blocks, total, ratio            |
-| `hardwareFault`    | one of the four hardware error fields is set      | alert    | the field names                     |
-| `eventingDegraded` | the UPnP subscription was contradicted by a poll  | info     | miss count                          |
-| `sleepTimer`       | `sleepSeconds > 0`                                | info     | minutes                             |
+| Finding            | Trigger                                             | Severity | Evidence                            |
+| ------------------ | --------------------------------------------------- | -------- | ----------------------------------- |
+| `offline`          | the last poll failed; the other rules are skipped   | alert    | failure count, last successful poll |
+| `offlineListed`    | the silent device is still in a master's slave list | info     | master, address, group              |
+| `offlineAlive`     | a stream port accepts while the control API is down | info     | the accepted port(s)                |
+| `weakLink`         | `RSSI <= -70` or `wlanSnr < 20`                     | warn     | RSSI, SNR, noise, band, rate        |
+| `wifiDrops`        | `disconnectedCount > 0`                             | warn     | count, age, raw disconnect message  |
+| `ethDrops`         | `ethDisconnectedCount > 0`                          | info     | count                               |
+| `pingFailures`     | `pingCheckFailedCount > 0`                          | warn     | count                               |
+| `abnormalReboots`  | `wlanAbnormalRebootTimes > 0`                       | alert    | count                               |
+| `crashCounters`    | the four crash counters sum above zero              | alert    | the four values                     |
+| `upnpActionsLost`  | `upnp_action_lost*` sum above zero                  | info     | lost of total                       |
+| `flashWear`        | `badBlockNum / totalBlockNum >= 2 %`                | warn     | bad blocks, total, ratio            |
+| `hardwareFault`    | one of the four hardware error fields is set        | alert    | the field names                     |
+| `eventingDegraded` | the UPnP subscription was contradicted by a poll    | info     | miss count                          |
+| `sleepTimer`       | `sleepSeconds > 0`                                  | info     | minutes                             |
 
 The counters are read on their own 60 s cadence, in three parallel commands, and findings are
 recomputed on every `/api/state`: a counter that recovered stops showing, nothing is stored as a

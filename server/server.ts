@@ -8,6 +8,7 @@ import { readDiagnostics } from './device/diagnostics.ts'
 import { type DevicePatch, type DeviceState, pollDevice } from './device/index.ts'
 import { setLocalMute } from './device/mute.ts'
 import { artUri, cleanTitle } from './device/payload.ts'
+import { alivePorts } from './device/reach.ts'
 import { resolveTarget } from './device/resolve.ts'
 import { readSettings } from './device/settings.ts'
 import { type DeviceEvent, MAX_EVENTS, MAX_SAMPLES } from './device/status.ts'
@@ -112,6 +113,7 @@ const emptyState = (host: string): DeviceState => ({
   uuid: '',
   group: { role: 'none', name: '', members: [], saved: false, parent: null },
   mirror: null,
+  reach: null,
   rssi: null,
   volume: null,
   status: '',
@@ -273,6 +275,22 @@ const refreshDiagnostics = (state: DeviceState): void => {
     .finally(() => probing.delete(state.ip))
 }
 
+// A silent speaker is probed on its other ports, outside the request path: the
+// page reads the stored answer, and a dead address costs one timeout on the slow
+// cadence instead of one per request. Only this loop writes `reach`.
+const probeReach = (state: DeviceState): void => {
+  if (state.online) return
+  const at = state.reach?.at ?? 0
+  if (Date.now() - at < slowPollMs) return
+  state.reach = { at: Date.now(), ports: state.reach?.ports ?? [] }
+  void alivePorts(state.ip).then(
+    ports => {
+      state.reach = { at: Date.now(), ports }
+    },
+    () => undefined
+  )
+}
+
 let polling = false
 const pollAll = async (): Promise<void> => {
   if (polling) return
@@ -317,10 +335,13 @@ const pollAll = async (): Promise<void> => {
     for (const host of hosts) {
       const state = states.get(host)
       if (state === undefined) continue
+      // A device that went silent gets its other ports probed before the
+      // findings are read, so the next answer can say "present but mute".
+      probeReach(state)
       notifier?.push({
         host,
         device: state.name,
-        findings: findingsFor({ state, diagnostics: state.diagnostics }),
+        findings: findingsFor({ state, diagnostics: state.diagnostics, fleet: states.values() }),
       })
     }
     // One frame per tick, once the pass has completed: a reader must never see
@@ -782,7 +803,7 @@ const hubPayload = () => {
     )
     .map(state => ({
       ...state,
-      findings: findingsFor({ state, diagnostics: state.diagnostics }),
+      findings: findingsFor({ state, diagnostics: state.diagnostics, fleet: states.values() }),
       guides: guidesFor({ state, diagnostics: state.diagnostics }),
     }))
   return { ts: Date.now(), pollMs, devices }
@@ -805,7 +826,11 @@ const sendReport = async (url: URL, res: ServerResponse): Promise<void> => {
     sendJson(res, 404, { error: 'unknown device' })
     return
   }
-  const findings = findingsFor({ state: entry.state, diagnostics: entry.state.diagnostics })
+  const findings = findingsFor({
+    state: entry.state,
+    diagnostics: entry.state.diagnostics,
+    fleet: states.values(),
+  })
   const guides = guidesFor({ state: entry.state, diagnostics: entry.state.diagnostics })
   // Probing eighteen commands costs about five seconds on a dead device and
   // says nothing useful there: an offline player is already the first finding.

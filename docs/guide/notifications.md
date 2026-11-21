@@ -23,14 +23,15 @@ without silencing the other.
 
 ## When it speaks
 
-The twelve diagnostic rules are evaluated on every poll. An alert is sent **when a rule appears**,
+The fourteen diagnostic rules are evaluated on every poll. An alert is sent **when a rule appears**,
 not while it stays:
 
 - a rule that is still raised is the same event: it is announced once, however long it lasts;
 - a rule that clears and comes back inside the quiet period (`NOTIFY_QUIET_MS`, one hour by default)
   is held: a weak link flapping around its threshold is one fault, not one per flap;
-- `NOTIFY_MIN_SEVERITY` (`warn` by default) leaves the four `info` rules out (`ethDrops`,
-  `upnpActionsLost`, `eventingDegraded`, `sleepTimer`); set `info` to hear about them too;
+- `NOTIFY_MIN_SEVERITY` (`warn` by default) leaves the six `info` rules out (`ethDrops`,
+  `upnpActionsLost`, `offlineListed`, `offlineAlive`, `eventingDegraded`, `sleepTimer`); set `info`
+  to hear about them too;
 - `NOTIFY_RULES` narrows the channel to the rules you name, comma separated and by id:
   `offline,hardwareFault,flashWear`. An unknown name is reported at start, because a typo would
   otherwise look like a rule that never fires.

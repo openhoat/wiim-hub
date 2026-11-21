@@ -26,6 +26,7 @@ import {
 } from './payload.ts'
 import { type Preset, presetCache, presetsFor } from './presets.ts'
 import { probeCommand } from './probes.ts'
+import type { Reach } from './reach.ts'
 import { forgetTarget, resolveTarget } from './resolve.ts'
 import {
   cleanModel,
@@ -57,6 +58,10 @@ export type DeviceState = DevicePatch & {
   // member card can show something audible, with the master named. Null when
   // the device plays on its own or no master is in the fleet.
   mirror: PlaybackMirror | null
+  // The last reachability probe, written by the poll loop while the device is
+  // silent: the findings read this instead of touching the network, so a
+  // request never waits on a dead address. Absent until the first probe.
+  reach?: Reach | null
   // The UPnP subscription behind the playback fields: `subscribed` means the
   // device pushes volume, mute and transport changes, `degraded` means a poll
   // contradicted it and the hub is back on the fast poll.
