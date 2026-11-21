@@ -52,6 +52,9 @@ export const VolumeSheet = ({
   const [pending, setPending] = useState<number | null>(null)
   const [confirmLevel, setConfirmLevel] = useState<number | null>(null)
   const track = useRef<HTMLInputElement | null>(null)
+  // The painted track is what the finger touches, not the native control: see
+  // the note on the mark-up below.
+  const surface = useRef<HTMLDivElement | null>(null)
   const start = useRef<{ x: number; moved: boolean } | null>(null)
   const beat = useRef<number | null>(null)
   const queued = useRef<number | null>(null)
@@ -143,7 +146,7 @@ export const VolumeSheet = ({
   }
 
   const ratioAt = (clientX: number): number => {
-    const rect = track.current?.getBoundingClientRect()
+    const rect = surface.current?.getBoundingClientRect()
     if (rect === undefined || rect.width === 0) return 0
     const ratio = (clientX - rect.left) / rect.width
     return Math.min(1, Math.max(0, ratio))
@@ -158,18 +161,20 @@ export const VolumeSheet = ({
     live.onChange(value)
   }
 
-  const onPointerDown = (event: PointerEvent<HTMLInputElement>): void => {
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>): void => {
     if (!device.online) return
-    // The browser's own range jumps the thumb to the contact point; the gesture
-    // has two meanings here, so the contact only arms it and the release decides
-    // which one it was.
+    // The native range would jump its thumb to the contact point, and Android
+    // keeps that jump even when the pointerdown is cancelled: a tap then wrote
+    // the point it landed on, and its own one step was never reached (measured
+    // on a phone, 21/11). The painted track carries the gesture instead, and the
+    // input keeps only the keyboard and the announced range.
     event.preventDefault()
-    event.currentTarget.focus()
+    track.current?.focus({ preventScroll: true })
     event.currentTarget.setPointerCapture(event.pointerId)
     start.current = { x: event.clientX, moved: false }
   }
 
-  const onPointerMove = (event: PointerEvent<HTMLInputElement>): void => {
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>): void => {
     const gesture = start.current
     if (gesture === null) return
     if (!gesture.moved && Math.abs(event.clientX - gesture.x) < slopPx) return
@@ -177,7 +182,7 @@ export const VolumeSheet = ({
     drag(crankVolume(ratioAt(event.clientX) * volumeMax))
   }
 
-  const onPointerUp = (event: PointerEvent<HTMLInputElement>): void => {
+  const onPointerUp = (event: PointerEvent<HTMLDivElement>): void => {
     const gesture = start.current
     start.current = null
     if (gesture === null) return
@@ -228,7 +233,20 @@ export const VolumeSheet = ({
         {readout}
       </p>
 
-      <div className="relative mt-2 h-14 w-full rounded-xl has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/50">
+      {/* The painted track carries the pointer; the native range below is only
+          the keyboard and the announced range. touch-none keeps a drag from
+          becoming a scroll: the gesture belongs to the track, all the way. */}
+      <div
+        ref={surface}
+        className={cn(
+          'relative mt-2 h-14 w-full touch-none rounded-xl has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/50',
+          device.online ? 'cursor-pointer' : 'cursor-not-allowed'
+        )}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+      >
         <div className="pointer-events-none absolute inset-x-0 top-1/2 h-3 -translate-y-1/2 rounded-full bg-muted">
           <div
             className={cn('h-full rounded-full bg-accent', !device.online && 'opacity-50')}
@@ -253,14 +271,10 @@ export const VolumeSheet = ({
           aria-label={title}
           onChange={onChange}
           onKeyDown={onKeyDown}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerCancel}
-          // Transparent over the painted track: the native control keeps the
-          // keyboard, the focus order and the announced range, while the two
-          // pointer gestures are read here.
-          className="absolute inset-0 size-full cursor-pointer appearance-none bg-transparent opacity-0 disabled:cursor-not-allowed"
+          // Transparent and inert to the pointer: the native control keeps the
+          // keyboard, the focus order and the announced range, and the track
+          // above reads the two gestures.
+          className="pointer-events-none absolute inset-0 size-full appearance-none bg-transparent opacity-0"
         />
       </div>
 

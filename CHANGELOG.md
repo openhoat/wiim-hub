@@ -10,6 +10,15 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+### Fixed
+
+- A tap beside the thumb in the volume pop-in wrote the level it landed on instead of stepping by
+  one, on a phone. Android keeps its own range behaviour, the thumb jumping to the contact point,
+  even when the pointerdown is cancelled: that jump reached the write path before the tap was read,
+  and a tap near the end of the track could send a large jump to the speaker. The painted track
+  carries the gesture now, and the native input is inert to the pointer, keeping its keyboard and
+  its announced range.
+
 ## [0.11.5] - 2026-11-21
 
 ### Added
