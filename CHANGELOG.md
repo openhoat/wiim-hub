@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.11.5] - 2026-11-21
+
 ### Added
 
 - An offline speaker no longer reads as gone when only its control API died. The hub keeps two
@@ -954,7 +956,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.4...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.5...HEAD
+[0.11.5]: https://github.com/openhoat/wiim-hub/compare/v0.11.4...v0.11.5
 [0.11.4]: https://github.com/openhoat/wiim-hub/compare/v0.11.3...v0.11.4
 [0.11.3]: https://github.com/openhoat/wiim-hub/compare/v0.11.2...v0.11.3
 [0.11.2]: https://github.com/openhoat/wiim-hub/compare/v0.11.1...v0.11.2
