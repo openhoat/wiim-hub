@@ -10,6 +10,8 @@ Releases are cut from `package.json`: the version in that file names the section
 
 ## [Unreleased]
 
+## [0.11.6] - 2026-11-21
+
 ### Fixed
 
 - A tap beside the thumb in the volume pop-in wrote the level it landed on instead of stepping by
@@ -965,7 +967,8 @@ Releases are cut from `package.json`: the version in that file names the section
   sample table, JSON and CSV export.
 - English and French labels, picked from the browser, with an English fallback.
 
-[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.5...HEAD
+[Unreleased]: https://github.com/openhoat/wiim-hub/compare/v0.11.6...HEAD
+[0.11.6]: https://github.com/openhoat/wiim-hub/compare/v0.11.5...v0.11.6
 [0.11.5]: https://github.com/openhoat/wiim-hub/compare/v0.11.4...v0.11.5
 [0.11.4]: https://github.com/openhoat/wiim-hub/compare/v0.11.3...v0.11.4
 [0.11.3]: https://github.com/openhoat/wiim-hub/compare/v0.11.2...v0.11.3
