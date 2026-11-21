@@ -165,10 +165,13 @@ const startFakeDevice = async (
 }
 
 // The callback base has to name the port before the hub starts, so the port is
-// borrowed from the OS first: a test cannot use port 0 for both.
+// borrowed from the OS first: a test cannot use port 0 for both. Every
+// interface is probed, not just loopback: the hub binds all of them, and a
+// service on the tailnet address can hold the same number (seen: tailscaled on
+// 100.64.0.5:41053, which loopback alone called free).
 const freePort = async (): Promise<number> => {
   const probe = createNetServer()
-  await new Promise<void>(resolve => probe.listen(0, '127.0.0.1', resolve))
+  await new Promise<void>(resolve => probe.listen(0, resolve))
   const port = (probe.address() as AddressInfo).port
   await new Promise<void>(resolve => probe.close(() => resolve()))
   return port
