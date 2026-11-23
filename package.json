@@ -60,11 +60,11 @@
     "@radix-ui/react-slot": "^1.5.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.74.0",
+    "lucide-react": "^1.77.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "sonner": "^2.0.8",
-    "tailwind-merge": "^3.7.0",
+    "tailwind-merge": "^3.7.1",
     "zod": "4.6.7"
   },
   "devDependencies": {
@@ -77,9 +77,9 @@
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.3.0",
-    "@vitest/coverage-v8": "5.1.0",
+    "@vitest/coverage-v8": "5.1.1",
     "husky": "9.1.7",
-    "markdownlint-cli2": "0.24.1",
+    "markdownlint-cli2": "0.24.2",
     "mermaid": "11.17.2",
     "prettier": "3.10.1",
     "sonarqube-scanner": "5.1.0",
@@ -88,7 +88,7 @@
     "vite": "^8.3.8",
     "vitepress": "1.6.4",
     "vitepress-plugin-mermaid": "2.0.17",
-    "vitest": "5.1.0",
+    "vitest": "5.1.1",
     "wireit": "0.15.0"
   },
   "wireit": {
